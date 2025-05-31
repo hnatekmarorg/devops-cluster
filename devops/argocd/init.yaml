@@ -3,13 +3,19 @@ kind: Application
 metadata:
   name: init
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
   labels:
     name: init
 spec:
-  project: init
+  project: default
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
+      - Validate=false
+    automated:
+      selfHeal: true
   source:
+    directory:
+      recurse: true
     repoURL: https://github.com/hnatekmarorg/devops-cluster.git
     targetRevision: HEAD
     path: devops/argocd

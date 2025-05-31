@@ -1,0 +1,44 @@
+apiVersion: devops.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: main
+  namespace: default
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 10.244.0.0/16
+    services:
+      cidrBlocks:
+      - 10.96.0.0/12
+  controlPlaneRef:
+    apiVersion: controlplane.devops.x-k8s.io/v1alpha3
+    kind: TalosControlPlane
+    name: main-cp
+    namespace: default
+  infrastructureRef:
+    apiVersion: infrastructure.devops.x-k8s.io/v1alpha3
+    kind: MetalCluster
+    name: main
+    namespace: default
+---
+apiVersion: infrastructure.devops.x-k8s.io/v1alpha3
+kind: MetalCluster
+metadata:
+  name: main
+  namespace: default
+spec:
+  controlPlaneEndpoint:
+    host: 172.16.100.150
+    port: 6443
+---
+apiVersion: bootstrap.devops.x-k8s.io/v1alpha3
+kind: TalosConfigTemplate
+metadata:
+  name: main-workers
+  namespace: default
+spec:
+  template:
+    spec:
+      generateType: join
+      talosVersion: v1.10.2

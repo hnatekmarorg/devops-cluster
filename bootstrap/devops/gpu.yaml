@@ -1,0 +1,61 @@
+apiVersion: metal.sidero.dev/v1alpha2
+kind: ServerClass
+metadata:
+  name: worker-gpu
+spec:
+  configPatches:
+    - op: add
+      path: /machine/kernel
+      value:
+        modules:
+          - name: nvidia
+          - name: nvidia_uvm
+          - name: nvidia_drm
+          - name: nvidia_modeset
+    - op: replace
+      path: /machine/sysctls
+      value:
+        net.core.bpf_jit_harden: 1
+  selector:
+    matchLabels:
+      node/type: "gpu"
+---
+apiVersion: infrastructure.devops.x-k8s.io/v1alpha3
+kind: MetalMachineTemplate
+metadata:
+  name: main-workers-gpu
+  namespace: default
+spec:
+  template:
+    spec:
+      serverClassRef:
+        apiVersion: metal.sidero.dev/v1alpha2
+        kind: ServerClass
+        name: worker-gpu
+        namespace: default
+---
+apiVersion: devops.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: main-workers-gpu
+  namespace: default
+spec:
+  clusterName: main
+  replicas: 1
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.devops.x-k8s.io/v1alpha3
+          kind: TalosConfigTemplate
+          name: main-workers
+          namespace: default
+      clusterName: main
+      infrastructureRef:
+        apiVersion: infrastructure.devops.x-k8s.io/v1alpha3
+        kind: MetalMachineTemplate
+        name: main-workers-gpu
+        namespace: default
+      version: v1.33.0

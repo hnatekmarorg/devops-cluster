@@ -1,0 +1,24 @@
+apiVersion: metal.sidero.dev/v1alpha2
+kind: Environment
+metadata:
+  name: hammurabi-env
+spec:
+  kernel:
+    url: "https://pxe.factory.talos.dev/image/3f399a21b708f704ba780927f691c1c14809a2f57ab285e8ed7eb9575cb1fd98/v1.10.2/kernel-amd64"
+    sha512: ""
+    args:
+      - console=tty0
+      - talos.platform=metal
+      - init_on_alloc=1
+      - slab_nomerge
+      - pti=on
+      - consoleblank=0
+      - nvme_core.io_timeout=4294967295
+      - printk.devkmsg=on 
+      - ima_template=ima-ng
+      - ima_appraise=fix
+      - ima_hash=sha512
+      - selinux=1
+  initrd:
+    url: "https://pxe.factory.talos.dev/image/3f399a21b708f704ba780927f691c1c14809a2f57ab285e8ed7eb9575cb1fd98/v1.10.2/initramfs-amd64.xz"
+    sha512: ""

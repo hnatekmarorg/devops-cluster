@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: init
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    name: init
+spec:
+  project: init
+  source:
+    repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    targetRevision: HEAD
+    path: devops/argocd

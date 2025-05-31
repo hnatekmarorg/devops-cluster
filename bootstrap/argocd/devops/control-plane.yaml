@@ -31,10 +31,12 @@ spec:
     controlplane:
       configPatches:
         - op: replace
-          path: cluster/extraManifest
+          path: /cluster/externalCloudProvider
           value:
-            - https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-            - https://raw.githubusercontent.com/hnatekmarorg/devops-cluster/refs/heads/main/devops/argocd/init.yaml
+            enabled: true
+            manifests:
+              - https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+              - https://raw.githubusercontent.com/hnatekmarorg/devops-cluster/refs/heads/main/devops/argocd/init.yaml
         - op: replace
           path: /machine/install/disk
           value: /dev/sda

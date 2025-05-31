@@ -3,8 +3,6 @@ kind: Application
 metadata:
   name: init
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   syncPolicy:

@@ -7,6 +7,9 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
+  syncPolicy:
+    automated:
+      selfHeal: true
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd

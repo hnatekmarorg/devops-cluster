@@ -12,7 +12,7 @@ spec:
       helm:
         releaseName: argocd
         valueFiles:
-          - $repo/devops/argocd/argocd/values.yaml
+          - ./devops/argocd/argocd/values.yaml
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd

@@ -11,11 +11,11 @@ metadata:
 spec:
   project: default
   source:
-    chart: prometheus
+    chart: crossplane
     repoURL: https://charts.crossplane.io/stable
     targetRevision: 0.0.1
     helm:
-      releaseName: crossplane-master
+      releaseName: crossplane
   destination:
     server: "https://kubernetes.default.svc"
     namespace: crossplane-system

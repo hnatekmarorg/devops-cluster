@@ -7,7 +7,7 @@ spec:
     matchLabels:
       node/type: "cpu"
 ---
-apiVersion: infrastructure.devops.x-k8s.io/v1alpha3
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
 kind: MetalMachineTemplate
 metadata:
   name: main-workers-cpu
@@ -21,7 +21,7 @@ spec:
         name: worker-cpu
         namespace: default
 ---
-apiVersion: devops.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
   name: main-workers-cpu
@@ -35,13 +35,13 @@ spec:
     spec:
       bootstrap:
         configRef:
-          apiVersion: bootstrap.devops.x-k8s.io/v1alpha3
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
           kind: TalosConfigTemplate
           name: main-workers
           namespace: default
       clusterName: main
       infrastructureRef:
-        apiVersion: infrastructure.devops.x-k8s.io/v1alpha3
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
         kind: MetalMachineTemplate
         name: main-workers-cpu
         namespace: default

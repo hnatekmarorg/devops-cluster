@@ -1,28 +1,24 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: prometheus
-  labels:
-    pod-security.kubernetes.io/enforce: privileged
+  name: crossplane-system
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: prometheus
+  name: crossplane
   namespace: argocd
 spec:
   project: init
   source:
     chart: prometheus
-    repoURL: https://prometheus-community.github.io/helm-charts
-    targetRevision: 27.17.0
+    repoURL: https://charts.crossplane.io/stable
+    targetRevision: 0.0.1
     helm:
-      releaseName: prometheus-community
-      valueFiles:
-        - $repo/argocd/prometheus/values.yaml
+      releaseName: crossplane-master
   destination:
     server: "https://kubernetes.default.svc"
-    namespace: prometheus
+    namespace: crossplane-system
   syncPolicy:
     automated:
       prune: true

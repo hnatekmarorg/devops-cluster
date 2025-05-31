@@ -11,8 +11,6 @@ spec:
       targetRevision: 8.0.12
       helm:
         releaseName: argocd
-        valueFiles:
-          - ./argocd/values.yaml
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd

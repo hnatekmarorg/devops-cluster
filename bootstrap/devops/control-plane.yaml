@@ -34,7 +34,7 @@ spec:
           path: cluster/extraManifest
           value:
             - https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-            - https://raw.githubusercontent.com/devops/argocd/init.yaml
+            - https://raw.githubusercontent.com/hnatekmarorg/devops-cluster/refs/heads/main/devops/argocd/init.yaml
         - op: replace
           path: /machine/install/disk
           value: /dev/sda

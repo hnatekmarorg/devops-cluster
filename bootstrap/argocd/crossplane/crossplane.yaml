@@ -9,7 +9,7 @@ metadata:
   name: crossplane
   namespace: argocd
 spec:
-  project: init
+  project: default
   source:
     chart: prometheus
     repoURL: https://charts.crossplane.io/stable

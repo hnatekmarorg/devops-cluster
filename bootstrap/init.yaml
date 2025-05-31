@@ -8,6 +8,9 @@ metadata:
 spec:
   project: default
   syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
+      - Validate=false
     automated:
       selfHeal: true
   destination:

@@ -19,7 +19,7 @@ spec:
     helm:
       releaseName: prometheus-community
       valueFiles:
-        - $repo/argocd/prometheus/values.yaml
+        - $repo/devops/argocd/prometheus/values.yaml
   destination:
     server: "https://kubernetes.default.svc"
     namespace: prometheus

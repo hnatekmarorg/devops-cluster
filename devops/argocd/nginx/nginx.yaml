@@ -17,7 +17,7 @@ spec:
     helm:
       releaseName:
       valueFiles:
-        - $repo/argocd/nginx/values.yaml
+        - $repo/devops/argocd/nginx/values.yaml
   destination:
     server: "https://kubernetes.default.svc"
     namespace: prometheus

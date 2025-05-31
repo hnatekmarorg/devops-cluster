@@ -19,7 +19,7 @@ spec:
     helm:
       releaseName: rook-ceph
       valueFiles:
-        - $repo/argocd/rook/values.yaml
+        - $repo/devops/argocd/rook/values.yaml
   destination:
     server: "https://kubernetes.default.svc"
     namespace: rook-ceph

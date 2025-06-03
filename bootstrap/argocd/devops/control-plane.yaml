@@ -31,6 +31,16 @@ spec:
     controlplane:
       configPatches:
         - op: replace
+          path: /machine/kubelet/extraMounts
+          value:
+            - destination: /var/mnt
+              type: bind
+              source: /var/mnt
+              options:
+                - bind
+                - rshared
+                - rw
+        - op: replace
           path: /cluster/externalCloudProvider
           value:
             enabled: true

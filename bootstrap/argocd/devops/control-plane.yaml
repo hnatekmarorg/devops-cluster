@@ -41,12 +41,6 @@ spec:
                 - rshared
                 - rw
         - op: replace
-          path: /cluster/externalCloudProvider
-          value:
-            enabled: true
-            manifests:
-              - https://raw.githubusercontent.com/hnatekmarorg/devops-cluster/refs/heads/main/devops/argocd/init.yaml
-        - op: replace
           path: /machine/install/disk
           value: /dev/sda
       generateType: controlplane

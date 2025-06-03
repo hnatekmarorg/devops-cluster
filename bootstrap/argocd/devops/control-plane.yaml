@@ -33,9 +33,9 @@ spec:
         - op: replace
           path: /machine/kubelet/extraMounts
           value:
-            - destination: /var/mnt
+            - destination: /var/local-path-provisioner
               type: bind
-              source: /var/mnt
+              source: /var/local-path-provisioner
               options:
                 - bind
                 - rshared

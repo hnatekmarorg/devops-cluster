@@ -4,6 +4,9 @@ metadata:
   name: worker-gpu
 spec:
   configPatches:
+    - op: replace
+       path: /machine/install/image
+       value: "factory.talos.dev/metal-installer/a5ce1cbe595e5d591428776691466c07b2b681eabb65fbb7ff943621689937de:v1.10.3" 
     - op: add
       path: /machine/kernel
       value:

@@ -8,11 +8,11 @@ spec:
   sources:
     - chart: cert-manager
       repoURL: https://charts.jetstack.io
-      targetRevision: v1.18.0
+      targetRevision: 1.18.0
       helm:
         releaseName: cert-manager
         valueFiles:
-          - $repo/devops/argocd/cert-manager/values.yaml
+          - $repo/devops/argocd/cert-manager/cert-manager-values.yaml
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo

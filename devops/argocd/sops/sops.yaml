@@ -11,8 +11,8 @@ spec:
       targetRevision: 0.22.0
       helm:
         releaseName: sops-secrets-operator
-      valueFiles:
-        - $repo/devops/argocd/sops/values.yaml
+        valueFiles:
+          - $repo/devops/argocd/sops/values.yaml
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
@@ -24,5 +24,5 @@ spec:
       prune: true
       selfHeal: true
       allowEmpty: false
-  syncOptions:
-    - CreateNamespace=false
+    syncOptions:
+      - CreateNamespace=true

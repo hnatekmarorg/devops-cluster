@@ -11,8 +11,8 @@ spec:
       targetRevision: v1.18.0
       helm:
         releaseName: cert-manager
-      valueFiles:
-        - $repo/devops/argocd/cert-manager/values.yaml
+        valueFiles:
+          - $repo/devops/argocd/cert-manager/values.yaml
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo

@@ -5,12 +5,17 @@ metadata:
   namespace: argocd
 spec:
   project: default
-  source:
-    chart: cert-manager
-    repoURL: https://charts.jetstack.io
-    targetRevision: v1.18.0
-    helm:
-      releaseName: cert-manager
+  sources:
+    - chart: cert-manager
+      repoURL: https://charts.jetstack.io
+      targetRevision: v1.18.0
+      helm:
+        releaseName: cert-manager
+      valueFiles:
+        - $repo/devops/argocd/cert-manager/values.yaml
+    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+      targetRevision: main
+      ref: repo
   destination:
     server: "https://kubernetes.default.svc"
     namespace: crossplane-system
@@ -19,21 +24,3 @@ spec:
       prune: true
       selfHeal: true
       allowEmpty: false
----
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: example-issuer
-spec:
-  acme:
-    email: user@example.com
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      name: example-issuer-account-key
-    solvers:
-      - dns01:
-          cloudDNS:
-            project: my-project
-            serviceAccountSecretRef:
-              name: prod-clouddns-svc-acct-secret
-              key: service-account.json

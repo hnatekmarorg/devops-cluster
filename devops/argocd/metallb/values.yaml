@@ -3,3 +3,7 @@ controller:
     - key: "node-role.kubernetes.io/master"
       operator: "Exists"
       effect: "NoSchedule"
+
+speaker:
+  frr:
+    enabled: false

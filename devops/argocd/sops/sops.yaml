@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   sources:
-    - chart: sops
+    - chart: sops-secrets-operator
       repoURL: https://isindir.github.io/sops-secrets-operator/
       targetRevision: 0.22.0
       helm:

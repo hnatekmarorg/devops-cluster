@@ -36,6 +36,6 @@ spec:
       - dns01:
           cloudflare:
             email: m.hnatma@gmail.com
-            apiKeySecretRef:
+            apiTokenSecretRef:
               name: cloudflare-api-token-secret
               key: api-token

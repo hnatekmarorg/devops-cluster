@@ -52,3 +52,12 @@ spec:
       allowEmpty: false
     syncOptions:
       - CreateNamespace=false
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: public-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 172.16.100.10-172.16.100.12

@@ -1,13 +1,13 @@
-#controller:
-#  enabled: true
-#  logLevel: info
-#  tolerations:
-#    - key: "node-role.kubernetes.io/master"
-#      operator: "Exists"
-#      effect: "NoSchedule"
-#
-#speaker:
-#  logLevel: info
-#  enabled: true
-#  frr:
-#    enabled: false
+controller:
+  enabled: true
+  logLevel: info
+  tolerations:
+    - key: "node-role.kubernetes.io/master"
+      operator: "Exists"
+      effect: "NoSchedule"
+
+speaker:
+  logLevel: info
+  enabled: true
+  frr:
+    enabled: false

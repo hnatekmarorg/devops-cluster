@@ -24,3 +24,17 @@ spec:
       prune: true
       selfHeal: true
       allowEmpty: false
+---
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: minio-backup
+  namespace: velero
+spec:
+  provider: aws
+  objectStorage:
+    bucket: main-velero-backup
+  config:
+    region: minio
+    s3ForcePathStyle: "true"
+    s3Url: "https://minio.hnatekmar.xyz"

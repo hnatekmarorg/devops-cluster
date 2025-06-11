@@ -64,3 +64,9 @@ spec:
   AvoidBuggyIPs: true
   addresses:
     - 172.16.100.15-172.16.100.16
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default
+  namespace: metallb-system

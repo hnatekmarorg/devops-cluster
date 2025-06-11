@@ -12,7 +12,7 @@ spec:
       helm:
         releaseName: sops-secrets-operator
         valueFiles:
-          - $repo/devops/argocd/sops/values.yaml
+          - $repo/devops/argocd/sops/sops-values.yaml
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo

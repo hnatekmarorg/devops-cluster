@@ -18,7 +18,7 @@ spec:
       ref: repo
   destination:
     server: "https://kubernetes.default.svc"
-    namespace: crossplane-system
+    namespace: cert-manager
   syncPolicy:
     automated:
       prune: true

@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server-http-ingress
+  namespace: argocd
+spec:
+  ingressClassName: kong
+  tls:
+    - hosts:
+        - argocd.hnatekmar.dev
+      secretName: argocd-hnatekmar
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  name: http
+      host: argocd.hnatekmar.dev

@@ -1,28 +1,30 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: rook-ceph-cluster
+  name: metallb
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
   sources:
-    - chart: rook-ceph-cluster
-      repoURL: https://charts.rook.io/release
-      targetRevision: 1.17.3
+    - chart: kube-prometheus-stack
+      repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: 73.2.2
       helm:
-        releaseName: rook-ceph-cluster
+        releaseName: kube-prometheus-stack
         valueFiles:
-          - $repo/manual/argocd/rook-cluster-values.yaml
+          - $repo/devops/argocd/prometheus/prometheus-values.yaml
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   destination:
     server: "https://kubernetes.default.svc"
-    namespace: rook-ceph
+    namespace: prometheus
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
       allowEmpty: false
     syncOptions:
-      - CreateNamespace=false
+      - CreateNamespace=true

@@ -238,7 +238,7 @@ cephClusterSpec:
   # The example under 'all' would have all services scheduled on kubernetes nodes labeled with 'role=storage-node' and
   # tolerate taints with a key of 'storage-node'.
   placement:
-  #   all:
+     all:
   #     nodeAffinity:
   #       requiredDuringSchedulingIgnoredDuringExecution:
   #         nodeSelectorTerms:

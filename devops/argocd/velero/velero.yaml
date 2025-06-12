@@ -30,6 +30,8 @@ kind: BackupStorageLocation
 metadata:
   name: minio-backup
   namespace: velero
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   provider: aws
   objectStorage:

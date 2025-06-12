@@ -5010,7 +5010,6 @@ thanosRuler:
     ## Of type: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#tlsconfig
     tlsConfig: {}
 
-    bearerTokenFile:
 
     ## MetricRelabelConfigs to apply to samples after scraping, but before ingestion.
     ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#relabelconfig
@@ -5047,7 +5046,6 @@ thanosRuler:
     podMetadata: {}
 
     ##
-    serviceName:
 
     ## Image of ThanosRuler
     ##

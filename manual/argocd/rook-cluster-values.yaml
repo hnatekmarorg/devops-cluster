@@ -427,7 +427,7 @@ ingress:
     #     proxy_ssl_verify off;
     host:
        name: ceph.dashboard.hnatekmar.dev
-       path: "/ceph-dashboard(/|$)(.*)"
+       path: "/"
        pathType: Prefix
     tls:
      - hosts:

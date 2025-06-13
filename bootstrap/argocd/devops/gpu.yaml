@@ -6,7 +6,7 @@ spec:
   configPatches:
     - op: replace
       path: /machine/install/image
-      value: "factory.talos.dev/metal-installer/a5ce1cbe595e5d591428776691466c07b2b681eabb65fbb7ff943621689937de:v1.10.3" 
+      value: "factory.talos.dev/metal-installer/a5ce1cbe595e5d591428776691466c07b2b681eabb65fbb7ff943621689937de:v1.10.4" 
     - op: add
       path: /machine/kernel
       value:
@@ -44,7 +44,7 @@ metadata:
   namespace: default
 spec:
   clusterName: main
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels: null
   template:

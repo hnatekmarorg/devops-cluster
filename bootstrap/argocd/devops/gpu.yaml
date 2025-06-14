@@ -44,7 +44,7 @@ metadata:
   namespace: default
 spec:
   clusterName: main
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels: null
   template:

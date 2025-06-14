@@ -4,6 +4,7 @@ metadata:
   name: argocd-server-http-ingress
   namespace: argocd
   annotations:
+    argocd.argoproj.io/sync-wave: "3"
     cert-manager.io/cluster-issuer: letsencrypt-cloudflare
     kubernetes.io/ingress.class: "nginx"
 spec:

@@ -9,3 +9,15 @@ prometheus:
             requests:
               storage: 50Gi
           selector: {}
+grafana:
+  ingress:
+    enabled: true
+    hosts:
+      - grafana.hnatekmar.dev
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+      kubernetes.io/ingress.class: nginx
+    tls:
+    - secretName: grafana-tls
+      hosts:
+        - grafana.hnatekmar.dev

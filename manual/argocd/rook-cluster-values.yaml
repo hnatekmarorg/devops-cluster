@@ -162,6 +162,7 @@ cephClusterSpec:
 
   # Network configuration, see: https://github.com/rook/rook/blob/master/Documentation/CRDs/Cluster/ceph-cluster-crd.md#network-configuration-settings
   network:
+    provider: host
     connections:
       # Whether to encrypt the data in transit across the wire to prevent eavesdropping the data on the network.
       # The default is false. When encryption is enabled, all communication between clients and Ceph daemons, or between Ceph daemons will be encrypted.

@@ -12,7 +12,9 @@ clusterName: main-storage
 # -- Optional override of the target kubernetes version
 
 # -- Cluster ceph.conf override
-#configOverride:
+configOverride: |
+    [global]
+    cluster_network=192.168.88.0/24
 # configOverride: |
 #   [global]
 #   mon_allow_pool_delete = true

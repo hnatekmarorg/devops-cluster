@@ -13,6 +13,15 @@ spec:
     targetRevision: 4.12.2
     helm:
       releaseName: ingress-nginx
+      valuesObject:
+        controller:
+          metrics:
+            enabled: true
+            serviceMonitor:
+              enabled: true
+              additionalLabels:
+                release: "prometheus"
+            
   destination:
     server: "https://kubernetes.default.svc"
     namespace: nginx

@@ -30,6 +30,9 @@ metadata:
   namespace: default
 spec:
   template:
+    metadata:
+      labels:
+        node/type: "gpu"
     spec:
       serverClassRef:
         apiVersion: metal.sidero.dev/v1alpha2

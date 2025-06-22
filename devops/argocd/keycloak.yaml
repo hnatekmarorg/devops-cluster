@@ -28,6 +28,7 @@ spec:
             cert-manager.io/cluster-issuer: letsencrypt-cloudflare
           ingressClassName: nginx
           tls: true
+          hostname: keycloak.infra.hnatekmar.dev
           hosts:
             - host: keycloak.infra.hnatekmar.dev
               paths:

@@ -1,6 +1,0 @@
-apiVersion: pkg.crossplane.io/v1
-kind: Provider
-metadata:
-  name: vshn-provider-minio
-spec:
-  package: "xpkg.upbound.io/vshn/provider-minio:{{.Values.provider.version}}"

@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: keycloak
+    repoURL: https://charts.bitnami.com/bitnami
+    targetRevision: 12.0.0  # Replace with the desired version
+    helm:
+      valuesObject:
+        persistence:
+          enabled: true
+          storageClass: "ceph-block"  # Replace with your Ceph Block storage class name
+        ingress:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+          ingressClassName: nginx
+          tls: true
+          hosts:
+            - host: keycloak.infra.hnatekmar.dev
+              paths:
+                - path: /
+                  pathType: Prefix
+        # Optional: Customize other parameters like service type, replicas, etc.
+        # service:
+        #   type: LoadBalancer
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: keycloak  # Replace with your desired namespace

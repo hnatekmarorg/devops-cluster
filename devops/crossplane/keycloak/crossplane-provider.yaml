@@ -10,9 +10,12 @@ spec:
 apiVersion: keycloak.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
-  name: master
+  name: master-realm
   namespace: crossplane-system
 spec:
   credentials:
+    source: Secret
     secretRef:
-      name: 
+      name: keycloak-master-realm
+      key: credentials
+      namespace: crossplane-system

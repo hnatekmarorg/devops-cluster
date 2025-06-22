@@ -19,6 +19,8 @@ spec:
     targetRevision: 12.0.0  # Replace with the desired version
     helm:
       valuesObject:
+        metrics:
+          enabled: true
         persistence:
           enabled: true
           storageClass: "ceph-block"  # Replace with your Ceph Block storage class name
@@ -29,14 +31,6 @@ spec:
           ingressClassName: nginx
           tls: true
           hostname: keycloak.infra.hnatekmar.dev
-          hosts:
-            - host: keycloak.infra.hnatekmar.dev
-              paths:
-                - path: /
-                  pathType: Prefix
-        # Optional: Customize other parameters like service type, replicas, etc.
-        # service:
-        #   type: LoadBalancer
   destination:
     server: "https://kubernetes.default.svc"
     namespace: keycloak  # Replace with your desired namespace

@@ -1,0 +1,62 @@
+apiVersion: metal.sidero.dev/v1alpha2
+kind: ServerClass
+metadata:
+  name: worker-cpu-autoscale
+spec:
+  configPatches:
+    - op: replace
+      path: /machine/install/image
+      #    customization:
+      #    systemExtensions:
+      #        officialExtensions:
+      #            - siderolabs/amd-ucode
+      value: "factory.talos.dev/metal-installer/96f8c146a67c80daad900d3fc1a6976fe11062321eee9ab6ae2a6aea88b2d26e:v1.10.4"
+  selector:
+    matchLabels:
+      node/type: "cpu-autoscale"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
+kind: MetalMachineTemplate
+metadata:
+  name: main-workers-cpu-autoscale
+  namespace: default
+spec:
+  template:
+    spec:
+      serverClassRef:
+        apiVersion: metal.sidero.dev/v1alpha2
+        kind: ServerClass
+        name: worker-cpu-autoscale
+        namespace: default
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: main-workers-cpu-autoscale
+  namespace: default
+  annotations:
+    argocd.argoproj.io/skip-reconcile: "true"
+    capacity.cluster-autoscaler.kubernetes.io/memory: "512G"
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "0"
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "1"
+    capacity.cluster-autoscaler.kubernetes.io/cpu: "128"
+spec:
+  clusterName: main
+  replicas: 0
+  selector:
+    matchLabels: {}
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+          kind: TalosConfigTemplate
+          name: main-workers
+          namespace: default
+      clusterName: main
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
+        kind: MetalMachineTemplate
+        name: main-workers-cpu-autoscale
+        namespace: default
+      version: v1.33.0

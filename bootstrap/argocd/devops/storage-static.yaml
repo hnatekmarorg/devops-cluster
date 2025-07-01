@@ -1,0 +1,54 @@
+apiVersion: metal.sidero.dev/v1alpha2
+kind: ServerClass
+metadata:
+  name: worker-cpu
+spec:
+  selector:
+    matchLabels:
+      node/type: "cpu"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
+kind: MetalMachineTemplate
+metadata:
+  name: main-workers-cpu
+  namespace: default
+spec:
+  template:
+    spec:
+      serverClassRef:
+        apiVersion: metal.sidero.dev/v1alpha2
+        kind: ServerClass
+        name: worker-cpu
+        namespace: default
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: main-workers-cpu
+  namespace: default
+spec:
+  clusterName: main
+  replicas: 1
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: main
+      cluster.x-k8s.io/deployment-name: main-workers-cpu
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: main
+        cluster.x-k8s.io/deployment-name: main-workers-cpu
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+          kind: TalosConfigTemplate
+          name: main-workers
+          namespace: default
+      clusterName: main
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
+        kind: MetalMachineTemplate
+        name: main-workers-cpu
+        namespace: default
+      version: v1.33.0

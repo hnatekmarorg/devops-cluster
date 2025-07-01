@@ -1,16 +1,21 @@
 apiVersion: metal.sidero.dev/v1alpha2
 kind: ServerClass
 metadata:
-  name: worker-cpu
+  name: worker-storage
 spec:
+  configPatches:
+    - op: replace
+      path: /machine/nodeTaints
+      value:
+        node/type: storage:NoSchedule
   selector:
     matchLabels:
-      node/type: "cpu"
+      node/type: "storage"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
 kind: MetalMachineTemplate
 metadata:
-  name: main-workers-cpu
+  name: main-workers-storage
   namespace: default
 spec:
   template:
@@ -18,13 +23,13 @@ spec:
       serverClassRef:
         apiVersion: metal.sidero.dev/v1alpha2
         kind: ServerClass
-        name: worker-cpu
+        name: worker-storage
         namespace: default
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: main-workers-cpu
+  name: main-workers-storage
   namespace: default
 spec:
   clusterName: main
@@ -32,12 +37,12 @@ spec:
   selector:
     matchLabels:
       cluster.x-k8s.io/cluster-name: main
-      cluster.x-k8s.io/deployment-name: main-workers-cpu
+      cluster.x-k8s.io/deployment-name: main-workers-storage
   template:
     metadata:
       labels:
         cluster.x-k8s.io/cluster-name: main
-        cluster.x-k8s.io/deployment-name: main-workers-cpu
+        cluster.x-k8s.io/deployment-name: main-workers-storage
     spec:
       bootstrap:
         configRef:
@@ -49,6 +54,6 @@ spec:
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
         kind: MetalMachineTemplate
-        name: main-workers-cpu
+        name: main-workers-storage
         namespace: default
       version: v1.33.0

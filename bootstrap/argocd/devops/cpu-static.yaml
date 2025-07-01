@@ -28,9 +28,9 @@ metadata:
   namespace: default
 spec:
   clusterName: main
-  replicas: 2
+  replicas: 1
   selector:
-    matchLabels: null
+    matchLabels: {}
   template:
     spec:
       bootstrap:

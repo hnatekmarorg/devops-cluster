@@ -1,0 +1,4 @@
+# https://raw.githubusercontent.com/kubernetes/autoscaler/refs/heads/master/charts/cluster-autoscaler/values.yaml
+cloudProvider: clusterapi
+clusterAPIKubeconfigSecret: mgmt-cluster
+clusterAPIMode: incluster-kubeconfig

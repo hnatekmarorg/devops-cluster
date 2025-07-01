@@ -44,7 +44,7 @@ spec:
           path: /machine/install/disk
           value: /dev/sda
       generateType: controlplane
-      talosVersion: v1.10.2
+      talosVersion: v1.10.4
   infrastructureTemplate:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
     kind: MetalMachineTemplate

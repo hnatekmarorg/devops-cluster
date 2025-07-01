@@ -6,7 +6,13 @@ spec:
   configPatches:
     - op: replace
       path: /machine/install/image
-      value: "factory.talos.dev/metal-installer/a5ce1cbe595e5d591428776691466c07b2b681eabb65fbb7ff943621689937de:v1.10.4" 
+      #    customization:
+      #      systemExtensions:
+      #        officialExtensions:
+      #          - siderolabs/amd-ucode
+      #          - siderolabs/nonfree-kmod-nvidia-production
+      #          - siderolabs/nvidia-container-toolkit-production
+      value: "factory.talos.dev/metal-installer/a5ce1cbe595e5d591428776691466c07b2b681eabb65fbb7ff943621689937de:v1.10.4"
     - op: add
       path: /machine/kernel
       value:
@@ -21,7 +27,7 @@ spec:
         net.core.bpf_jit_harden: 1
   selector:
     matchLabels:
-      node/type: "gpu"
+      node/type: "gpu-autoscale"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
 kind: MetalMachineTemplate
@@ -30,9 +36,6 @@ metadata:
   namespace: default
 spec:
   template:
-    metadata:
-      labels:
-        node/type: "gpu"
     spec:
       serverClassRef:
         apiVersion: metal.sidero.dev/v1alpha2
@@ -45,11 +48,19 @@ kind: MachineDeployment
 metadata:
   name: main-workers-gpu
   namespace: default
+  annotations:
+    argocd.argoproj.io/skip-reconcile: "true"
+    capacity.cluster-autoscaler.kubernetes.io/memory: "512G"
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "0"
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "1"
+    capacity.cluster-autoscaler.kubernetes.io/gpu-type: "nvidia.com/gpu"
+    capacity.cluster-autoscaler.kubernetes.io/gpu-count: "4"
+    capacity.cluster-autoscaler.kubernetes.io/cpu: "48"
 spec:
   clusterName: main
-  replicas: 1
+  replicas: 0
   selector:
-    matchLabels: null
+    matchLabels: {}
   template:
     spec:
       bootstrap:

@@ -44,8 +44,14 @@ spec:
   clusterName: main
   replicas: 0
   selector:
-    matchLabels: {}
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: main
+      cluster.x-k8s.io/deployment-name: main-workers-cpu-autoscale
   template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: main
+        cluster.x-k8s.io/deployment-name: main-workers-cpu-autoscale
     spec:
       bootstrap:
         configRef:

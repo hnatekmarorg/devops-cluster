@@ -2,5 +2,9 @@
 cloudProvider: clusterapi
 clusterAPIKubeconfigSecret: mgmt-cluster
 clusterAPIMode: incluster-kubeconfig
+extraVolumeMounts:
+  - name: cluster-api-kubeconfig
+    mountPath: /etc/kubernetes/mgmt-kubeconfig
+    readOnly: true
 autoDiscovery:
   clusterName: main

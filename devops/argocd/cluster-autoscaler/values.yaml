@@ -2,6 +2,7 @@
 cloudProvider: clusterapi
 clusterAPIKubeconfigSecret: mgmt-cluster
 clusterAPIMode: incluster-kubeconfig
+clusterAPICloudConfigPath: /etc/kubernetes/mgmt-kubeconfig/kubeconfig
 extraVolumeMounts:
   - name: cluster-api-kubeconfig
     mountPath: /etc/kubernetes/mgmt-kubeconfig

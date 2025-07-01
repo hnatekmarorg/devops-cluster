@@ -3,7 +3,7 @@ kind: ServerClass
 metadata:
   name: worker-cpu-autoscale
 spec:
-  configPatches:
+#  configPatches:
 #    - op: replace
 #      path: /machine/install/image
 #      #    customization:

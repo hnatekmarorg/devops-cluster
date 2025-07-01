@@ -50,12 +50,10 @@ metadata:
   namespace: default
   annotations:
     argocd.argoproj.io/skip-reconcile: "true"
-    capacity.cluster-autoscaler.kubernetes.io/memory: "512G"
     cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "0"
     cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "1"
     capacity.cluster-autoscaler.kubernetes.io/gpu-type: "nvidia.com/gpu"
     capacity.cluster-autoscaler.kubernetes.io/gpu-count: "4"
-    capacity.cluster-autoscaler.kubernetes.io/cpu: "48"
 spec:
   clusterName: main
   replicas: 0

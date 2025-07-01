@@ -8,7 +8,7 @@ spec:
   syncPolicy:
     syncOptions:
       - ServerSideApply=true
-      - Validate=false
+      - Validate=true
     automated:
       selfHeal: true
   destination:

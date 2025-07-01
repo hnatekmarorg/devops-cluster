@@ -34,6 +34,10 @@ spec:
       cluster.x-k8s.io/cluster-name: main
       cluster.x-k8s.io/deployment-name: main-workers-cpu
   template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: main
+        cluster.x-k8s.io/deployment-name: main-workers-cpu
     spec:
       bootstrap:
         configRef:

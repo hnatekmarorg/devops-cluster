@@ -30,7 +30,9 @@ spec:
   clusterName: main
   replicas: 1
   selector:
-    matchLabels: {}
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: main
+      cluster.x-k8s.io/deployment-name: main-workers-cpu
   template:
     spec:
       bootstrap:

@@ -4,7 +4,7 @@ prometheus:
     serviceMonitorSelectorNilUsesHelmValues: false
     storageSpec:
       emptyDir:
-        medium: memory
+        medium: Memory
 grafana:
   extraSecretMounts:
     - name: auth-generic-oauth-secret-mount

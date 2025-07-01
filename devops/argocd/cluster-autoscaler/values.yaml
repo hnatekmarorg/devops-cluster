@@ -2,3 +2,5 @@
 cloudProvider: clusterapi
 clusterAPIKubeconfigSecret: mgmt-cluster
 clusterAPIMode: incluster-kubeconfig
+autoDiscovery:
+  clusterName: main

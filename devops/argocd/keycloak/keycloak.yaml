@@ -23,7 +23,7 @@ spec:
           enabled: true
         persistence:
           enabled: true
-          storageClass: "ceph-block"  # Replace with your Ceph Block storage class name
+          storageClass: "longhorn"  # Replace with your Ceph Block storage class name
         ingress:
           enabled: true
           annotations:

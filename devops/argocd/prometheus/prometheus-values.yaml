@@ -3,8 +3,13 @@ prometheus:
     podMonitorSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
     storageSpec:
-      emptyDir:
-        medium: Memory
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes: [ "ReadWriteOnce" ]
+          resources:
+            requests:
+              storage: 25Gi
 grafana:
   extraSecretMounts:
     - name: auth-generic-oauth-secret-mount

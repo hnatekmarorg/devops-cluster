@@ -19,6 +19,9 @@ spec:
     targetRevision: 24.7.5  # Replace with the desired version
     helm:
       valuesObject:
+        extraEnvVars:
+          - name: JAVA_OPTS_APPEND
+            value: "-Dcom.redhat.fips=false"
         metrics:
           enabled: true
         persistence:

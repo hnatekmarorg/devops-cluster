@@ -28,4 +28,4 @@ spec:
           securityContext:
             privileged: true
             runAsUser: 0
-          command: ["/bin/sh", "-c", "apk add parted iputils parted iperf util-linux sgdisk lsblk && sleep infinity"]
+          command: ["/bin/sh", "-c", "apk add git git-lfs parted iputils parted iperf util-linux sgdisk lsblk && sleep infinity"]

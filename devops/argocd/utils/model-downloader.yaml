@@ -1,17 +1,22 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: disk-manager
+  name: model-downloader
   namespace: kube-system
 spec:
   selector:
     matchLabels:
-      app: disk-manager
+      app: model-downloader
   template:
     metadata:
       labels:
-        app: disk-manager
+        app: model-downloader
     spec:
+      volumes:
+        - name: nas
+          nfs:
+            server: 192.168.88.25
+            path: /mnt/data/k8s
       hostNetwork: true
       tolerations:
         - key: "node-role.talos.dev/master"
@@ -25,7 +30,10 @@ spec:
       containers:
         - name: disk-tools
           image: alpine:latest
+          volumeMounts:
+            - mountPath: /mnt/data/k8s
+              name: nas
           securityContext:
             privileged: true
             runAsUser: 0
-          command: ["/bin/sh", "-c", "apk add parted iputils parted iperf util-linux sgdisk lsblk && sleep infinity"]
+          command: ["/bin/sh", "-c", "apk add git git-lfs && sleep infinity"]

@@ -6,7 +6,8 @@ metadata:
 spec:
   project: default
   ignoreDifferences:
-    - kind: MachineDeployment
+    - kind: "*"
+      group: "*"
       namespace: default
       jsonPointers:
         - /spec/replicas

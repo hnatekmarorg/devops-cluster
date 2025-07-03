@@ -41,4 +41,4 @@ spec:
   template:
     spec:
       generateType: join
-      talosVersion: v1.10.2
+      talosVersion: v1.10.4

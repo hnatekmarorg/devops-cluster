@@ -5,15 +5,6 @@ metadata:
 spec:
   configPatches:
     - op: replace
-      path: /machine/install/image
-      #    customization:
-      #      systemExtensions:
-      #        officialExtensions:
-      #          - siderolabs/amd-ucode
-      #          - siderolabs/nonfree-kmod-nvidia-production
-      #          - siderolabs/nvidia-container-toolkit-production
-      value: "factory.talos.dev/metal-installer/a5ce1cbe595e5d591428776691466c07b2b681eabb65fbb7ff943621689937de:v1.10.4"
-    - op: add
       path: /machine/kernel
       value:
         modules:

@@ -13,7 +13,9 @@ spec:
   syncPolicy:
     syncOptions:
       - ServerSideApply=true
-      - Validate=true
+      - RespectIgnoreDifferences=true
+    automated:
+      selfHeal: true
   destination:
     server: "https://kubernetes.default.svc"
     namespace: argocd

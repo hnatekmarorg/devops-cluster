@@ -10,7 +10,7 @@ spec:
   source:
     chart: ingress-nginx
     repoURL: https://kubernetes.github.io/ingress-nginx
-    targetRevision: 4.12.2
+    targetRevision: 4.12.3
     helm:
       releaseName: ingress-nginx
       valuesObject:
@@ -21,7 +21,6 @@ spec:
               enabled: true
               additionalLabels:
                 release: "prometheus"
-            
   destination:
     server: "https://kubernetes.default.svc"
     namespace: nginx

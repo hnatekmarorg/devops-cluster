@@ -3,6 +3,31 @@ kind: ServerClass
 metadata:
   name: worker-cpu-autoscale
 spec:
+  configPatches:
+    - op: replace
+      path: /machine/install/image
+      value: factory.talos.dev/metal-installer/743d53d3c9cc1942e0a3fc7167565665ea25823e6261d82bf022e9a9e50ed84d:v1.10.4
+    - op: replace
+      path: /machine/sysctls
+      value:
+        vm.nr_hugepages: "1024"
+    - op: replace
+      path: /machine/kernel
+      value:
+        modules:
+          - name: nvme_tcp
+          - name: vfio_pci
+          - name: uio_pci_generic
+    - op: replace
+      path: /machine/kubelet/extraMounts
+      value:
+        - destination: /var/lib/longhorn
+          type: bind
+          source: /var/lib/longhorn
+          options:
+            - bind
+            - rshared
+            - rw
 #  configPatches:
 #    - op: replace
 #      path: /machine/install/image

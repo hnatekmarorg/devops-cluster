@@ -5,6 +5,9 @@ metadata:
 spec:
   configPatches:
     - op: replace
+      path: /machine/install/image
+      value: factory.talos.dev/metal-installer/f94d6ccfd2bdd87123a1686350355b80fa43cdf73c910d35c0087e0c0e5e9710:v1.10.4
+    - op: replace
       path: /machine/kernel
       value:
         modules:
@@ -12,10 +15,14 @@ spec:
           - name: nvidia_uvm
           - name: nvidia_drm
           - name: nvidia_modeset
+          - name: nvme_tcp
+          - name: vfio_pci
+          - name: uio_pci_generic
     - op: replace
       path: /machine/sysctls
       value:
         net.core.bpf_jit_harden: 1
+        vm.nr_hugepages: "1024"
   selector:
     matchLabels:
       node/type: "gpu-autoscale"
@@ -40,11 +47,12 @@ metadata:
   name: main-workers-gpu
   namespace: default
   annotations:
-    argocd.argoproj.io/skip-reconcile: "true"
     cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "0"
     cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "1"
     capacity.cluster-autoscaler.kubernetes.io/gpu-type: "nvidia.com/gpu"
     capacity.cluster-autoscaler.kubernetes.io/gpu-count: "4"
+    capacity.cluster-autoscaler.kubernetes.io/memory: "512G"
+    capacity.cluster-autoscaler.kubernetes.io/cpu: "96"
 spec:
   clusterName: main
   replicas: 0

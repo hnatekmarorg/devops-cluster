@@ -51,8 +51,6 @@ metadata:
     cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "1"
     capacity.cluster-autoscaler.kubernetes.io/gpu-type: "nvidia.com/gpu"
     capacity.cluster-autoscaler.kubernetes.io/gpu-count: "4"
-    k8s.io/cluster-autoscaler/node-template/label/nvidia.com/gpu: "true"
-    k8s.io/cluster-autoscaler/node-template/resources/nvidia.com/gpu: "4"
     capacity.cluster-autoscaler.kubernetes.io/memory: "512G"
     capacity.cluster-autoscaler.kubernetes.io/cpu: "96"
 spec:

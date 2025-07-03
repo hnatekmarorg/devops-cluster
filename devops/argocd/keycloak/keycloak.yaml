@@ -16,7 +16,7 @@ spec:
   source:
     chart: keycloak
     repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: 24.7.5  # Replace with the desired version
+    targetRevision: 23.0.0  # Replace with the desired version
     helm:
       valuesObject:
         extraEnvVars:

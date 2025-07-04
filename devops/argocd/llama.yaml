@@ -21,6 +21,8 @@ spec:
           models:
             - name: agatha
               args:
+                - -c
+                - "64000"
                 - -ngl
                 - "99"
                 - --flash-attn

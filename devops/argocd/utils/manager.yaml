@@ -24,6 +24,10 @@ spec:
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
           effect: "NoSchedule"
+        - key: "node/type"
+          operator: "Equal"
+          value: "storage"
+          effect: "NoSchedule"
         - key: "CriticalAddonsOnly"
           operator: "Exists"
       containers:

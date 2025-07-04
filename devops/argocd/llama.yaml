@@ -19,7 +19,7 @@ spec:
       helm:
         valuesObject:
           models:
-            - name: qwen2.5-coder # exl2 example
+            - name: qwen2-5-coder # exl2 example
               engine: aphrodite
               replicas: 1
               resources:

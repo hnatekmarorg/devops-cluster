@@ -11,7 +11,7 @@ spec:
       path: /machine/sysctls
       value:
         vm.nr_hugepages: "1024"
-    - op: replace
+    - op: add
       path: /machine/kubelet/extraArgs/registerWithTaints
       value:
         - key: node/type

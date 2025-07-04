@@ -1,7 +1,7 @@
 llm:
   host: llm.hnatekmar.dev
   llama_cpp:
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b5664
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
 
 ingress:
   host: llama.hnatekmar.dev

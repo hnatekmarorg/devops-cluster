@@ -27,7 +27,7 @@ spec:
           resources:
             {{toYaml .resources | nindent 12}}
           image: {{ $.Values.llm.llama_cpp.image }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           args: {{ toYaml .args | nindent 12}}
           volumeMounts:
             - mountPath: /models

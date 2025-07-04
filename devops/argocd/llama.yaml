@@ -28,7 +28,7 @@ spec:
                   nvidia.com/gpu: 3
                 limits:
                   nvidia.com/gpu: 3
-            - name: Valkyrie-49B
+            - name: valkyrie-49b
               args:
                 - -ngl
                 - "99"

@@ -1,0 +1,26 @@
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: storage
+  namespace: longhorn-system
+spec:
+  name: storage
+  disks:
+    sdb:
+      allowScheduling: true
+      diskType: filesystem
+      path: /var/mnt/sdb
+      tags:
+        - hdd
+    sdc:
+      allowScheduling: true
+      diskType: filesystem
+      path: /var/mnt/sdc
+      tags:
+        - hdd
+    sdd:
+      allowScheduling: true
+      diskType: filesystem
+      path: /var/mnt/sdd
+      tags:
+        - hdd

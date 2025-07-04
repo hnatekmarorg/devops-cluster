@@ -1,0 +1,91 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llama-cpp
+  namespace: argocd  # or your Argo CD namespace
+spec:
+  project: default
+  sources:
+    - name: chart
+      repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      chart: llama.cpp
+      path: charts
+      targetRevision: main
+      helm:
+        valuesObject:
+          models:
+            - name: agatha
+              args:
+                - -ngl
+                - "99"
+                - --flash-attn
+                - --numa
+                - distribute
+                - -m
+                - /models/gguf/agatha/TheDrummer_Agatha-111B-v1-Q4_K_S-00001-of-00002.gguf
+              selector: { }
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+            - name: Valkyrie-49B
+              args:
+                - -ngl
+                - "99"
+                - --flash-attn
+                - --numa
+                - distribute
+                - -m
+                - /models/gguf/TheDrummer_Valkyrie-49B-v1-Q5_K_M.gguf
+              selector: { }
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+            - name: qwen3-235b
+              args:
+                - --jinja
+                - -c
+                - "32768"
+                - -ngl
+                - "99"
+                - --no-mmap
+                - --flash-attn
+                - --numa
+                - distribute
+                - --override-tensor
+                - blk\.[0-9][0-7]?\.ffn.*exps.*=CPU
+                - -m
+                - /models/gguf/Qwen-235B/Qwen3-235B-A22B-128K-UD-Q8_K_XL-00001-of-00006.gguf
+              selector: { }
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+            - name: qwen3-32b
+              args:
+                - --jinja
+                - "-m"
+                - "/models/gguf/Qwen3-32B-Q5_K_M.gguf"
+                - "-ngl"
+                - "99"
+              selector: { }
+              resources:
+                requests:
+                  nvidia.com/gpu: 1
+                limits:
+                  nvidia.com/gpu: 1
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

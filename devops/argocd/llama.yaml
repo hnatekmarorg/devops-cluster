@@ -9,7 +9,7 @@ spec:
     - name: chart
       repoURL: https://github.com/hnatekmarorg/devops-cluster.git
       chart: llama-cpp
-      path: charts
+      path: charts/llama-cpp
       targetRevision: main
       helm:
         valuesObject:

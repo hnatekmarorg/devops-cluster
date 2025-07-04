@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llama-swap
+data:
+  config.yaml: |
+    models:
+    {{range .Values.models}}
+      {{.name | quote}}:
+        cmd: sleep infinity
+        healthCheckTimeout: 999999
+        proxy: {{printf "https://%s/%s" $.Values.llm.host .name }}
+    {{end}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-swap
+  labels:
+    app: llama-swap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama-swap
+  template:
+    metadata:
+      name: llama-swap
+      labels:
+        app: llama-swap
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: llama-swap
+            items:
+              - key: config.yaml
+                path: config.yaml
+      containers:
+        - name: llama-swap
+          image: ghcr.io/mostlygeek/llama-swap:cpu
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /mnt
+              name: config
+          args:
+            - -config
+            - /mnt/config.yaml
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-swap
+spec:
+  selector:
+    app: llama-swap
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: llama-swap
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{.Values.ingress.host}}
+      secretName: llama-swap
+  rules:
+    - host: {{.Values.ingress.host}}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: llama-swap
+                port:
+                  number: 8080

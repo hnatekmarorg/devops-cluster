@@ -1,0 +1,81 @@
+{{ range  .Values.models }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.name}}
+  labels:
+    llm: {{.name}}
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      llm: {{.name}}
+  template:
+    metadata:
+      name: {{.name}}
+      labels:
+        llm: {{.name}}
+    spec:
+      runtimeClassName: nvidia
+      volumes:
+        - name: nas
+          nfs:
+            server: 192.168.88.25
+            path: /mnt/data/k8s/ai
+      containers:
+        - name: llamacpp
+          resources:
+            {{toYaml .resources | nindent 12}}
+          image: {{ $.Values.llm.llama_cpp.image }}
+          imagePullPolicy: IfNotPresent
+          args: {{ toYaml .args | nindent 12}}
+          volumeMounts:
+            - mountPath: /models
+              name: nas
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: http
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.name}}
+spec:
+  selector:
+    llm: {{.name}}
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+{{end}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{$.Values.llm.host}}
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{$.Values.llm.host}}
+      secretName: {{$.Values.llm.host}}
+  rules:
+{{ range  .Values.models }}
+    - host: {{$.Values.llm.host}}
+      http:
+        paths:
+          - path: /{{.name}}(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{.name}}
+                port:
+                  number: 8080
+{{end}}

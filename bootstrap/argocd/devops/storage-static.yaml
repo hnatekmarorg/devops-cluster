@@ -12,12 +12,11 @@ spec:
       value:
         vm.nr_hugepages: "1024"
     - op: replace
-      path: /machine/kubelet/extraArgs
-      value: |
-        registerWithTaints:
-          - key: node/type
-            effect: NoSchedule
-            value: storage
+      path: /machine/kubelet/extraArgs/registerWithTaints
+      value:
+        - key: node/type
+          effect: NoSchedule
+          value: storage
     - op: replace
       path: /machine/kernel
       value:

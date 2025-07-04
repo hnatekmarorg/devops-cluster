@@ -5,6 +5,12 @@ metadata:
   namespace: argocd  # or your Argo CD namespace
 spec:
   project: default
+  ignoreDifferences:
+    - kind: "*"
+      group: "*"
+      namespace: default
+      jsonPointers:
+        - /spec/replicas
   sources:
     - name: chart
       repoURL: https://github.com/hnatekmarorg/devops-cluster.git

@@ -8,7 +8,7 @@ spec:
   ignoreDifferences:
     - kind: "*"
       group: "*"
-      namespace: default
+      namespace: inference
       jsonPointers:
         - /spec/replicas
   sources:

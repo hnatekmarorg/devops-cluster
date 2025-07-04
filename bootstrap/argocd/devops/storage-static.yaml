@@ -13,7 +13,7 @@ spec:
         vm.nr_hugepages: "1024"
     - op: replace
       path: /machine/kubelet/extraArgs
-      value:
+      value: |
         registerWithTaints:
           - key: node/type
             effect: NoSchedule

@@ -4,7 +4,7 @@ kind: ScaledObject
 metadata:
   name: {{.name}}
 spec:
-  cooldownPeriod: 300
+  cooldownPeriod: 120
   maxReplicaCount: {{.replicas | default 1}}
   pollingInterval: 15
   scaleTargetRef:
@@ -14,6 +14,6 @@ spec:
     metadata:
       serverAddress: http://kube-prometheus-stack-prometheus.prometheus.svc.cluster.local:9090
       threshold: '1'
-      query: {{ printf "sum(rate(nginx_ingress_controller_requests{host=\"%s\", path=\"/%s(/|$)(.*)\"}[5m]))" $.Values.llm.host .name }}
+      query: {{ printf "sum(rate(nginx_ingress_controller_requests{host=\"%s\", path=\"/%s(/|$)(.*)\"}[1m]))" $.Values.llm.host .name }}
 ---
 {{- end -}}

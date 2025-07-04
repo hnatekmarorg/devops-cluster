@@ -33,7 +33,7 @@ spec:
                 - --port
                 - "8080"
                 - --model
-                - /models/exl2/Qwen2.5-Coder-32B-Instruct-exl2
+                - /models/awq/Qwen2.5-Coder-32B-Instruct-AWQ
             - name: agatha
               args:
                 - -c

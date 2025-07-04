@@ -26,7 +26,11 @@ spec:
         - name: llamacpp
           resources:
             {{toYaml .resources | nindent 12}}
+          {{- if eq (.engine | default "llama") "aphrodite" }}
+          image: {{ $.Values.llm.vllm.image }}
+          {{- else }}
           image: {{ $.Values.llm.llama_cpp.image }}
+          {{- end }}
           imagePullPolicy: Always
           args: {{ toYaml .args | nindent 12}}
           volumeMounts:

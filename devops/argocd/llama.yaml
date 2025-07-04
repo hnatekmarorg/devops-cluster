@@ -19,6 +19,17 @@ spec:
       helm:
         valuesObject:
           models:
+            - name: qwen2.5-coder # exl2 example
+              engine: aphrodite
+              replicas: 1
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+              args:
+                - run
+                - /models/exl2/Qwen2.5-Coder-32B-Instruct-exl2
             - name: agatha
               args:
                 - -c

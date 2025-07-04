@@ -5,7 +5,7 @@ metadata:
   name: {{.name}}
 spec:
   cooldownPeriod: 300
-  maxReplicaCount: 1
+  maxReplicaCount: {{.replicas | default 1}}
   pollingInterval: 15
   scaleTargetRef:
     name: {{.name}}

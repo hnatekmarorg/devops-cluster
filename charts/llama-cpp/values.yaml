@@ -1,5 +1,7 @@
 llm:
   host: llm.hnatekmar.dev
+  vllm:
+    image: alpindale/aphrodite-openai:latest
   llama_cpp:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
 
@@ -7,6 +9,17 @@ ingress:
   host: llama.hnatekmar.dev
 
 models:
+  - name: qwen2.5-coder # exl2 example
+    engine: aphrodite
+    replicas: 1
+    resources:
+      requests:
+        nvidia.com/gpu: 3
+      limits:
+        nvidia.com/gpu: 3
+    args:
+      - run
+      - /models/exl2/Qwen2.5-Coder-32B-Instruct-exl2
   - name: qwen3
     args:
       - --jinja
@@ -15,6 +28,7 @@ models:
       - "-ngl"
       - "99"
     selector: {}
+    replicas: 3
     resources:
       requests:
         nvidia.com/gpu: 1

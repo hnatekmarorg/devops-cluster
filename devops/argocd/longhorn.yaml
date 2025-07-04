@@ -27,6 +27,8 @@ spec:
       targetRevision: v1.9.0 # Replace with the Longhorn version you'd like to install or upgrade to
       helm:
         values: |
+          defaultSettings:
+            kubernetesClusterAutoscalerEnabled: true
           preUpgradeChecker:
             jobEnabled: false
   destination:

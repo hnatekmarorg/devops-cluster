@@ -21,19 +21,37 @@ spec:
           models:
             - name: qwen2-5-coder # exl2 example
               engine: aphrodite
-              replicas: 1
+              replicas: 3
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 1
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 1
               args:
                 - --host
                 - "0.0.0.0"
                 - --port
                 - "8080"
+                - -enable-auto-tool-choice
                 - --model
                 - /models/awq/Qwen2.5-Coder-32B-Instruct-AWQ
+            - name: fallen-llama
+              args:
+                - -c
+                - "64000"
+                - -ngl
+                - "99"
+                - --flash-attn
+                - --numa
+                - distribute
+                - -m
+                - /models/gguf/agatha/TheDrummer_Fallen-Llama-3.3-R1-70B-v1-Q4_K_L.gguf
+              selector: { }
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
             - name: agatha
               args:
                 - -c

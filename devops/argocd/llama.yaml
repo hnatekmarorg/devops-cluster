@@ -45,7 +45,7 @@ spec:
                 - --numa
                 - distribute
                 - -m
-                - /models/gguf/agatha/TheDrummer_Fallen-Llama-3.3-R1-70B-v1-Q4_K_L.gguf
+                - /models/gguf/TheDrummer_Fallen-Llama-3.3-R1-70B-v1-Q4_K_L.gguf
               selector: { }
               resources:
                 requests:

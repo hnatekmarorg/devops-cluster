@@ -31,6 +31,18 @@ spec:
             kubernetesClusterAutoscalerEnabled: true
           preUpgradeChecker:
             jobEnabled: false
+          longhornManager:
+            tolerations:
+            - key: "node/type"
+              operator: "Equal"
+              value: "storage"
+              effect: "NoSchedule"
+          longhornDriver:
+            tolerations:
+            - key: "node/type"
+              operator: "Equal"
+              value: "storage"
+              effect: "NoSchedule"
   destination:
     server: https://kubernetes.default.svc
     namespace: longhorn-system

@@ -1,5 +1,4 @@
 {{- range .Values.models -}}
----
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -16,4 +15,5 @@ spec:
       serverAddress: http://kube-prometheus-stack-prometheus.prometheus.svc.cluster.local:9090
       threshold: '1'
       query: {{ printf "sum(rate(nginx_ingress_controller_requests{host=\"%s\", path=\"/%s(/|$)(.*)\"}[5m]))" $.Values.llm.host .name }}
+---
 {{- end -}}

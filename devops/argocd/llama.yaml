@@ -28,7 +28,11 @@ spec:
                 limits:
                   nvidia.com/gpu: 3
               args:
-                - run
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --model
                 - /models/exl2/Qwen2.5-Coder-32B-Instruct-exl2
             - name: agatha
               args:

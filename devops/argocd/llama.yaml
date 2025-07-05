@@ -28,12 +28,14 @@ spec:
                 limits:
                   nvidia.com/gpu: 1
               args:
-                - --host
+                - "--host"
                 - "0.0.0.0"
-                - --port
+                - "--port"
                 - "8080"
-                - --model
-                - /models/awq/Qwen2.5-Coder-32B-Instruct-AWQ
+                - "--tensor-parallel-size"
+                - "4"
+                - "--model"
+                - "/models/awq/Qwen2.5-Coder-32B-Instruct-AWQ"
             - name: fallen-llama
               args:
                 - -c

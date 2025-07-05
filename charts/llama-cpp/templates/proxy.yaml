@@ -12,7 +12,7 @@ data:
         {{- if eq (.engine | default "llama") "aphrodite" }}
         proxy: {{printf "https://%s/%s/api" $.Values.llm.host .name }}
         {{- else }}
-        proxy: {{printf "https://%s/%s" $.Values.llm.host .name }}
+        proxy: {{printf "https://%s/%s/api/v1" $.Values.llm.host .name }}
         {{- end }}
     {{end}}
 ---

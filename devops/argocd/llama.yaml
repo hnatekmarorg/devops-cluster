@@ -24,9 +24,9 @@ spec:
               replicas: 3
               resources:
                 requests:
-                  nvidia.com/gpu: 1
+                  nvidia.com/gpu: 2
                 limits:
-                  nvidia.com/gpu: 1
+                  nvidia.com/gpu: 2
               args:
                 - "--host"
                 - "0.0.0.0"

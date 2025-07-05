@@ -26,7 +26,7 @@ spec:
                 requests:
                   nvidia.com/gpu: 1
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 1
               args:
                 - --host
                 - "0.0.0.0"

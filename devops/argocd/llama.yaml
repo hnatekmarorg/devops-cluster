@@ -71,21 +71,24 @@ spec:
                   nvidia.com/gpu: 3
                 limits:
                   nvidia.com/gpu: 3
-            - name: valkyrie-49b
+            - name: fallen-command
               args:
+                - -c
+                - "64000"
                 - -ngl
                 - "99"
                 - --flash-attn
                 - --numa
                 - distribute
                 - -m
-                - /models/gguf/TheDrummer_Valkyrie-49B-v1-Q5_K_M.gguf
+                - /models/gguf/fallen-command/TheDrummer_Fallen-Command-A-111B-v1.1-Q4_K_S-00001-of-00002.gguf
               selector: { }
               resources:
                 requests:
                   nvidia.com/gpu: 3
                 limits:
                   nvidia.com/gpu: 3
+
             - name: qwen3-235b
               args:
                 - --jinja
@@ -117,9 +120,9 @@ spec:
               selector: { }
               resources:
                 requests:
-                  nvidia.com/gpu: 1
+                  memory: "300Gi"
                 limits:
-                  nvidia.com/gpu: 1
+                  memory: "300Gi"
 
   destination:
     server: https://kubernetes.default.svc

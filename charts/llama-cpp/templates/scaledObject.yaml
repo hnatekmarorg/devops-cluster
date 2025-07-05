@@ -4,7 +4,7 @@ kind: ScaledObject
 metadata:
   name: {{.name}}
 spec:
-  cooldownPeriod: 120
+  cooldownPeriod: {{ .cooldownPeriod | default 120 }}
   maxReplicaCount: {{.replicas | default 1}}
   pollingInterval: 15
   scaleTargetRef:

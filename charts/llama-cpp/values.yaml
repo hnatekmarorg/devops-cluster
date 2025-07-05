@@ -20,6 +20,7 @@ models:
     args:
       - run
       - /models/exl2/Qwen2.5-Coder-32B-Instruct-exl2
+    cooldownPeriod: 120
   - name: qwen3
     args:
       - --jinja
@@ -34,6 +35,7 @@ models:
         nvidia.com/gpu: 1
       limits:
         nvidia.com/gpu: 1
+    cooldownPeriod: 120
   - name: qwen3
     args:
       - --jinja
@@ -47,3 +49,4 @@ models:
         nvidia.com/gpu: 1
       limits:
         nvidia.com/gpu: 1
+    cooldownPeriod: 120

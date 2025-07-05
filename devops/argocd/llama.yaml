@@ -32,7 +32,7 @@ spec:
                 - "0.0.0.0"
                 - --port
                 - "8080"
-                - -enable-auto-tool-choice
+                - --enable-auto-tool-choice
                 - --model
                 - /models/awq/Qwen2.5-Coder-32B-Instruct-AWQ
             - name: fallen-llama

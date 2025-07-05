@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: silly-tavern
+  namespace: silly-tavern
+data:
+  config.yaml: |
+    listen: true
+    whitelistMode: false
+    basicAuthMode: true
+    basicAuthUser:
+      username: "user"
+      password: "proxmox"

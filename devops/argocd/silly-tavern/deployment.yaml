@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: silly-tavern
+  namespace: silly-tavern
+  labels:
+    app: silly-tavern
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: silly-tavern
+  template:
+    metadata:
+      name: silly-tavern
+      labels:
+        app: silly-tavern
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: silly-tavern
+        - name: data
+          emptyDir:
+            medium: Memory
+        - name: plugins
+          emptyDir:
+            medium: Memory
+        - name: extensions
+          emptyDir:
+            medium: Memory
+      containers:
+        - name: silly-tavern
+          image: ghcr.io/sillytavern/sillytavern:latest
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: FORCE_COLOR
+              value: "1"
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /home/node/app/config
+              name: config
+            - mountPath: /home/node/app/data
+              name: data
+            - mountPath: /home/node/app/plugins
+              name: plugins
+            - mountPath: /home/node/app/public/scripts/extensions/third-party
+              name: extensions
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: silly-tavern
+  namespace: silly-tavern
+spec:
+  selector:
+    app: silly-tavern
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: silly-tavern
+  namespace: silly-tavern
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - tavern.hnatekmar.dev
+      secretName: tavern-tls
+  rules:
+    - host: tavern.hnatekmar.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: silly-tavern
+                port:
+                  number: 8000
+

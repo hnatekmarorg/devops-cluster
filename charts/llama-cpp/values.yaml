@@ -1,7 +1,7 @@
 llm:
   host: llm.hnatekmar.dev
   vllm:
-    image: alpindale/aphrodite-openai:latest
+    image: vllm/vllm-openai:latest
   llama_cpp:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
 
@@ -14,9 +14,9 @@ models:
     replicas: 1
     resources:
       requests:
-        nvidia.com/gpu: 3
+        nvidia.com/gpu: 2
       limits:
-        nvidia.com/gpu: 3
+        nvidia.com/gpu: 2
     args:
       - run
       - /models/exl2/Qwen2.5-Coder-32B-Instruct-exl2

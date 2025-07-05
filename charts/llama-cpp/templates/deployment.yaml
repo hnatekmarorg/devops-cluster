@@ -36,11 +36,17 @@ spec:
           volumeMounts:
             - mountPath: /models
               name: nas
+            - mountPath: /dev/shm
+              name: shm
+          volumeMounts:
+            - mountPath: /models
+              name: nas
           ports:
             - containerPort: 8080
               protocol: TCP
               name: http
       restartPolicy: Always
+      securityContext: {}
 ---
 apiVersion: v1
 kind: Service

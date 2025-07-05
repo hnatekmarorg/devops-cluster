@@ -18,6 +18,9 @@ spec:
     spec:
       runtimeClassName: nvidia
       volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
         - name: nas
           nfs:
             server: 192.168.88.25
@@ -38,9 +41,6 @@ spec:
               name: nas
             - mountPath: /dev/shm
               name: shm
-          volumeMounts:
-            - mountPath: /models
-              name: nas
           ports:
             - containerPort: 8080
               protocol: TCP

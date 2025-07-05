@@ -33,7 +33,7 @@ spec:
                 - "--port"
                 - "8080"
                 - "--tensor-parallel-size"
-                - "4"
+                - "2"
                 - "--model"
                 - "/models/awq/Qwen2.5-Coder-32B-Instruct-AWQ"
             - name: fallen-llama

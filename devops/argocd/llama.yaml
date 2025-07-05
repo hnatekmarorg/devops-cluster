@@ -22,6 +22,7 @@ spec:
             - name: qwen2-5-coder # exl2 example
               engine: aphrodite
               replicas: 3
+              cooldownPeriod: 600
               resources:
                 requests:
                   nvidia.com/gpu: 2

@@ -133,7 +133,7 @@ spec:
                 - "-m"
                 - "/models/gguf/Qwen-72B/Qwen2.5-VL-72B-Instruct-UD-Q5_K_XL-00001-of-00002.gguf"
                 - "-ngl"
-                - "99"
+                - "70"
               selector: { }
               resources:
                 requests:

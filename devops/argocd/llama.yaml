@@ -19,7 +19,7 @@ spec:
       helm:
         valuesObject:
           models:
-            - name: anubis-70b
+            - name: devstral
               replicas: 1
               cooldownPeriod: 600
               resources:
@@ -29,7 +29,7 @@ spec:
                   nvidia.com/gpu: 4
               args:
                 - -c
-                - "32000"
+                - "128000"
                 - -ngl
                 - "99"
                 - "--host"
@@ -37,7 +37,7 @@ spec:
                 - "--port"
                 - "8080"
                 - --model
-                - /models/gguf/Anubis-70b/TheDrummer_Anubis-70B-v1.1-Q6_K-00001-of-00002.gguf
+                - /models/gguf/Devstral-Small-2505-bf16.gguf
             - name: qwen2-5-coder # exl2 example
               engine: aphrodite
               replicas: 3

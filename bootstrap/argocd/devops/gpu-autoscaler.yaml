@@ -6,7 +6,7 @@ spec:
   configPatches:
     - op: replace
       path: /machine/install/image
-      value: factory.talos.dev/metal-installer/f94d6ccfd2bdd87123a1686350355b80fa43cdf73c910d35c0087e0c0e5e9710:v1.10.4
+      value: gitea.hnatekmar.xyz/public/image-factory/amd-gpu:v1.10.4
     - op: replace
       path: /machine/kernel
       value:

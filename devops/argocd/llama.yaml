@@ -120,9 +120,9 @@ spec:
               selector: { }
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 2
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 2
             - name: qwen-72b
               args:
                 - "--jinja"

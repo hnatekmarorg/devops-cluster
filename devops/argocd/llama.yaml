@@ -29,7 +29,7 @@ spec:
                   nvidia.com/gpu: 4
               args:
                 - -c
-                - "45000"
+                - "32000"
                 - -ngl
                 - "99"
                 - "--host"

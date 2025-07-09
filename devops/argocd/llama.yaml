@@ -19,6 +19,25 @@ spec:
       helm:
         valuesObject:
           models:
+            - name: Anubis-70b
+              replicas: 1
+              cooldownPeriod: 600
+              resources:
+                requests:
+                  nvidia.com/gpu: 4
+                limits:
+                  nvidia.com/gpu: 4
+              args:
+                - -c
+                - "131072"
+                - -ngl
+                - "99"
+                - "--host"
+                - "0.0.0.0"
+                - "--port"
+                - "8080"
+                - --model
+                - /models/gguf/Anubis-70b/TheDrummer_Anubis-70B-v1.1-Q6_K-00001-of-00002.gguf
             - name: qwen2-5-coder # exl2 example
               engine: aphrodite
               replicas: 3

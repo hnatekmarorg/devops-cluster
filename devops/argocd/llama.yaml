@@ -19,7 +19,7 @@ spec:
       helm:
         valuesObject:
           models:
-            - name: Anubis-70b
+            - name: anubis-70b
               replicas: 1
               cooldownPeriod: 600
               resources:

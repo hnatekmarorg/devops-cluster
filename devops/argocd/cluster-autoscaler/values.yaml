@@ -10,4 +10,4 @@ extraVolumeMounts:
 autoDiscovery:
   clusterName: main
 extraArgs:
-  scale-down-delay-after-add: 60m
+  scale-down-delay-after-add: 240m

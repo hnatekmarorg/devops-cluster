@@ -28,6 +28,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
+                - --jinja
                 - -c
                 - "128000"
                 - -ngl

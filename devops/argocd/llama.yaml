@@ -29,7 +29,7 @@ spec:
                   nvidia.com/gpu: 4
               args:
                 - -c
-                - "64000"
+                - "128000"
                 - -ngl
                 - "99"
                 - "--host"
@@ -37,7 +37,7 @@ spec:
                 - "--port"
                 - "8080"
                 - --model
-                - /models/gguf/Devstral-Small-2505-bf16.gguf
+                - /models/gguf/Devstral-Small-2505-UD-Q8_K_XL.gguf
             - name: qwen2-5-coder # exl2 example
               engine: aphrodite
               replicas: 3

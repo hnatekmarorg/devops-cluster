@@ -81,7 +81,7 @@ spec:
                 - --port
                 - "8080"
                 - --max-seq-len 
-                - "128000"
+                - "64000"
                 - --model-dir
                 - /models/exl2
                 - --model-name

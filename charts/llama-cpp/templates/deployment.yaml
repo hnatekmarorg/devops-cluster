@@ -29,7 +29,7 @@ spec:
         - name: llamacpp
           resources:
             {{toYaml .resources | nindent 12}}
-          {{- if eq (.engine | default "llama") "aphrodite" }}
+          {{- if eq (.engine | default "llama") "vllm" }}
           image: {{ $.Values.llm.vllm.image }}
           {{- else if eq (.engine | default "llama") "tabby" }}
           image: ghcr.io/theroyallab/tabbyapi:latest

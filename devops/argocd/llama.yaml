@@ -65,41 +65,69 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 120
-            - name: qwen-coder-vllm # exl2 example
-              engine: vllm
-              replicas: 3
-              cooldownPeriod: 600
+            - name: gemma-3-27b # exl2 example
+              engine: tabby
+              replicas: 1
+              cooldownPeriod: 120
               resources:
                 requests:
                   nvidia.com/gpu: 2
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - "--host"
+                - start.py
+                - --host
                 - "0.0.0.0"
-                - "--port"
+                - --port
                 - "8080"
-                - "--tensor-parallel-size"
-                - "2"
-                - "--model"
-                - "/models/awq/Qwen2.5-Coder-32B-Instruct-AWQ"
-            - name: fallen-llama
-              args:
-                - -c
-                - "64000"
-                - -ngl
-                - "99"
-                - --flash-attn
-                - --numa
-                - distribute
-                - -m
-                - /models/gguf/TheDrummer_Fallen-Llama-3.3-R1-70B-v1-Q4_K_L.gguf
-              selector: { }
+                - --max-seq-len 
+                - "128000"
+                - --model-dir
+                - /models/exl2
+                - --model-name
+                - "/models/exl2/gemma-3-27b-it-exl2"
+            - name: fallen-abomination
+              engine: tabby
+              replicas: 1
+              cooldownPeriod: 240
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
+              args:
+                - start.py
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --max-seq-len 
+                - "90000"
+                - --model-dir
+                - /models/exl2
+                - --model-name
+                - "Fallen-Abomination-70B-R1-v4.1_EXL2_4.65bpw_H8"
+            - name: fallen-llama
+              engine: tabby
+              replicas: 1
+              cooldownPeriod: 240
+              resources:
+                requests:
+                  nvidia.com/gpu: 4
+                limits:
+                  nvidia.com/gpu: 4
+              args:
+                - start.py
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --max-seq-len 
+                - "90000"
+                - --model-dir
+                - /models/exl2
+                - --model-name
+                - "Fallen-Llama-3.3-R1-70B-v1-6.0bpw-h8-exl2"
             - name: agatha
               args:
                 - -c

@@ -31,6 +31,8 @@ spec:
             {{toYaml .resources | nindent 12}}
           {{- if eq (.engine | default "llama") "aphrodite" }}
           image: {{ $.Values.llm.vllm.image }}
+          {{- else if eq (.engine | default "llama") "tabby" }}
+          image: ghcr.io/theroyallab/tabbyapi:latest
           {{- else }}
           image: {{ $.Values.llm.llama_cpp.image }}
           {{- end }}

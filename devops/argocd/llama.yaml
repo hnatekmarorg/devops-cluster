@@ -85,7 +85,7 @@ spec:
                 - --model-dir
                 - /models/exl2
                 - --model-name
-                - "/models/exl2/gemma-3-27b-it-exl2"
+                - "gemma-3-27b-it-exl2_4.65bpw"
                 - --gpu-lib
                 - cu121
                 - --disable-auth

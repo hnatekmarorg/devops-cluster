@@ -69,7 +69,7 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 120
-            - name: gemma-3-27b # exl2 example
+            - name: qwen3-32b # exl2 example
               engine: tabby
               replicas: 1
               cooldownPeriod: 120
@@ -85,13 +85,15 @@ spec:
                 - --port
                 - "8080"
                 - --max-seq-len 
-                - "32000"
+                - "32768"
                 - --draft-model-dir
                 - /models/exl2
+                - --draft-model
+                - Qwen3-0.6B-exl3-8bpw-h8
                 - --model-dir
                 - /models/exl2
                 - --model-name
-                - "gemma-3-27b-it-exl2_4.65bpw"
+                - "Qwen3-32B-exl2-6bpw"
                 - --gpu-lib
                 - cu121
                 - --disable-auth

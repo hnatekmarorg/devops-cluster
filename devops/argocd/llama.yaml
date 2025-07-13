@@ -55,7 +55,7 @@ spec:
                 - --port
                 - "8080"
                 - --max-seq-len 
-                - "64000"
+                - "32768"
                 - --draft-model-dir
                 - /models/exl2
                 - --draft-model-name

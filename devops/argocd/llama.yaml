@@ -55,11 +55,11 @@ spec:
                 - --port
                 - "8080"
                 - --max-seq-len 
-                - "32768"
+                - "64000"
                 - --draft-model-dir
                 - /models/exl2
                 - --draft-model-name
-                - Qwen2.5-Coder-3B-Instruct-exl2
+                - Qwen3-0.6B-exl3-8bpw-h8
                 - --model-dir
                 - /models/exl2
                 - --model-name

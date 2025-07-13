@@ -115,6 +115,10 @@ spec:
                 - "8080"
                 - --max-seq-len 
                 - "128000"
+                - --cache-mode
+                - "Q8"
+                - --cuda-malloc-backend
+                - "true"
                 - --model-dir
                 - /models/exl2
                 - --draft-model-name

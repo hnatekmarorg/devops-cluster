@@ -96,7 +96,7 @@ spec:
                 - cu121
                 - --disable-auth
                 - "true"
-            - name: fallen-abomination
+            - name: electra
               engine: tabby
               replicas: 1
               cooldownPeriod: 240
@@ -116,7 +116,7 @@ spec:
                 - --model-dir
                 - /models/exl2
                 - --model-name
-                - "Fallen-Abomination-70B-R1-v4.1_EXL2_4.65bpw_H8"
+                - "L3.3-Electra-R1-70b-4.25bpw-h8-exl2"
                 - --gpu-lib
                 - cu121
                 - --disable-auth

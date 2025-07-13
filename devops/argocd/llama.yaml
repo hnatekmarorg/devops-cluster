@@ -84,6 +84,8 @@ spec:
                 - "8080"
                 - --max-seq-len 
                 - "32000"
+                - --draft-model-dir
+                - /models/exl2
                 - --model-dir
                 - /models/exl2
                 - --model-name

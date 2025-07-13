@@ -89,7 +89,7 @@ spec:
                 - --port
                 - "8080"
                 - --cuda-malloc-backend
-                - true
+                - "true"
                 - --cache-mode
                 - "Q8" 
                 - --max-seq-len 

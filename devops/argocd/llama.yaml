@@ -59,7 +59,7 @@ spec:
                 - --draft-model-dir
                 - /models/exl2
                 - --draft-model-name
-                - Qwen3-0.6B-exl3-8bpw-h8
+                - Qwen2.5-Coder-0.5B-Instruct-exl2_5.0bpw
                 - --model-dir
                 - /models/exl2
                 - --model-name

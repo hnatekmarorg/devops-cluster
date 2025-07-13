@@ -54,8 +54,12 @@ spec:
                 - "0.0.0.0"
                 - --port
                 - "8080"
+                - --cuda-malloc-backend
+                - true
                 - --max-seq-len 
                 - "32768"
+                - --cache-mode
+                - "Q8" 
                 - --draft-model-dir
                 - /models/exl2
                 - --draft-model-name
@@ -84,6 +88,10 @@ spec:
                 - "0.0.0.0"
                 - --port
                 - "8080"
+                - --cuda-malloc-backend
+                - true
+                - --cache-mode
+                - "Q8" 
                 - --max-seq-len 
                 - "32768"
                 - --model-dir

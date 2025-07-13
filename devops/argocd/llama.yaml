@@ -98,8 +98,6 @@ spec:
                 - /models/exl2
                 - --model-name
                 - "Qwen3-32B-exl2-6bpw"
-                - --gpu-lib
-                - cu121
                 - --disable-auth
                 - "true"
             - name: electra

@@ -121,8 +121,6 @@ spec:
                 - "true"
                 - --model-dir
                 - /models/exl2
-                - --draft-model-name
-                - "Llama-3.2-3B-Instruct-exl2"
                 - --draft-model-dir
                 - /models/exl2
                 - --model-name

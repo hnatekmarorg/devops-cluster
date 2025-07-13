@@ -32,7 +32,7 @@ spec:
           {{- if eq (.engine | default "llama") "vllm" }}
           image: {{ $.Values.llm.vllm.image }}
           {{- else if eq (.engine | default "llama") "tabby" }}
-          image: ghcr.io/theroyallab/tabbyapi:latest
+          image: gitea.hnatekmar.xyz/public/tabbyapi:latest
           {{- else }}
           image: {{ $.Values.llm.llama_cpp.image }}
           {{- end }}

@@ -69,7 +69,7 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 120
-            - name: qwen3-32b # exl2 example
+            - name: qwen3-32b-exl # exl2 example
               engine: tabby
               replicas: 1
               cooldownPeriod: 120

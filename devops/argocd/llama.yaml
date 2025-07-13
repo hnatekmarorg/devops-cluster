@@ -68,8 +68,6 @@ spec:
                 - /models/exl2
                 - --model-name
                 - Qwen2.5-Coder-32B-Instruct-exl2
-                - --gpu-lib
-                - cu121
                 - --disable-auth
                 - "true"
               cooldownPeriod: 120

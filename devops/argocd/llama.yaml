@@ -49,7 +49,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - start.py
+                - main.py
                 - --host
                 - "0.0.0.0"
                 - --port
@@ -79,7 +79,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - start.py
+                - main.py
                 - --host
                 - "0.0.0.0"
                 - --port
@@ -104,7 +104,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - start.py
+                - main.py
                 - --host
                 - "0.0.0.0"
                 - --port
@@ -135,7 +135,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - start.py
+                - main.py
                 - --host
                 - "0.0.0.0"
                 - --port

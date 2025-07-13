@@ -127,8 +127,6 @@ spec:
                 - /models/exl2
                 - --model-name
                 - "L3.3-Electra-R1-70b-4.25bpw-h8-exl2"
-                - --gpu-lib
-                - cu121
                 - --disable-auth
                 - "true"
             - name: fallen-llama

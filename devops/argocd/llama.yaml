@@ -148,8 +148,6 @@ spec:
                 - /models/exl2
                 - --model-name
                 - "Fallen-Llama-3.3-R1-70B-v1-6.0bpw-h8-exl2"
-                - --gpu-lib
-                - cu121
                 - --disable-auth
                 - "true"
             - name: agatha

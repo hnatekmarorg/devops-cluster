@@ -70,11 +70,11 @@ spec:
                 - Qwen2.5-Coder-32B-Instruct-exl2
                 - --disable-auth
                 - "true"
-              cooldownPeriod: 120
+              cooldownPeriod: 600
             - name: qwen3-32b-exl # exl2 example
               engine: tabby
               replicas: 1
-              cooldownPeriod: 120
+              cooldownPeriod: 600
               resources:
                 requests:
                   nvidia.com/gpu: 2

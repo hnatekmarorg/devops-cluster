@@ -185,7 +185,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 3
 
-            - name: qwen3-235b
+            - name: qwen3-235b-q8
               args:
                 - --jinja
                 - -c
@@ -206,6 +206,34 @@ spec:
                   memory: "300Gi"
                 limits:
                   memory: "300Gi"
+            - name: qwen3-235b-exl
+              engine: tabby
+              replicas: 1
+              resources:
+                requests:
+                  nvidia.com/gpu: 4
+                limits:
+                  nvidia.com/gpu: 4
+              args:
+                - main.py
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --cuda-malloc-backend
+                - "true"
+                - --max-seq-len 
+                - "32768"
+                - --cache-mode
+                - "Q8" 
+                - --draft-model-dir
+                - /models/exl2
+                - --model-dir
+                - /models/exl2
+                - --model-name
+                - Qwen3-235B-A22B-exl3
+                - --disable-auth
+                - "true"
             - name: qwen3-32b
               args:
                 - --jinja

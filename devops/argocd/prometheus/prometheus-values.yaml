@@ -11,12 +11,6 @@ prometheus:
             requests:
               storage: 25Gi
 grafana:
-  extraSecretMounts:
-    - name: auth-generic-oauth-secret-mount
-      secretName: grafana-oidc
-      defaultMode: 0440
-      mountPath: /etc/secrets/auth_generic_oauth
-      readOnly: true
   grafana.ini:
     server:
       root_url: https://grafana.hnatekmar.dev

@@ -191,9 +191,12 @@ spec:
             - name: forgotten
               args:
                 - --flash-attn
-                - "--jinja"
+                - --cache-type-k
+                - q8_0
+                - --cache-type-v 
+                - q8_0 
                 - "-c"
-                - "32768"
+                - "128000"
                 - "-m"
                 - "/models/gguf/forgotten/Forgotten-Safeword-70B-v5.0.Q6_K.gguf.part1of2"
                 - "-ngl"

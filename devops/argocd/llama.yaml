@@ -188,15 +188,13 @@ spec:
                   nvidia.com/gpu: 2
                 limits:
                   nvidia.com/gpu: 2
-            - name: qwen-72b
+            - name: forgotten
               args:
                 - "--jinja"
                 - "-c"
                 - "32768"
-                - "--mmproj"
-                - "/models/gguf/Qwen-72B/mmproj-Qwen2-VL-72B-Instruct-f32.gguf"
                 - "-m"
-                - "/models/gguf/Qwen-72B/Qwen2.5-VL-72B-Instruct-UD-Q5_K_XL-00001-of-00002.gguf"
+                - "/models/gguf/forgotten/Forgotten-Safeword-70B-v5.0.Q6_K.gguf.part1of2"
                 - "-ngl"
                 - "99"
               selector: { }

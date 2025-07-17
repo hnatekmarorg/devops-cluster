@@ -189,18 +189,25 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
             - name: forgotten
+              engine: tabby
               args:
-                - --flash-attn
-                - --cache-type-k
-                - q8_0
-                - --cache-type-v 
-                - q8_0 
-                - "-c"
+                - main.py
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --cuda-malloc-backend
+                - "true"
+                - --max-seq-len 
                 - "128000"
-                - "-m"
-                - "/models/gguf/forgotten/Forgotten-Safeword-70B-v5.0.Q6_K-00001-of-00002.gguf"
-                - "-ngl"
-                - "99"
+                - --cache-mode
+                - "Q8" 
+                - --model-dir
+                - /models/exl2
+                - --model-name
+                - forgotten
+                - --disable-auth
+                - "true"
               selector: { }
               resources:
                 requests:

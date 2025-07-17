@@ -190,6 +190,7 @@ spec:
                   nvidia.com/gpu: 2
             - name: forgotten
               engine: tabby
+              cooldownPeriod: 600
               args:
                 - main.py
                 - --host

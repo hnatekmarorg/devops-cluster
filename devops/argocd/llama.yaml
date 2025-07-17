@@ -198,7 +198,7 @@ spec:
                 - "-c"
                 - "128000"
                 - "-m"
-                - "/models/gguf/forgotten/Forgotten-Safeword-70B-v5.0.Q6_K.gguf.part1of2"
+                - "/models/gguf/forgotten/Forgotten-Safeword-70B-v5.0.Q6_K-00001-of-00002.gguf"
                 - "-ngl"
                 - "99"
               selector: { }

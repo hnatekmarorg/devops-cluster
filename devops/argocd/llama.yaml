@@ -190,6 +190,7 @@ spec:
                   nvidia.com/gpu: 2
             - name: forgotten
               args:
+                - --flash-attn
                 - "--jinja"
                 - "-c"
                 - "32768"

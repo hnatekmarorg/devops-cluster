@@ -9,3 +9,4 @@ extraVolumeMounts:
     readOnly: true
 autoDiscovery:
   clusterName: main
+  scale-down-delay-after-add: 480m

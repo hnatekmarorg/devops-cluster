@@ -37,6 +37,18 @@ spec:
                 - "0.0.0.0"
                 - "--port"
                 - "8080"
+                - --prio
+                - "2" 
+                - --temp
+                - "0.15"
+                - --repeat-penalty
+                - "1.0"
+                - --min-p
+                - "0.01"
+                - --top-k
+                - "64"
+                - --top-p
+                - "0.95"
                 - --model 
                 - /models/gguf/devstral/Devstral-Vision-Small-2507.i1-Q6_K.gguf
             - name: qwen-coder-exl2

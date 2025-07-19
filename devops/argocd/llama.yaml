@@ -28,9 +28,13 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
+                - --threads
+                - "-1"
+                - --cache-type
+                - q8_0
                 - --jinja
                 - -c
-                - "128000"
+                - "131072"
                 - -ngl
                 - "99"
                 - "--host"

@@ -55,8 +55,6 @@ spec:
                 - "64"
                 - --top-p
                 - "0.95"
-                - --mmproj
-                - /models/gguf/devstral/mmproj-F16.gguf
                 - --model 
                 - /models/gguf/devstral/Devstral-Small-2507-UD-Q6_K_XL.gguf
             - name: qwen-coder-exl2

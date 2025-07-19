@@ -58,7 +58,7 @@ spec:
                 - --mmproj
                 - /models/gguf/devstral/mmproj-F16.gguf
                 - --model 
-                - /models/gguf/devstral/Devstral-Small-2507-UD-Q8_K_XL.gguf
+                - /models/gguf/devstral/Devstral-Small-2507-UD-Q6_K_XL.gguf
             - name: qwen-coder-exl2
               engine: tabby
               replicas: 1

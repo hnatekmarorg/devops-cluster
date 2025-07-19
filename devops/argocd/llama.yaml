@@ -38,7 +38,7 @@ spec:
                 - "--port"
                 - "8080"
                 - --model 
-                - /models/gguf/devstral/Devstral-Vision-Small-2507.Q8_0.gguf
+                - /models/gguf/devstral/Devstral-Vision-Small-2507.i1-Q6_K.gguf
             - name: qwen-coder-exl2
               engine: tabby
               replicas: 1

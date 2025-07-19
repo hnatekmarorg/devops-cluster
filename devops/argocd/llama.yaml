@@ -32,8 +32,6 @@ spec:
                 - --jinja
                 - -c
                 - "128000"
-                - --cache-mode
-                - "Q8" 
                 - -ngl
                 - "99"
                 - "--host"

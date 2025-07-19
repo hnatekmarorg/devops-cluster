@@ -28,7 +28,6 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - --flash-attn
                 - --jinja
                 - -c
                 - "128000"

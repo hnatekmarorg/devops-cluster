@@ -28,9 +28,11 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
+                - --seed 
+                - "3407"
                 - --threads
                 - "-1"
-                - --cache-type
+                - --cache-type-k
                 - q8_0
                 - --jinja
                 - -c

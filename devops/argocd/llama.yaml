@@ -88,6 +88,33 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600
+            - name: kimi-dev # exl2 example
+              engine: tabby
+              replicas: 1
+              cooldownPeriod: 600
+              resources:
+                requests:
+                  nvidia.com/gpu: 2
+                limits:
+                  nvidia.com/gpu: 2
+              args:
+                - main.py
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --cuda-malloc-backend
+                - "true"
+                - --cache-mode
+                - "Q8" 
+                - --max-seq-len 
+                - "128000"
+                - --model-dir
+                - /models/exl2
+                - --model-name
+                - "moonshotai_Kimi-Dev-72B-EXL3"
+                - --disable-auth
+                - "true"
             - name: qwen3-32b-exl # exl2 example
               engine: tabby
               replicas: 1

@@ -94,9 +94,9 @@ spec:
               cooldownPeriod: 600
               resources:
                 requests:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 4
               args:
                 - main.py
                 - --host

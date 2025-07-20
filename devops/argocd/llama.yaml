@@ -108,7 +108,7 @@ spec:
                 - --cache-mode
                 - "Q8" 
                 - --max-seq-len 
-                - "128000"
+                - "131072"
                 - --model-dir
                 - /models/exl2
                 - --model-name

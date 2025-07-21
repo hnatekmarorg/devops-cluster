@@ -19,44 +19,7 @@ spec:
       helm:
         valuesObject:
           models:
-            - name: devstral
-              replicas: 1
-              cooldownPeriod: 600
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
-              args:
-                - --seed 
-                - "3407"
-                - --threads
-                - "-1"
-                - --cache-type-k
-                - q8_0
-                - --jinja
-                - -c
-                - "131072"
-                - -ngl
-                - "99"
-                - "--host"
-                - "0.0.0.0"
-                - "--port"
-                - "8080"
-                - --prio
-                - "2" 
-                - --temp
-                - "0.15"
-                - --repeat-penalty
-                - "1.0"
-                - --min-p
-                - "0.01"
-                - --top-k
-                - "64"
-                - --top-p
-                - "0.95"
-                - --model 
-                - /models/gguf/devstral/Devstral-Small-2507-UD-Q6_K_XL.gguf
+
             - name: qwen-coder-exl2
               engine: tabby
               replicas: 1
@@ -88,6 +51,45 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600
+            - name: scout
+              cooldownPeriod: 600
+              resources:
+                requests:
+                  nvidia.com/gpu: 4
+                limits:
+                  nvidia.com/gpu: 4
+              args:
+                - --jinja
+                - "-m"
+                - "/models/gguf/scout/Llama-4-Scout-17B-16E-Instruct-UD-Q4_K_XL-00001-of-00002.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - --cache-type-k
+                - "q8_0"
+                - --cache-type-v
+                - "q8_0"
+                - -t
+                - "-1"
+                - --jinja
+                - --prio
+                - "3"
+                - --temp
+                - "0.6"
+                - --min-p
+                - "0.01"
+                - --top-p
+                - "0.9"
+                - -ot 
+                - ".ffn_.*_exps.=CPU"
+                - --ctx-size 
+                - "1000000"
+                - --mproj
+                - /models/gguf/scout/mmproj-F16.gguf
+                - --numa
+                - distribute
+                - --alias
+                - "scout"
             - name: athene-agent
               cooldownPeriod: 600
               resources:
@@ -128,33 +130,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
 
-            - name: kimi-dev-exl # exl2 example
-              engine: tabby
-              replicas: 1
-              cooldownPeriod: 600
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
-              args:
-                - main.py
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --cuda-malloc-backend
-                - "true"
-                - --cache-mode
-                - "Q8" 
-                - --max-seq-len 
-                - "131072"
-                - --model-dir
-                - /models/exl2
-                - --model-name
-                - "moonshotai_Kimi-Dev-72B-EXL3"
-                - --disable-auth
-                - "true"
+
             - name: qwen3-32b-exl # exl2 example
               engine: tabby
               replicas: 1
@@ -182,33 +158,7 @@ spec:
                 - "Qwen3-32B-exl3"
                 - --disable-auth
                 - "true"
-            - name: omega
-              engine: tabby
-              replicas: 1
-              cooldownPeriod: 240
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
-              args:
-                - main.py
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --max-seq-len 
-                - "128000"
-                - --cache-mode
-                - "Q8"
-                - --cuda-malloc-backend
-                - "true"
-                - --model-dir
-                - /models/exl2
-                - --model-name
-                - "L3.3-The-Omega-Directive-70B-Unslop-v2.0-EXL3"
-                - --disable-auth
-                - "true"
+
             - name: qwen3-235b-q8
               args:
                 - --jinja
@@ -230,35 +180,7 @@ spec:
                   memory: "300Gi"
                 limits:
                   memory: "300Gi"
-            - name: qwen3-235b-exl
-              cooldownPeriod: 600
-              engine: tabby
-              replicas: 1
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
-              args:
-                - main.py
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --cuda-malloc-backend
-                - "true"
-                - --max-seq-len 
-                - "32768"
-                - --cache-mode
-                - "Q8" 
-                - --draft-model-dir
-                - /models/exl2
-                - --model-dir
-                - /models/exl2
-                - --model-name
-                - Qwen3-235B-A22B-exl3
-                - --disable-auth
-                - "true"
+
             - name: qwen3-32b
               args:
                 - --jinja

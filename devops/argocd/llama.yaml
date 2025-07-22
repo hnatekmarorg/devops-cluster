@@ -59,6 +59,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
+                - --no-mmap
                 - --jinja
                 - "-m"
                 - "/models/gguf/scout/Llama-4-Scout-17B-16E-Instruct-UD-Q4_K_XL-00001-of-00002.gguf"

@@ -84,7 +84,7 @@ spec:
                 - --top-p
                 - "0.9"
                 - --ctx-size 
-                - "1000000"
+                - "4000000"
                 - --mmproj
                 - /models/gguf/scout/mmproj-F16.gguf
                 - --numa

@@ -55,9 +55,9 @@ spec:
               cooldownPeriod: 600
               resources:
                 requests:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 5
                 limits:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 5
               args:
 
                 - --no-mmap

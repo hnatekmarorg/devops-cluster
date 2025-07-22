@@ -51,6 +51,36 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600
+            - name: fallen-command
+              cooldownPeriod: 600
+              resources:
+                requests:
+                  nvidia.com/gpu: 5
+                limits:
+                  nvidia.com/gpu: 5
+              args:
+                - --no-mmap
+                - --jinja
+                - "-m"
+                - "/models/gguf/fallen-command/TheDrummer_Fallen-Command-A-111B-v1.1-Q5_K_S-00001-of-00002.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - --cache-type-k
+                - "q8_0"
+                - --cache-type-v
+                - "q8_0"
+                - -t
+                - "-1"
+                - --jinja
+                - --prio
+                - "3"
+                - --ctx-size 
+                - "256000"
+                - --numa
+                - distribute
+                - --alias
+                - "fallen-command"
             - name: scout
               cooldownPeriod: 600
               resources:
@@ -59,7 +89,6 @@ spec:
                 limits:
                   nvidia.com/gpu: 5
               args:
-
                 - --no-mmap
                 - --jinja
                 - "-m"
@@ -90,47 +119,6 @@ spec:
                 - distribute
                 - --alias
                 - "scout"
-            - name: athene-agent
-              cooldownPeriod: 600
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
-              args:
-                - --jinja
-                - "-m"
-                - "/models/gguf/athene-v2-agent/Athene-V2-Agent-Q6_K_L-00001-of-00002.gguf"
-                - "-ngl"
-                - "99"
-                - -fa
-                - --cache-type-k
-                - "q8_0"
-                - --cache-type-v
-                - "q8_0"
-                - -t
-                - "-1"
-                - --jinja
-                - --temp
-                - "0"
-                - --ctx-size 
-                - "32768"
-                - --numa
-                - distribute
-                - --alias
-                - "athene-agent"
-                - --top_p
-                - "0"
-                - --top_k
-                - "0"
-              selector: { }
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
-
-
             - name: qwen3-32b-exl # exl2 example
               engine: tabby
               replicas: 1

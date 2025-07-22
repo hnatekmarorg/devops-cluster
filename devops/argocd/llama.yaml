@@ -84,7 +84,7 @@ spec:
                 - ".ffn_.*_exps.=CPU"
                 - --ctx-size 
                 - "1000000"
-                - --mproj
+                - --mmproj
                 - /models/gguf/scout/mmproj-F16.gguf
                 - --numa
                 - distribute

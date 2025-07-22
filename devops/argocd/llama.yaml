@@ -80,8 +80,7 @@ spec:
                 - "0.01"
                 - --top-p
                 - "0.9"
-                - -ot 
-                - ".ffn_.*_exps.=CPU"
+
                 - --ctx-size 
                 - "1000000"
                 - --mmproj

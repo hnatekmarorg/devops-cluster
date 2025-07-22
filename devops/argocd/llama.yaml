@@ -177,8 +177,10 @@ spec:
               selector: { }
               resources:
                 requests:
+                  nvidia.com/gpu: 4
                   memory: "300Gi"
                 limits:
+                  nvidia.com/gpu: 4
                   memory: "300Gi"
 
             - name: qwen3-32b

@@ -59,6 +59,8 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
+                - -ot 
+                - ".ffn_.*_exps.=CPU"
                 - --no-mmap
                 - --jinja
                 - "-m"
@@ -81,7 +83,6 @@ spec:
                 - "0.01"
                 - --top-p
                 - "0.9"
-
                 - --ctx-size 
                 - "1000000"
                 - --mmproj

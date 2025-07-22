@@ -165,7 +165,7 @@ spec:
                 - -c
                 - "32768"
                 - -ngl
-                - "99"
+                - "0"
                 - --no-mmap
                 - --flash-attn
                 - --numa
@@ -177,25 +177,9 @@ spec:
               selector: { }
               resources:
                 requests:
-                  nvidia.com/gpu: 4
                   memory: "300Gi"
                 limits:
-                  nvidia.com/gpu: 4
                   memory: "300Gi"
-
-            - name: qwen3-32b
-              args:
-                - --jinja
-                - "-m"
-                - "/models/gguf/Qwen3-32B-Q5_K_M.gguf"
-                - "-ngl"
-                - "99"
-              selector: { }
-              resources:
-                requests:
-                  nvidia.com/gpu: 2
-                limits:
-                  nvidia.com/gpu: 2
             - name: forgotten
               engine: tabby
               cooldownPeriod: 600

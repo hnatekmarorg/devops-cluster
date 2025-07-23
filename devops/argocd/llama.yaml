@@ -51,6 +51,38 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600
+            - name: qwen-72b
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 5
+                limits:
+                  nvidia.com/gpu: 5
+              args:
+                - --no-mmap
+                - --jinja
+                - --mmproj
+                - "/models/gguf/Qwen-72B/mmproj-Qwen2-VL-72B-Instruct-f32.gguf"
+                - "-m"
+                - "/models/gguf/Qwen-72B/Qwen2.5-VL-72B-Instruct-UD-Q6_K_XL-00001-of-00002.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - --cache-type-k
+                - "q8_0"
+                - --cache-type-v
+                - "q8_0"
+                - -t
+                - "-1"
+                - --jinja
+                - --prio
+                - "3"
+                - --ctx-size 
+                - "32768"
+                - --numa
+                - distribute
+                - --alias
+                - "qwen-72b"
             - name: fallen-command
               cooldownPeriod: 600
               resources:
@@ -61,6 +93,7 @@ spec:
               args:
                 - --no-mmap
                 - --jinja
+
                 - "-m"
                 - "/models/gguf/fallen-command/TheDrummer_Fallen-Command-A-111B-v1.1-Q5_K_S-00001-of-00002.gguf"
                 - "-ngl"

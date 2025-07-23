@@ -59,6 +59,12 @@ spec:
                 limits:
                   nvidia.com/gpu: 5
               args:
+                - --rope-scaling 
+                - yarn 
+                - --rope-scale
+                - "4"
+                - --yarn-orig-ctx
+                - "32768"
                 - --temp
                 - "0.7"
                 - --top-p
@@ -83,8 +89,6 @@ spec:
                 - --jinja
                 - --prio
                 - "3"
-                - --ctx-size 
-                - "32768"
                 - --numa
                 - distribute
                 - --alias

@@ -24,18 +24,22 @@ spec:
               replicas: 1
               resources:
                 requests:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 5
                 limits:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 5
               args:
+                - --rope-scaling 
+                - '{"rope_type":"yarn","factor":4.0,"original_max_position_embeddings":32768}' 
+                - --max-model-len 
+                - "131072"
                 - --tensor-parallel-size
-                - "4"
+                - "5"
                 - --host
                 - "0.0.0.0"
                 - --port
                 - "8080"
                 - --model
-                - /models/awq/Qwen2.5-72B-Instruct-AWQ
+                - /models/awq/Qwen2.5-VL-72B-Instruct-AWQ
             - name: qwen-coder-exl2
               engine: tabby
               replicas: 1

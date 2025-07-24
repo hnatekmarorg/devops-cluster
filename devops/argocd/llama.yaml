@@ -28,6 +28,8 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
+                - --tensor-parallel-size
+                - "4"
                 - --host
                 - "0.0.0.0"
                 - --port

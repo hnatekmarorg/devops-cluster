@@ -19,7 +19,21 @@ spec:
       helm:
         valuesObject:
           models:
-
+            - name: qwen-72b-awq
+              engine: aphrodite
+              replicas: 1
+              resources:
+                requests:
+                  nvidia.com/gpu: 4
+                limits:
+                  nvidia.com/gpu: 4
+              args:
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --model
+                - /models/awq/Qwen2.5-72B-Instruct-AWQ
             - name: qwen-coder-exl2
               engine: tabby
               replicas: 1
@@ -105,7 +119,6 @@ spec:
               args:
                 - --no-mmap
                 - --jinja
-
                 - "-m"
                 - "/models/gguf/fallen-command/TheDrummer_Fallen-Command-A-111B-v1.1-Q5_K_S-00001-of-00002.gguf"
                 - "-ngl"

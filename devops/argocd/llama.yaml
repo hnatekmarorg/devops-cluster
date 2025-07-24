@@ -20,7 +20,7 @@ spec:
         valuesObject:
           models:
             - name: qwen-72b-awq
-              engine: aphrodite
+              engine: vllm
               replicas: 1
               resources:
                 requests:

@@ -159,7 +159,7 @@ spec:
                 - --prio
                 - "3"
                 - --ctx-size 
-                - "128000"
+                - "64000"
                 - --numa
                 - distribute
                 - --alias

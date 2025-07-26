@@ -163,7 +163,7 @@ spec:
                 - --numa
                 - distribute
                 - --alias
-                - "fallen-command"
+                - "forgotten"
             - name: fallen-command
               cooldownPeriod: 600
               resources:

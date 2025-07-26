@@ -138,6 +138,32 @@ spec:
                 - distribute
                 - --alias
                 - "qwen-72b"
+            - name: forgotten
+              cooldownPeriod: 600
+              resources:
+                requests:
+                  nvidia.com/gpu: 5
+                limits:
+                  nvidia.com/gpu: 5
+              args:
+                - --no-mmap
+                - --jinja
+                - "-m"
+                - "/models/gguf/forgotten/Forgotten-Safeword-70B-v5.0.Q8_0.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - -t
+                - "-1"
+                - --jinja
+                - --prio
+                - "3"
+                - --ctx-size 
+                - "128000"
+                - --numa
+                - distribute
+                - --alias
+                - "fallen-command"
             - name: fallen-command
               cooldownPeriod: 600
               resources:
@@ -255,33 +281,6 @@ spec:
                   memory: "300Gi"
                 limits:
                   memory: "300Gi"
-            - name: forgotten
-              engine: tabby
-              cooldownPeriod: 600
-              args:
-                - main.py
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --cuda-malloc-backend
-                - "true"
-                - --max-seq-len 
-                - "128000"
-                - --cache-mode
-                - "Q8" 
-                - --model-dir
-                - /models/exl2
-                - --model-name
-                - forgotten
-                - --disable-auth
-                - "true"
-              selector: { }
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
   destination:
     server: https://kubernetes.default.svc
     namespace: inference

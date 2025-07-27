@@ -98,9 +98,9 @@ spec:
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 3
                 limits:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 3
               args:
                 - -c 
                 - "131072" 

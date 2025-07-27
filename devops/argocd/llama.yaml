@@ -102,10 +102,12 @@ spec:
                 limits:
                   nvidia.com/gpu: 3
               args:
-                - -c 
-                - "131072" 
-                - -n 
-                - "32768" 
+                - -c
+                - "40960" 
+                - -n
+                - "32768"
+                - -sm 
+                - row
                 - --rope-scaling 
                 - yarn 
                 - --rope-scale
@@ -122,6 +124,8 @@ spec:
                 - "0"
                 - --no-mmap
                 - --jinja
+                - --reasoning-format
+                - deepseek
                 - --model
                 - "/models/gguf/Qwen3-32B-128K-UD-Q8_K_XL.gguf"
                 - "-ngl"

@@ -166,7 +166,7 @@ spec:
                 - --reasoning-format
                 - deepseek
                 - --mmproj
-                - /models/gguf/gemma3/mmproj-F32.gguf
+                - /models/gguf/gemma3/mmproj-F16.gguf
                 - --model
                 - "/models/gguf/gemma3/gemma-3-27b-it-UD-Q8_K_XL.gguf"
                 - "-ngl"

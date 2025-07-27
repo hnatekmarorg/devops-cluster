@@ -133,7 +133,6 @@ spec:
                 - -fa
                 - -t
                 - "-1"
-                - --jinja
                 - --prio
                 - "3"
                 - --numa
@@ -148,8 +147,12 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - -c 
-                - "32768" 
+                - -c
+                - "40960" 
+                - -n
+                - "32768"
+                - -sm 
+                - row
                 - --rope-scaling 
                 - yarn 
                 - --rope-scale
@@ -166,6 +169,8 @@ spec:
                 - "0"
                 - --no-mmap
                 - --jinja
+                - --reasoning-format
+                - deepseek
                 - --model
                 - "/models/gguf/Qwen3-30B-A3B-128K-UD-Q8_K_XL.gguf"
                 - "-ngl"
@@ -173,7 +178,6 @@ spec:
                 - -fa
                 - -t
                 - "-1"
-                - --jinja
                 - --prio
                 - "3"
                 - --numa

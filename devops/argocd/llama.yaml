@@ -139,6 +139,47 @@ spec:
                 - distribute
                 - --alias
                 - "qwen-32B"
+            - name: gemma3-27b
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 2
+                limits:
+                  nvidia.com/gpu: 2
+              args:
+                - -c
+                - "128000" 
+                - -sm 
+                - row
+                - --temp
+                - "0.6"
+                - --top-p
+                - "0.95"
+                - --top-k
+                - "64"
+                - --min-p
+                - "0"
+                - --repeat-penalty 
+                - "1.0"
+                - --no-mmap
+                - --jinja
+                - --reasoning-format
+                - deepseek
+                - --mmproj
+                - /models/gguf/gemma/mmproj-F32.gguf
+                - --model
+                - "/models/gguf/gemma/gemma-3-27b-it-UD-Q8_K_XL.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - -t
+                - "-1"
+                - --prio
+                - "3"
+                - --numa
+                - distribute
+                - --alias
+                - "qwen-30B"
             - name: qwen-30b
               cooldownPeriod: 3600
               resources:

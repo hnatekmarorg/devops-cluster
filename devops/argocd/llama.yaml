@@ -179,7 +179,7 @@ spec:
                 - --numa
                 - distribute
                 - --alias
-                - "qwen-30B"
+                - "gemma3-27b"
             - name: qwen-30b
               cooldownPeriod: 3600
               resources:

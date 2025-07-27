@@ -94,6 +94,89 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600
+            - name: qwen-32b
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 2
+                limits:
+                  nvidia.com/gpu: 2
+              args:
+                - -c 
+                - "131072" 
+                - -n 
+                - "32768" 
+                - --rope-scaling 
+                - yarn 
+                - --rope-scale
+                - "4"
+                - --yarn-orig-ctx
+                - "32768"
+                - --temp
+                - "0.6"
+                - --top-p
+                - "0.95"
+                - --top-k
+                - "20"
+                - --min-p
+                - "0"
+                - --no-mmap
+                - --jinja
+                - --mmproj
+                - "/models/gguf/Qwen3-32B-128K-UD-Q8_K_XL.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - -t
+                - "-1"
+                - --jinja
+                - --prio
+                - "3"
+                - --numa
+                - distribute
+                - --alias
+                - "qwen-32B"
+            - name: qwen-30b
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 2
+                limits:
+                  nvidia.com/gpu: 2
+              args:
+                - -c 
+                - "131072" 
+                - -n 
+                - "32768" 
+                - --rope-scaling yarn 
+                - --rope-scale
+                - "4"
+                - --yarn-orig-ctx
+                - "32768"
+                - --temp
+                - "0.6"
+                - --top-p
+                - "0.95"
+                - --top-k
+                - "20"
+                - --min-p
+                - "0"
+                - --no-mmap
+                - --jinja
+                - --mmproj
+                - "/models/gguf/Qwen3-30B-A3B-128K-UD-Q8_K_XL.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - -t
+                - "-1"
+                - --jinja
+                - --prio
+                - "3"
+                - --numa
+                - distribute
+                - --alias
+                - "qwen-30B"
             - name: qwen-72b
               cooldownPeriod: 3600
               resources:
@@ -164,36 +247,6 @@ spec:
                 - distribute
                 - --alias
                 - "forgotten"
-            - name: fallen-command
-              cooldownPeriod: 600
-              resources:
-                requests:
-                  nvidia.com/gpu: 5
-                limits:
-                  nvidia.com/gpu: 5
-              args:
-                - --no-mmap
-                - --jinja
-                - "-m"
-                - "/models/gguf/fallen-command/TheDrummer_Fallen-Command-A-111B-v1.1-Q5_K_S-00001-of-00002.gguf"
-                - "-ngl"
-                - "99"
-                - -fa
-                - --cache-type-k
-                - "q8_0"
-                - --cache-type-v
-                - "q8_0"
-                - -t
-                - "-1"
-                - --jinja
-                - --prio
-                - "3"
-                - --ctx-size 
-                - "256000"
-                - --numa
-                - distribute
-                - --alias
-                - "fallen-command"
             - name: scout
               cooldownPeriod: 600
               resources:
@@ -232,34 +285,6 @@ spec:
                 - distribute
                 - --alias
                 - "scout"
-            - name: qwen3-32b-exl # exl2 example
-              engine: tabby
-              replicas: 1
-              cooldownPeriod: 600
-              resources:
-                requests:
-                  nvidia.com/gpu: 2
-                limits:
-                  nvidia.com/gpu: 2
-              args:
-                - main.py
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --cuda-malloc-backend
-                - "true"
-                - --cache-mode
-                - "Q8" 
-                - --max-seq-len 
-                - "32768"
-                - --model-dir
-                - /models/exl2
-                - --model-name
-                - "Qwen3-32B-exl3"
-                - --disable-auth
-                - "true"
-
             - name: qwen3-235b-q8
               args:
                 - --jinja

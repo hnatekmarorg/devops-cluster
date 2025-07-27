@@ -145,7 +145,7 @@ spec:
                   nvidia.com/gpu: 2
               args:
                 - -c 
-                - "131072" 
+                - "32768" 
                 - --rope-scaling 
                 - yarn 
                 - --rope-scale

@@ -148,7 +148,8 @@ spec:
                 - "131072" 
                 - -n 
                 - "32768" 
-                - --rope-scaling yarn 
+                - --rope-scaling 
+                - yarn 
                 - --rope-scale
                 - "4"
                 - --yarn-orig-ctx

@@ -122,7 +122,7 @@ spec:
                 - "0"
                 - --no-mmap
                 - --jinja
-                - --mmproj
+                - --model
                 - "/models/gguf/Qwen3-32B-128K-UD-Q8_K_XL.gguf"
                 - "-ngl"
                 - "99"
@@ -163,7 +163,7 @@ spec:
                 - "0"
                 - --no-mmap
                 - --jinja
-                - --mmproj
+                - --model
                 - "/models/gguf/Qwen3-30B-A3B-128K-UD-Q8_K_XL.gguf"
                 - "-ngl"
                 - "99"

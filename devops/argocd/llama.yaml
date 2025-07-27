@@ -146,8 +146,6 @@ spec:
               args:
                 - -c 
                 - "131072" 
-                - -n 
-                - "32768" 
                 - --rope-scaling 
                 - yarn 
                 - --rope-scale

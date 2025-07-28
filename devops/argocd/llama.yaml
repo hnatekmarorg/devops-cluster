@@ -363,6 +363,8 @@ spec:
                 - "8080"
                 - --cuda-malloc-backend
                 - "true"
+                - --cache-mode
+                - "Q8" 
                 - --max-seq-len 
                 - "55000" 
                 - --model-dir

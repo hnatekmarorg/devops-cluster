@@ -263,10 +263,6 @@ spec:
                 - "-ngl"
                 - "99"
                 - -fa
-                - --cache-type-k
-                - "q8_0"
-                - --cache-type-v
-                - "q8_0"
                 - -c
                 - "131072"
                 - -t
@@ -286,10 +282,16 @@ spec:
                 limits:
                   nvidia.com/gpu: 5
               args:
+                - --rope-scaling 
+                - yarn 
+                - --rope-scale
+                - "16"
+                - --yarn-orig-ctx
+                - "8192"
                 - --no-mmap
                 - --jinja
                 - "-m"
-                - "/models/gguf/forgotten/Forgotten-Safeword-70B-v5.0.Q8_0.gguf"
+                - "/models/gguf/forgotten/forgotten.gguf"
                 - "-ngl"
                 - "99"
                 - -fa
@@ -299,7 +301,7 @@ spec:
                 - --prio
                 - "3"
                 - --ctx-size 
-                - "64000"
+                - "131072"
                 - --numa
                 - distribute
                 - --alias

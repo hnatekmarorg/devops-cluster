@@ -4,6 +4,7 @@ llm:
     image: vllm/vllm-openai:latest
   llama_cpp:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    cpuImage: ghcr.io/ggml-org/llama.cpp:server
 
 ingress:
   host: llama.hnatekmar.dev
@@ -57,4 +58,22 @@ models:
       - cu121
       - --disable-auth
       - "true"
+    cooldownPeriod: 120
+
+  # CPU model example
+  - name: qwen3-cpu
+    device: cpu
+    args:
+      - --jinja
+      - "-m"
+      - "/models/gguf/Qwen3-32B-Q5_K_M.gguf"
+      # Note: Removed "-ngl" parameter for CPU operation
+    cpuResources:
+      requests:
+        cpu: "4"
+        memory: "16Gi"
+      limits:
+        cpu: "8"
+        memory: "32Gi"
+    replicas: 3
     cooldownPeriod: 120

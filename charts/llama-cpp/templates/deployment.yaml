@@ -16,7 +16,9 @@ spec:
       labels:
         llm: {{.name}}
     spec:
+      {{- if eq (.device | default "gpu") "gpu" }}
       runtimeClassName: nvidia
+      {{- end }}
       volumes:
         - name: shm
           emptyDir:
@@ -28,13 +30,21 @@ spec:
       containers:
         - name: llamacpp
           resources:
+            {{- if eq (.device | default "gpu") "gpu" }}
             {{toYaml .resources | nindent 12}}
+            {{- else }}
+            {{toYaml .cpuResources | nindent 12}}
+            {{- end }}
           {{- if eq (.engine | default "llama") "vllm" }}
           image: {{ $.Values.llm.vllm.image }}
           {{- else if eq (.engine | default "llama") "tabby" }}
           image: gitea.hnatekmar.xyz/public/tabbyapi:latest
           {{- else }}
+          {{- if eq (.device | default "gpu") "gpu" }}
           image: {{ $.Values.llm.llama_cpp.image }}
+          {{- else }}
+          image: {{ $.Values.llm.llama_cpp.cpuImage }}
+          {{- end }}
           {{- end }}
           imagePullPolicy: Always
           args: {{ toYaml .args | nindent 12}}

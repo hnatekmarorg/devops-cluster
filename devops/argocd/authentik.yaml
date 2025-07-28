@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: authentik
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.goauthentik.io
+    chart: authentik
+    targetRevision: 2024.10.0
+    helm:
+      releaseName: authentik
+      values: |
+        ingress:
+          enabled: true
+          className: nginx
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+          hosts:
+            - host: authentik.hnatekmar.dev
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - secretName: authentik-hnatekmar
+              hosts:
+                - authentik.hnatekmar.dev
+        postgresql:
+          enabled: true
+          persistence:
+            storageClass: longhorn
+        redis:
+          enabled: true
+          persistence:
+            storageClass: longhorn
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: authentik
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

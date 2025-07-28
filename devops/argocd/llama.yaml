@@ -341,11 +341,8 @@ spec:
                 - -ngl
                 - "0"
                 - --no-mmap
-                - --flash-attn
                 - --numa
                 - distribute
-                - --override-tensor
-                - blk\.[0-9][0-7]?\.ffn.*exps.*=CPU
                 - -m
                 - /models/gguf/Qwen-235B/Qwen3-235B-A22B-128K-UD-Q8_K_XL-00001-of-00006.gguf
               selector: { }

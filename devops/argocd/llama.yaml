@@ -364,7 +364,7 @@ spec:
                 - --cuda-malloc-backend
                 - "true"
                 - --max-seq-len 
-                - "57000" 
+                - "55000" 
                 - --model-dir
                 - /models/exl2
                 - --model-name

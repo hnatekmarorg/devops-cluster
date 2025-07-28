@@ -102,7 +102,7 @@ spec:
                 - --numa
                 - distribute
                 - --alias
-                - "qwen-32B"
+                - "llama-3-nemotron"
             - name: qwen-32b
               cooldownPeriod: 3600
               resources:

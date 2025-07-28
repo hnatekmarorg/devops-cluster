@@ -19,10 +19,7 @@ spec:
             annotations:
               cert-manager.io/cluster-issuer: letsencrypt-cloudflare
             hosts:
-              - host: authentik.hnatekmar.dev
-                paths:
-                  - path: /
-                    pathType: Prefix
+              - authentik.hnatekmar.dev
             tls:
               - secretName: authentik-hnatekmar
                 hosts:

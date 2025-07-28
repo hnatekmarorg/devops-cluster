@@ -12,20 +12,21 @@ spec:
     helm:
       releaseName: authentik
       values: |
-        ingress:
-          enabled: true
-          className: nginx
-          annotations:
-            cert-manager.io/cluster-issuer: letsencrypt-cloudflare
-          hosts:
-            - host: authentik.hnatekmar.dev
-              paths:
-                - path: /
-                  pathType: Prefix
-          tls:
-            - secretName: authentik-hnatekmar
-              hosts:
-                - authentik.hnatekmar.dev
+        server:
+          ingress:
+            enabled: true
+            className: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+            hosts:
+              - host: authentik.hnatekmar.dev
+                paths:
+                  - path: /
+                    pathType: Prefix
+            tls:
+              - secretName: authentik-hnatekmar
+                hosts:
+                  - authentik.hnatekmar.dev
         postgresql:
           enabled: true
           persistence:

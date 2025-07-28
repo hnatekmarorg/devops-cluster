@@ -15,7 +15,7 @@ spec:
         global:
           envFrom:
             - secretRef:
-                name: authentik
+                name: authentik-cookie
         authentik:
           secret_key: env://SECRET_KEY
         server:

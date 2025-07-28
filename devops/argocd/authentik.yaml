@@ -12,6 +12,12 @@ spec:
     helm:
       releaseName: authentik
       values: |
+        global:
+          envFrom:
+            - secretRef:
+                name: authentik
+        authentik:
+          secret_key: env://SECRET_KEY
         server:
           ingress:
             enabled: true

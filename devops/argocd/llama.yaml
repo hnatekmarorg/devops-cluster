@@ -346,6 +346,30 @@ spec:
                 - distribute
                 - --alias
                 - "scout"
+            - name: qwen-235b-exl
+              engine: tabby
+              replicas: 1
+              resources:
+                requests:
+                  nvidia.com/gpu: 5
+                limits:
+                  nvidia.com/gpu: 5
+              args:
+                - main.py
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --cuda-malloc-backend
+                - "true"
+                - --max-seq-len 
+                - "57000" 
+                - --model-dir
+                - /models/exl2
+                - --model-name
+                - Qwen3-235B-A22B-Thinking-2507-exl3 
+                - --disable-auth
+                - "true"
             - name: qwen3-235b-q8
               args:
                 - --jinja

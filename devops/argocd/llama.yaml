@@ -39,30 +39,6 @@ spec:
                 - "8080"
                 - --model
                 - /models/awq/Qwen2.5-Coder-14B-Instruct-AWQ
-            - name: qwen-72b-awq
-              engine: vllm
-              replicas: 1
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
-              args:
-                - --kv-cache-dtype
-                - fp8
-                - --hf-overrides 
-                - '{"rope_scaling":{"factor":4,"original_max_position_embeddings":32768,"type":"yarn","rope_type":"yarn"}}' 
-                - --max-model-len 
-                - "52000" 
-                - --tensor-parallel-size
-                - "4"
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --model
-                - /models/awq/Qwen2.5-VL-72B-Instruct-AWQ
             - name: qwen-coder-exl2
               engine: tabby
               replicas: 1
@@ -94,6 +70,39 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600
+            - name: llama-3-nemotron
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+              args:
+                - -c
+                - "32768" 
+                - -sm 
+                - row
+                - --temp
+                - "0.6"
+                - --top-p
+                - "0.95"
+                - --top-k
+                - "20"
+                - --no-mmap
+                - --jinja
+                - --model
+                - "/models/gguf/nvidia_Llama-3_3-Nemotron-Super-49B-v1_5-Q6_K_L.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - -t
+                - "-1"
+                - --prio
+                - "3"
+                - --numa
+                - distribute
+                - --alias
+                - "qwen-32B"
             - name: qwen-32b
               cooldownPeriod: 3600
               resources:

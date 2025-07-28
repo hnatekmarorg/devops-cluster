@@ -282,6 +282,8 @@ spec:
                 limits:
                   nvidia.com/gpu: 5
               args:
+                - -sm 
+                - row
                 - --rope-scaling 
                 - yarn 
                 - --rope-scale

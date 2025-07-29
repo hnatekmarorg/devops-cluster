@@ -177,6 +177,9 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
+                - -fa
+                - --cache-type-v
+                - "q8_0"
                 - -c
                 - "262144" 
                 - -sm 

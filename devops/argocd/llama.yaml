@@ -19,26 +19,6 @@ spec:
       helm:
         valuesObject:
           models:
-            - name: qwen-coder-14b
-              engine: vllm
-              replicas: 1
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 1
-                limits:
-                  nvidia.com/gpu: 1
-              args:
-                - --max-model-len 
-                - "32768" 
-                - --tensor-parallel-size
-                - "1"
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --model
-                - /models/awq/Qwen2.5-Coder-14B-Instruct-AWQ
             - name: qwen-coder-exl2
               engine: tabby
               replicas: 1
@@ -287,7 +267,7 @@ spec:
                 - --rope-scaling 
                 - yarn 
                 - --rope-scale
-                - "16"
+                - "8"
                 - --yarn-orig-ctx
                 - "8192"
                 - --no-mmap
@@ -303,7 +283,7 @@ spec:
                 - --prio
                 - "3"
                 - --ctx-size 
-                - "131072"
+                - "65536"
                 - --numa
                 - distribute
                 - --alias

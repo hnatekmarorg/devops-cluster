@@ -169,6 +169,42 @@ spec:
                 - distribute
                 - --alias
                 - "gemma3-27b"
+            - name: qwen-30b-instruct
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+              args:
+                - -c
+                - "262144" 
+                - -sm 
+                - row
+                - --temp
+                - "0.7"
+                - --top-p
+                - "0.80"
+                - --top-k
+                - "20"
+                - --min-p
+                - "0"
+                - --presence-penalty
+                - "1.5"
+                - --no-mmap
+                - --jinja
+                - --model
+                - "/models/gguf/Qwen3-30B-A3B-Instruct-2507-UD-Q8_K_XL.gguf"
+                - "-ngl"
+                - "99"
+                - -t
+                - "-1"
+                - --prio
+                - "3"
+                - --numa
+                - distribute
+                - --alias
+                - "qwen-30b-instruct"
             - name: qwen-30b
               cooldownPeriod: 3600
               resources:

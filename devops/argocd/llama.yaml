@@ -169,6 +169,47 @@ spec:
                 - distribute
                 - --alias
                 - "gemma3-27b"
+            - name: qwen-30b-thinking
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 2
+                limits:
+                  nvidia.com/gpu: 2
+              args:
+                - -fa
+                - --cache-type-k
+                - "q8_0"
+                - --cache-type-v
+                - "q8_0"
+                - -c
+                - "262144" 
+                - -sm 
+                - row
+                - --temp
+                - "0.7"
+                - --top-p
+                - "0.80"
+                - --top-k
+                - "20"
+                - --min-p
+                - "0"
+                - --presence-penalty
+                - "1.5"
+                - --no-mmap
+                - --jinja
+                - --model
+                - "/models/gguf/Qwen3-30B-A3B-Thinking-2507-UD-Q6_K_XL.gguf"
+                - "-ngl"
+                - "99"
+                - -t
+                - "-1"
+                - --prio
+                - "3"
+                - --numa
+                - distribute
+                - --alias
+                - "qwen-30b-thinking"
             - name: qwen-30b-instruct
               cooldownPeriod: 3600
               resources:

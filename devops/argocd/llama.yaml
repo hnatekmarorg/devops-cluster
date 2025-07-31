@@ -396,19 +396,26 @@ spec:
                 - --disable-auth
                 - "true"
             - name: qwen3-235b-q8
+              device: cpu
               args:
                 - --jinja
                 - -c
-                - "32768"
+                - "131072"
                 - -ngl
                 - "0"
                 - --no-mmap
                 - --numa
                 - distribute
+                - --rope-scaling 
+                - yarn 
+                - --rope-scale 
+                - "4" 
+                - --yarn-orig-ctx
+                - "32768"
                 - -m
                 - /models/gguf/Qwen-235B/Qwen3-235B-A22B-128K-UD-Q8_K_XL-00001-of-00006.gguf
               selector: { }
-              resources:
+              cpuResources:
                 requests:
                   memory: "300Gi"
                 limits:

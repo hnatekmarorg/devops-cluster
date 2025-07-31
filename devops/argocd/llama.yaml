@@ -187,15 +187,15 @@ spec:
                 - -sm 
                 - row
                 - --temp
-                - "0.7"
+                - "0.6"
                 - --top-p
-                - "0.80"
+                - "0.95"
                 - --top-k
                 - "20"
                 - --min-p
                 - "0"
                 - --presence-penalty
-                - "1.5"
+                - "0"
                 - --no-mmap
                 - --jinja
                 - --model
@@ -236,7 +236,7 @@ spec:
                 - --min-p
                 - "0"
                 - --presence-penalty
-                - "1.5"
+                - "0"
                 - --no-mmap
                 - --jinja
                 - --model

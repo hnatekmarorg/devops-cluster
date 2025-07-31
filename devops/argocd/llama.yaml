@@ -396,6 +396,7 @@ spec:
                 - --disable-auth
                 - "true"
             - name: qwen3-235b-q8
+              cooldownPeriod: 3600
               device: cpu
               args:
                 - --jinja

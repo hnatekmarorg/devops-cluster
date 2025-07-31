@@ -173,10 +173,15 @@ spec:
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 2
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 2
               args:
+                - -fa
+                - --cache-type-k
+                - "q8_0"
+                - --cache-type-v
+                - "q8_0"
                 - -c
                 - "262144" 
                 - -sm 

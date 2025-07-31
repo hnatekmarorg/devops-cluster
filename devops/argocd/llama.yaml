@@ -399,6 +399,8 @@ spec:
               cooldownPeriod: 3600
               device: cpu
               args:
+                - -t
+                - "-1"
                 - --jinja
                 - -c
                 - "131072"

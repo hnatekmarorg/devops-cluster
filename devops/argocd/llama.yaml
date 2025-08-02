@@ -20,6 +20,7 @@ spec:
         valuesObject:
           models:
             - name: exl
+              cooldownPeriod: 3600
               engine: tabby
               replicas: 1
               resources:

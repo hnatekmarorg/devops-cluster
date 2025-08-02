@@ -19,14 +19,14 @@ spec:
       helm:
         valuesObject:
           models:
-            - name: qwen-coder-exl2
+            - name: exl
               engine: tabby
               replicas: 1
               resources:
                 requests:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 5
                 limits:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 5
               args:
                 - main.py
                 - --host
@@ -35,18 +35,10 @@ spec:
                 - "8080"
                 - --cuda-malloc-backend
                 - "true"
-                - --max-seq-len 
-                - "32768"
-                - --cache-mode
-                - "Q8" 
-                - --draft-model-dir
-                - /models/exl2
-                - --draft-model-name
-                - Qwen2.5-Coder-0.5B-Instruct-exl2_5.0bpw
                 - --model-dir
                 - /models/exl2
-                - --model-name
-                - Qwen2.5-Coder-32B-Instruct-exl2
+                - --inline-model-loading
+                - true
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600

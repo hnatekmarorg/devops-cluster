@@ -25,9 +25,9 @@ spec:
               replicas: 1
               resources:
                 requests:
-                  nvidia.com/gpu: 5
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 5
+                  nvidia.com/gpu: 4
               args:
                 - main.py
                 - --host

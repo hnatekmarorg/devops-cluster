@@ -39,7 +39,7 @@ spec:
                 - --model-dir
                 - /models/exl2
                 - --inline-model-loading
-                - true
+                - "true"
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600

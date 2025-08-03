@@ -12,7 +12,7 @@ spec:
       helm:
         releaseName: argocd
         valueFiles:
-          - $repo/argocd/argocd/values.yaml
+          - $repo/devops/argocd/argocd/values.yaml
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo

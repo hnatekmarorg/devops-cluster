@@ -18,9 +18,10 @@ spec:
                 name: authentik-cookie
           env:
             - name: POSTGRES_PASSWORD
-              secretKeyRef:
-                name: authentik-postgresql
-                key: postgres-password
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-postgresql
+                  key: postgres-password
         authentik:
           secret_key: env://SECRET_KEY
           postgresql:

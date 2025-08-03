@@ -18,6 +18,8 @@ spec:
                 name: authentik-cookie
         authentik:
           secret_key: env://SECRET_KEY
+          postgresql:
+            password: env://SECRET_KEY
         server:
           ingress:
             enabled: true

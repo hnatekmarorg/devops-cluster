@@ -16,10 +16,12 @@ spec:
           envFrom:
             - secretRef:
                 name: authentik-cookie
+            - secretRef:
+                name: authentik-postgresql
         authentik:
           secret_key: env://SECRET_KEY
           postgresql:
-            password: env://SECRET_KEY
+            password: env://postgres-password
         server:
           ingress:
             enabled: true

@@ -1,11 +1,11 @@
 global:
+  domain: argocd.hnatekmar.dev
   addPrometheusAnnotations: true
 
 configs:
   params:
     server.insecure: true
   cm:
-    url: https://argocd.hnatekmar.dev
     dex.config: |
       connectors:
        - config:

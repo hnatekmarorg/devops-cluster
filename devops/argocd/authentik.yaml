@@ -29,7 +29,7 @@ spec:
         server:
           ingress:
             enabled: true
-            className: nginx
+            ingressClassName: nginx
             annotations:
               cert-manager.io/cluster-issuer: letsencrypt-cloudflare
             hosts:

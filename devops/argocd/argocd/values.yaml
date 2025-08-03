@@ -1,0 +1,34 @@
+global:
+  addPrometheusAnnotations: true
+
+configs:
+  params:
+    server.insecure: true
+  cm:
+    url: https://argocd.hnatekmar.dev
+    dex.config: |
+      connectors:
+       - config:
+           issuer: https://authentik.hnatekmar.xyz/application/o/argocd/
+           clientID: $argocd-sso:oidc.authentik.clientID
+           clientSecret: $argocd-sso:oidc.authentik.clientSecret
+           insecureEnableGroups: true
+           scopes:
+             - openid
+             - profile
+             - email
+         name: authentik
+         type: oidc
+         id: authentik
+server:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    extraTls:
+      - hosts:
+          - argocd.hnatekmar.dev
+        secretName: argocd-hnatekmar

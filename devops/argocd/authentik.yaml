@@ -17,6 +17,10 @@ spec:
             - secretRef:
                 name: authentik-cookie
           env:
+            - name: AUTHENTIK_BOOTSTRAP_TOKEN
+              secretKeyRef:
+                name: authentik-bootstrap-token
+                key: TOKEN
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:

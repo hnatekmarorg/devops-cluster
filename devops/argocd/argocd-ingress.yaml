@@ -4,6 +4,8 @@ metadata:
   name: argocd-server-http-ingress
   namespace: argocd
   annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     argocd.argoproj.io/sync-wave: "3"
     cert-manager.io/cluster-issuer: letsencrypt-cloudflare
 spec:
@@ -21,5 +23,5 @@ spec:
               service:
                 name: argocd-server
                 port:
-                  number: 80
+                  name: http
       host: argocd.hnatekmar.dev

@@ -170,8 +170,6 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - --chat-template-file
-                - /models/gguf/coder.jinja
                 - -fa
                 - --cache-type-k
                 - "q8_0"
@@ -192,7 +190,7 @@ spec:
                 - --no-mmap
                 - --jinja
                 - --model
-                - "/models/gguf/Qwen3-Coder-30B-A3B-Instruct-UD-Q6_K_XL.gguf"
+                - "/models/gguf/Qwen3-Coder-30B-A3B-Instruct-Q6_K.gguf"
                 - "-ngl"
                 - "99"
                 - -t

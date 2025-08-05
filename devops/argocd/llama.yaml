@@ -190,7 +190,7 @@ spec:
                 - --no-mmap
                 - --jinja
                 - --model
-                - "/models/gguf/Qwen3-Coder-30B-A3B-Instruct-1M-UD-Q6_K_XL.gguf"
+                - "/models/gguf/Qwen3-Coder-30B-A3B-Instruct-UD-Q6_K_XL.gguf"
                 - "-ngl"
                 - "99"
                 - -t

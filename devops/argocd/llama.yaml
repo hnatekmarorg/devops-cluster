@@ -19,6 +19,24 @@ spec:
       helm:
         valuesObject:
           models:
+            - name: glm-air # exl2 example
+              engine: vllm
+              replicas: 1
+              resources:
+                requests:
+                  nvidia.com/gpu: 4
+                limits:
+                  nvidia.com/gpu: 4
+              args:
+                - --dtype=float16 
+                - --tensor-parallel-size=2 
+                - --pipeline-parallel-size=2
+                - --host
+                - "0.0.0.0"
+                - --port
+                - "8080"
+                - --model
+                - /models/awq/GLM-4.5-Air-AWQ
             - name: exl
               cooldownPeriod: 3600
               engine: tabby

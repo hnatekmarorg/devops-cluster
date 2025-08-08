@@ -62,7 +62,6 @@ spec:
                 - --top-k
                 - "0"
                 - --no-mmap
-                - --jinja
                 - --model
                 - "/models/gguf/gpt-oss-120b-F16.gguf"
                 - "-ngl"

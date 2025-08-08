@@ -51,6 +51,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 5
               args:
+                - --jinja
                 - -c
                 - "131072" 
                 - -sm 

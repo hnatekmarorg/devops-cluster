@@ -19,24 +19,6 @@ spec:
       helm:
         valuesObject:
           models:
-            - name: glm-air # exl2 example
-              engine: vllm
-              replicas: 1
-              resources:
-                requests:
-                  nvidia.com/gpu: 4
-                limits:
-                  nvidia.com/gpu: 4
-              args:
-                - --pipeline-parallel-size=3 
-                - --tensor-parallel-size=1
-                - --kv-cache-dtype=fp8 
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --model
-                - /models/awq/GLM-4.5-Air-AWQ
             - name: exl
               cooldownPeriod: 3600
               engine: tabby
@@ -61,28 +43,28 @@ spec:
                 - --disable-auth
                 - "true"
               cooldownPeriod: 600
-            - name: llama-3-nemotron
+            - name: gpt-oss
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 5
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 5
               args:
                 - -c
-                - "32768" 
+                - "131072" 
                 - -sm 
                 - row
                 - --temp
-                - "0.6"
+                - "1.0"
                 - --top-p
-                - "0.95"
+                - "1"
                 - --top-k
-                - "20"
+                - "0"
                 - --no-mmap
                 - --jinja
                 - --model
-                - "/models/gguf/nvidia_Llama-3_3-Nemotron-Super-49B-v1_5-Q6_K_L.gguf"
+                - "/models/gguf/gpt-oss-120b-F16.gguf"
                 - "-ngl"
                 - "99"
                 - -fa
@@ -93,7 +75,7 @@ spec:
                 - --numa
                 - distribute
                 - --alias
-                - "llama-3-nemotron"
+                - "gpt-oss"
             - name: qwen-32b
               cooldownPeriod: 3600
               resources:

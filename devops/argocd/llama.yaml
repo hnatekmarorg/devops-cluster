@@ -427,7 +427,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - serve
+                - --model
                 - /models/fp8/Qwen3-Coder-30B-A3B-Instruct
                 - --tensor-parallel-size
                 - "4"

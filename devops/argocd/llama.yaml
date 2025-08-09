@@ -120,47 +120,6 @@ spec:
                 - distribute
                 - --alias
                 - "qwen-32B"
-            - name: gemma3-27b
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 2
-                limits:
-                  nvidia.com/gpu: 2
-              args:
-                - -c
-                - "128000" 
-                - -sm 
-                - row
-                - --temp
-                - "0.6"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "64"
-                - --min-p
-                - "0"
-                - --repeat-penalty 
-                - "1.0"
-                - --no-mmap
-                - --jinja
-                - --reasoning-format
-                - deepseek
-                - --mmproj
-                - /models/gguf/gemma3/mmproj-F16.gguf
-                - --model
-                - "/models/gguf/gemma3/gemma-3-27b-it-UD-Q8_K_XL.gguf"
-                - "-ngl"
-                - "99"
-                - -fa
-                - -t
-                - "-1"
-                - --prio
-                - "3"
-                - --numa
-                - distribute
-                - --alias
-                - "gemma3-27b"
             - name: qwen-30b-thinking
               cooldownPeriod: 3600
               resources:
@@ -390,6 +349,27 @@ spec:
                 - Qwen3-235B-A22B-Thinking-2507-exl3 
                 - --disable-auth
                 - "true"
+            - name: gemma3
+              engine: vllm
+              cooldownPeriod: 7200
+              resources:
+                requests:
+                  nvidia.com/gpu: 2
+                limits:
+                  nvidia.com/gpu: 2
+              args:
+                - --max-model-len=105584
+                - --tensor-parallel-size=2
+                - --gpu-memory-utilization=0.96
+                - --port
+                - "8080"
+                - --model
+                - /models/fp8/gemma-3-27b-it-quantized.w8a8
+                - --served-model-name
+                - gemma3
+                - --enable-auto-tool-choice
+                - --tool-call-parser
+                - qwen3_coder
             - name: qwen3-235b-q8
               cooldownPeriod: 3600
               device: cpu

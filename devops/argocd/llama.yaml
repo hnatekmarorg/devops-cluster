@@ -358,7 +358,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - --max-model-len=105584
+                - --max-model-len=105000
                 - --tensor-parallel-size=2
                 - --gpu-memory-utilization=0.96
                 - --port

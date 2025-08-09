@@ -42,7 +42,6 @@ spec:
                 - "true"
                 - --disable-auth
                 - "true"
-              cooldownPeriod: 600
             - name: gpt-oss
               cooldownPeriod: 3600
               resources:
@@ -162,46 +161,6 @@ spec:
                 - distribute
                 - --alias
                 - "gemma3-27b"
-            - name: qwen-30b-coder
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 2
-                limits:
-                  nvidia.com/gpu: 2
-              args:
-                - -fa
-                - --cache-type-k
-                - "q8_0"
-                - --cache-type-v
-                - "q8_0"
-                - -c
-                - "262144" 
-                - -sm 
-                - row
-                - --temp
-                - "0.7"
-                - --top-p
-                - "0.8"
-                - --top-k
-                - "20"
-                - --repeat-penalty
-                - "1.05"
-                - --no-mmap
-                - --jinja
-                - --model
-                - "/models/gguf/Qwen3-Coder-30B-A3B-Instruct-Q6_K.gguf"
-                - "-ngl"
-                - "99"
-                - -t
-                - "-1"
-                - --prio
-                - "3"
-                - --numa
-                - distribute
-                - --alias
-                - "qwen-30b-coder"
-
             - name: qwen-30b-thinking
               cooldownPeriod: 3600
               resources:
@@ -404,44 +363,6 @@ spec:
                 - distribute
                 - --alias
                 - "forgotten"
-            - name: scout
-              cooldownPeriod: 600
-              resources:
-                requests:
-                  nvidia.com/gpu: 5
-                limits:
-                  nvidia.com/gpu: 5
-              args:
-                - --no-mmap
-                - --jinja
-                - "-m"
-                - "/models/gguf/scout/Llama-4-Scout-17B-16E-Instruct-UD-Q4_K_XL-00001-of-00002.gguf"
-                - "-ngl"
-                - "99"
-                - -fa
-                - --cache-type-k
-                - "q8_0"
-                - --cache-type-v
-                - "q8_0"
-                - -t
-                - "-1"
-                - --jinja
-                - --prio
-                - "3"
-                - --temp
-                - "0.6"
-                - --min-p
-                - "0.01"
-                - --top-p
-                - "0.9"
-                - --ctx-size 
-                - "32000"
-                - --mmproj
-                - /models/gguf/scout/mmproj-F16.gguf
-                - --numa
-                - distribute
-                - --alias
-                - "scout"
             - name: qwen-235b-exl
               engine: tabby
               replicas: 1
@@ -497,6 +418,24 @@ spec:
                   memory: "300Gi"
                 limits:
                   memory: "300Gi"
+            - name: qwen3-coder
+              engine: vllm
+              cooldownPeriod: 7200
+              resources:
+                requests:
+                  nvidia.com/gpu: 4
+                limits:
+                  nvidia.com/gpu: 4
+              args:
+                - /models/fp8/Qwen3-Coder-30B-A3B-Instruct
+                - --tensor-parallel-size
+                - "4"
+                - --served-model-name
+                - qwen3-coder-plus
+                - --enable-auto-tool-choice
+                - --tool-call-parser
+                - qwen3_coder
+                - --enable-expert-parallel
   destination:
     server: https://kubernetes.default.svc
     namespace: inference

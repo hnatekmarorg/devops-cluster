@@ -28,7 +28,7 @@ spec:
             path: /mnt/data/k8s/ai
       containers:
         - name: test
-          image: lmsysorg/sglang:blackwell
+          image: vllm/vllm-openai:latest
           imagePullPolicy: Always
           resources:
             requests:

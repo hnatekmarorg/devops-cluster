@@ -423,10 +423,13 @@ spec:
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 2
                 limits:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 2
               args:
+                - --tensor-parallel-size=2 
+                - --gpu-memory-utilization=1.0
+                - --kv-cache-dtype=fp8
                 - --port
                 - "8080"
                 - --model

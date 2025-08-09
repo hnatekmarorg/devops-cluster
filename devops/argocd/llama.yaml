@@ -427,7 +427,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 3
               args:
-                - -pipeline-parallel-size=3
+                - --pipeline-parallel-size=3
                 - --gpu-memory-utilization=1.0
                 - --port
                 - "8080"

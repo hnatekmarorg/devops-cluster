@@ -351,6 +351,26 @@ spec:
                   memory: "300Gi"
                 limits:
                   memory: "300Gi"
+            - name: qwen3-30b-thinking
+              engine: vllm
+              cooldownPeriod: 7200
+              resources:
+                requests:
+                  nvidia.com/gpu: 2
+                limits:
+                  nvidia.com/gpu: 2
+              args:
+                - --tensor-parallel-size=2
+                - --max-model-len=120000
+                - --port
+                - "8080"
+                - --model
+                - /models/fp8/Qwen3-30B-A3B-thinking-2507-W8A8
+                - --served-model-name
+                - qwen3-30b
+                - --enable-auto-tool-choice
+                - --tool-call-parser
+                - hermes
             - name: qwen3-30b
               engine: vllm
               cooldownPeriod: 7200
@@ -367,7 +387,7 @@ spec:
                 - --model
                 - /models/fp8/Qwen3-30B-A3B-Instruct-2507-W8A8
                 - --served-model-name
-                - Qwen3-30B
+                - qwen3-30b
                 - --enable-auto-tool-choice
                 - --tool-call-parser
                 - hermes

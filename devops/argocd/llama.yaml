@@ -362,7 +362,7 @@ spec:
               args:
                 - --tensor-parallel-size=2
                 - --gpu-memory-utilization=0.95
-                - --max-model-len=128000
+                - --max-model-len=120000
                 - --port
                 - "8080"
                 - --model

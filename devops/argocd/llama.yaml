@@ -361,7 +361,6 @@ spec:
                   nvidia.com/gpu: 2
               args:
                 - --tensor-parallel-size=2
-                - --gpu-memory-utilization=0.95
                 - --max-model-len=120000
                 - --port
                 - "8080"

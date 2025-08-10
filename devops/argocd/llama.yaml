@@ -360,7 +360,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - --pipeline-parallel-size=2
+                - --tensor-parallel-size=2
                 - --port
                 - "8080"
                 - --model

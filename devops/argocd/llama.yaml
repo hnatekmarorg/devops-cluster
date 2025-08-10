@@ -406,7 +406,7 @@ spec:
                 - --port
                 - "8080"
                 - --model
-                - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8
+                - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-W8A8
                 - --served-model-name
                 - qwen3-coder-plus
                 - --enable-auto-tool-choice

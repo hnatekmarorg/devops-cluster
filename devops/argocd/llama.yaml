@@ -405,12 +405,11 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - --pipeline-parallel-size=3
+                - --tensor-parallel-size=2
                 - --port
                 - "8080"
                 - --model
                 - /models/fp8/Qwen2.5-VL-32B-Instruct-AWQ
-
                 - --served-model-name
                 - gwen2-vl-32
                 - --enable-auto-tool-choice

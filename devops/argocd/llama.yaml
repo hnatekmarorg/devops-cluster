@@ -351,7 +351,7 @@ spec:
                   memory: "300Gi"
                 limits:
                   memory: "300Gi"
-            - name: qwen3-30B
+            - name: qwen3-30b
               engine: vllm
               cooldownPeriod: 7200
               resources:

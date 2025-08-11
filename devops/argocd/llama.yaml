@@ -71,6 +71,7 @@ spec:
                 - "-1"
                 - --prio
                 - "3"
+                - --jinja
                 - --numa
                 - distribute
                 - --alias

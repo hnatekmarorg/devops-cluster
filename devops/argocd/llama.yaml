@@ -120,38 +120,31 @@ spec:
                 - distribute
                 - --alias
                 - "qwen-32B"
-            - name: qwen-30b-instruct
+            - name: glm-air
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 5
                 limits:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 5
               args:
                 - -fa
-                - --cache-type-k
-                - "q8_0"
-                - --cache-type-v
-                - "q8_0"
                 - -c
-                - "262144" 
+                - "128000" 
                 - -sm 
                 - row
                 - --temp
-                - "0.7"
+                - "0.6"
                 - --top-p
-                - "0.80"
+                - "0.95"
                 - --top-k
-                - "20"
+                - "40"
                 - --min-p
-                - "0"
-                - --presence-penalty
                 - "0"
                 - --no-mmap
                 - --jinja
                 - --model
-                #- "/models/gguf/Qwen3-30B-A3B-Instruct-2507-UD-Q8_K_XL.gguf"
-                - "/models/gguf/Qwen3-30B-A3B-Instruct-2507-UD-Q6_K_XL.gguf"
+                - "/models/gguf/glm/GLM-4.5-Air-UD-Q4_K_XL-00001-of-00002.gguf"
                 - "-ngl"
                 - "99"
                 - -t
@@ -161,7 +154,7 @@ spec:
                 - --numa
                 - distribute
                 - --alias
-                - "qwen-30b-instruct"
+                - "glm-air"
             - name: qwen-72b
               cooldownPeriod: 3600
               resources:

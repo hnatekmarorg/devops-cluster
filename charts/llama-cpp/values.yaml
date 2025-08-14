@@ -3,7 +3,7 @@ llm:
   vllm:
     image: vllm/vllm-openai:latest
   llama_cpp:
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    image: gitea.hnatekmar.xyz/public/llama-cpp
     cpuImage: ghcr.io/ggml-org/llama.cpp:server
 
 ingress:

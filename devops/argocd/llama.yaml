@@ -61,7 +61,7 @@ spec:
                 - "0"
                 - --no-mmap
                 - --model
-                - "/models/gguf/gpt-oss-120b-F16.gguf"
+                - "/models/gguf/gpt-oss/gpt-oss-120b-UD-Q8_K_XL-00001-of-00002.gguf"
                 - "-ngl"
                 - "99"
                 - -fa

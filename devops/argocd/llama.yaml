@@ -46,9 +46,9 @@ spec:
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
               args:
                 - --jinja
                 - -c
@@ -249,25 +249,6 @@ spec:
                 - Qwen3-235B-A22B-Thinking-2507-exl3 
                 - --disable-auth
                 - "true"
-            - name: gemma3
-              engine: vllm
-              cooldownPeriod: 7200
-              resources:
-                requests:
-                  nvidia.com/gpu: 2
-                limits:
-                  nvidia.com/gpu: 2
-              args:
-                - --tensor-parallel-size=2
-                - --port
-                - "8080"
-                - --model
-                - /models/fp8/gemma-3-27b-it-quantized.w8a8
-                - --served-model-name
-                - gemma3
-                - --enable-auto-tool-choice     
-                - --tool-call-parser
-                - pythonic
             - name: qwen3-235b-q8
               cooldownPeriod: 3600
               device: cpu

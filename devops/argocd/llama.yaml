@@ -46,9 +46,9 @@ spec:
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 3
                 limits:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 3
               args:
                 - --jinja
                 - -c

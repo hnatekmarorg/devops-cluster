@@ -70,6 +70,7 @@ spec:
                 - --prio
                 - "3"
                 - --jinja
+                - --chat-template-kwargs '{"reasoning_effort": "high"}'
                 - --numa
                 - distribute
                 - --alias

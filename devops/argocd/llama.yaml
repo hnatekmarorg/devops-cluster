@@ -76,86 +76,6 @@ spec:
                 - distribute
                 - --alias
                 - "gpt-oss"
-            - name: qwen-32b
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 3
-                limits:
-                  nvidia.com/gpu: 3
-              args:
-                - -c
-                - "40960" 
-                - -n
-                - "32768"
-                - -sm 
-                - row
-                - --rope-scaling 
-                - yarn 
-                - --rope-scale
-                - "4"
-                - --yarn-orig-ctx
-                - "32768"
-                - --temp
-                - "0.6"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "20"
-                - --min-p
-                - "0"
-                - --no-mmap
-                - --jinja
-                - --reasoning-format
-                - deepseek
-                - --model
-                - "/models/gguf/Qwen3-32B-128K-UD-Q8_K_XL.gguf"
-                - "-ngl"
-                - "99"
-                - -fa
-                - -t
-                - "-1"
-                - --prio
-                - "3"
-                - --numa
-                - distribute
-                - --alias
-                - "qwen-32B"
-            - name: glm-air
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 5
-                limits:
-                  nvidia.com/gpu: 5
-              args:
-                - -fa
-                - -c
-                - "128000" 
-                - -sm 
-                - row
-                - --temp
-                - "0.6"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "40"
-                - --min-p
-                - "0"
-                - --no-mmap
-                - --jinja
-                - --model
-                - "/models/gguf/glm/GLM-4.5-Air-UD-Q4_K_XL-00001-of-00002.gguf"
-                - "-ngl"
-                - "99"
-                - -t
-                - "-1"
-                - --prio
-                - "3"
-                - --numa
-                - distribute
-                - --alias
-                - "glm-air"
             - name: gemma3
               cooldownPeriod: 3600
               resources:
@@ -190,26 +110,30 @@ spec:
                 - distribute
                 - --alias
                 - "gemma3"
-            - name: forgotten
-              cooldownPeriod: 600
+            - name: qwen3-235b
+              cooldownPeriod: 3600
               resources:
                 requests:
                   nvidia.com/gpu: 5
                 limits:
                   nvidia.com/gpu: 5
               args:
-                - -sm 
-                - row
-                - --rope-scaling 
-                - yarn 
-                - --rope-scale
-                - "8"
-                - --yarn-orig-ctx
-                - "8192"
+                - --presence-penalty 
+                - "1.0"
+                - --ctx-size
+                - "132000"
+                - --temp
+                - "0.6"
+                - --min-p
+                - "0.0"
+                - --top-p
+                - "0.95"
+                - --top-k
+                - "20"
                 - --no-mmap
                 - --jinja
                 - "-m"
-                - "/models/gguf/forgotten/forgotten.gguf"
+                - "/models/gguf/Qwen3-235B-A22B-2507/Qwen3-235B-A22B-Instruct-2507-UD-Q2_K_XL-00001-of-00002.gguf"
                 - "-ngl"
                 - "99"
                 - -fa
@@ -218,39 +142,10 @@ spec:
                 - --jinja
                 - --prio
                 - "3"
-                - --ctx-size 
-                - "65536"
                 - --numa
                 - distribute
                 - --alias
-                - "forgotten"
-            - name: qwen-235b-exl
-              engine: tabby
-              replicas: 1
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 5
-                limits:
-                  nvidia.com/gpu: 5
-              args:
-                - main.py
-                - --host
-                - "0.0.0.0"
-                - --port
-                - "8080"
-                - --cuda-malloc-backend
-                - "true"
-                - --cache-mode
-                - "Q8" 
-                - --max-seq-len 
-                - "55000" 
-                - --model-dir
-                - /models/exl2
-                - --model-name
-                - Qwen3-235B-A22B-Thinking-2507-exl3 
-                - --disable-auth
-                - "true"
+                - "qwen3-235b"
             - name: qwen3-235b-q8
               cooldownPeriod: 3600
               device: cpu
@@ -295,26 +190,6 @@ spec:
                 - "8080"
                 - --model
                 - /models/fp8/Qwen3-30B-A3B-thinking-2507-W8A8
-                - --served-model-name
-                - qwen3-30b
-                - --enable-auto-tool-choice
-                - --tool-call-parser
-                - hermes
-            - name: qwen3-30b
-              engine: vllm
-              cooldownPeriod: 7200
-              resources:
-                requests:
-                  nvidia.com/gpu: 2
-                limits:
-                  nvidia.com/gpu: 2
-              args:
-                - --tensor-parallel-size=2
-                - --max-model-len=120000
-                - --port
-                - "8080"
-                - --model
-                - /models/fp8/Qwen3-30B-A3B-Instruct-2507-W8A8
                 - --served-model-name
                 - qwen3-30b
                 - --enable-auto-tool-choice

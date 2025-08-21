@@ -133,7 +133,7 @@ spec:
                 - --no-mmap
                 - --jinja
                 - "-m"
-                - "/models/gguf/Qwen3-235B-A22B-2507/Qwen3-235B-A22B-Instruct-2507-UD-Q2_K_XL-00001-of-00002.gguf"
+                - "/models/gguf/Qwen3-235B-A22B-2507/Qwen3-235B-A22B-Thinking-2507-UD-Q2_K_XL-00001-of-00002.gguf"
                 - "-ngl"
                 - "99"
                 - -fa

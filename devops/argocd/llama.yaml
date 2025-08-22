@@ -144,9 +144,9 @@ spec:
                 limits:
                   nvidia.com/gpu: 5
               args:
-                - -cvt
+                - -ctv
                 - q8_0
-                - -cvk
+                - -ctk
                 - q8_0
                 - --presence-penalty 
                 - "1.0"

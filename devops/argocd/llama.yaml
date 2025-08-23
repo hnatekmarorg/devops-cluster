@@ -140,9 +140,9 @@ spec:
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 5
+                  nvidia.com/gpu: 6
                 limits:
-                  nvidia.com/gpu: 5
+                  nvidia.com/gpu: 6
               args:
                 - -ctv
                 - q8_0
@@ -151,7 +151,7 @@ spec:
                 - --presence-penalty 
                 - "1.0"
                 - --ctx-size
-                - "132000"
+                - "262144"
                 - --temp
                 - "0.6"
                 - --min-p

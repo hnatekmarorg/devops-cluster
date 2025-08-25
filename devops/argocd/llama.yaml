@@ -211,6 +211,8 @@ spec:
                 limits:
                   nvidia.com/gpu: 6
               args:
+                - -ngl
+                - "99"
                 - --jinja
                 - --temp
                 - "0.6"

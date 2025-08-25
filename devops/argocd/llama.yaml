@@ -109,15 +109,8 @@ spec:
                 - --numa
                 - distribute
                 - --alias
-<<<<<<< HEAD
-                - "gemma3-27b"
-            
-            - name: qwen-30b-instruct
-=======
-                - "gemma3"
-
+                - gemma3
             - name: behemoth
->>>>>>> 5bc17e7660d41fbc00b93199a5046990639bff67
               cooldownPeriod: 3600
               resources:
                 requests:

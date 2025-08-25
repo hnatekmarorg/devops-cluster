@@ -204,6 +204,7 @@ spec:
                 limits:
                   memory: "300Gi"
             - name: glm-4-5-air
+              engine: vllm
               cooldownPeriod: 7200
               resources:
                 requests:
@@ -211,23 +212,20 @@ spec:
                 limits:
                   nvidia.com/gpu: 6
               args:
-                - -ngl
-                - "99"
-                - --jinja
-                - --temp
-                - "0.6"
-                - --top-p
-                - "1.0"
-                - -c
-                - "131072"
+                - --pipeline-parallel-size
+                - "6"
+                - --port
+                - "8080"
                 - --model
-                - /models/gguf/glm-air/GLM-4.5-Air-UD-Q6_K_XL-00001-of-00003.gguf
-                - -fa
-                - -t
-                - "-1"
-                - --no-mmap
-                - --alias
+                - /models/awq/GLM-4.5-Air-AWQ-FP16Mix
+                - --served-model-name
                 - glm-4-5-air
+                - --tool-call-parser
+                - glm45
+                - --reasoning-parser
+                - glm45
+                - --enable-auto-tool-choice
+                - --enable-expert-parallel
             - name: qwen3-coder
               engine: vllm
               cooldownPeriod: 7200

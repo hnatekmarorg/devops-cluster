@@ -204,27 +204,29 @@ spec:
                   memory: "300Gi"
                 limits:
                   memory: "300Gi"
-            - name: qwen3-30b-thinking
+            - name: glm-4-5-air
               engine: vllm
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 6
                 limits:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 6
               args:
+                - --pipeline-parallel-size
+                - "6"
                 - --max-num-seqs=1
-                - --tensor-parallel-size=2
-                - --max-model-len=120000
                 - --port
                 - "8080"
                 - --model
-                - /models/fp8/Qwen3-30B-A3B-thinking-2507-W8A8
+                - /models/awq/GLM-4.5-Air-AWQ-FP16Mix
                 - --served-model-name
-                - qwen3-30b
-                - --enable-auto-tool-choice
+                - glm-4-5-air
                 - --tool-call-parser
-                - hermes
+                - glm45
+                - --tool-call-parser
+                - glm45
+                - --enable-auto-tool-choice
             - name: qwen3-coder
               engine: vllm
               cooldownPeriod: 7200

@@ -219,6 +219,8 @@ spec:
                 - -ngl
                 - "99"
                 - --no-mmap
+                - -sm 
+                - row
                 - --numa
                 - distribute
                 - -m

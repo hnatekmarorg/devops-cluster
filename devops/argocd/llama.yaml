@@ -219,8 +219,10 @@ spec:
                 - -ngl
                 - "99"
                 - --no-mmap
-                - -sm 
-                - row
+                - -ctv
+                - q8_0
+                - -ctk
+                - q8_0
                 - --numa
                 - distribute
                 - -m

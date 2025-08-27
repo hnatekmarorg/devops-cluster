@@ -215,14 +215,10 @@ spec:
                 - "-1"
                 - --jinja
                 - -c
-                - "131072"
+                - "32000"
                 - -ngl
                 - "99"
                 - --no-mmap
-                - -ctv
-                - q8_0
-                - -ctk
-                - q8_0
                 - --numa
                 - distribute
                 - -m

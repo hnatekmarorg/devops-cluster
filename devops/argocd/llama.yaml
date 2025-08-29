@@ -135,6 +135,38 @@ spec:
                 - distribute
                 - --alias
                 - "behemoth"
+            - name: kimi-dev
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 6
+                limits:
+                  nvidia.com/gpu: 6
+              args:
+                - --ctx-size
+                - "32768"
+                - --temp
+                - "0.7"
+                - --top-p
+                - "0.8"
+                - --top-k
+                - "20"
+                - --no-mmap
+                - --jinja
+                - "-m"
+                - "/models/gguf/moonshotai_Kimi-Dev-72B-Q4_1.gguff"
+                - "-ngl"
+                - "99"
+                - -fa
+                - -t
+                - "-1"
+                - --jinja
+                - --prio
+                - "3"
+                - --numa
+                - distribute
+                - --alias
+                - "kimi-dev"
             - name: qwen3-235b
               cooldownPeriod: 3600
               resources:

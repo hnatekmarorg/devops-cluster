@@ -154,7 +154,7 @@ spec:
                 - --no-mmap
                 - --jinja
                 - "-m"
-                - "/models/gguf/moonshotai_Kimi-Dev-72B-Q4_1.gguff"
+                - "/models/gguf/moonshotai_Kimi-Dev-72B-Q4_1.gguf"
                 - "-ngl"
                 - "99"
                 - -fa

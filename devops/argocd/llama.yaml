@@ -80,9 +80,9 @@ spec:
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 1
+                  nvidia.com/gpu: 2
                 limits:
-                  nvidia.com/gpu: 1
+                  nvidia.com/gpu: 2
               args:
                 - --yarn-orig-ctx
                 - "32768"

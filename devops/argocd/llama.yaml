@@ -133,7 +133,7 @@ spec:
                 - distribute
                 - --alias
                 - "behemoth"
-            - name: kimi-dev
+            - name: glm-steam
               cooldownPeriod: 3600
               resources:
                 requests:
@@ -142,9 +142,9 @@ spec:
                   nvidia.com/gpu: 6
               args:
                 - --ctx-size
-                - "32768"
+                - "128000"
                 - --temp
-                - "0.7"
+                - "0.6"
                 - --top-p
                 - "0.8"
                 - --top-k
@@ -152,7 +152,7 @@ spec:
                 - --no-mmap
                 - --jinja
                 - "-m"
-                - "/models/gguf/moonshotai_Kimi-Dev-72B-Q4_1.gguf"
+                - "/models/gguf/glm-steam/TheDrummer_GLM-Steam-106B-A12B-v1-Q6_K-00001-of-00003.gguf"
                 - "-ngl"
                 - "99"
                 - -fa
@@ -164,47 +164,8 @@ spec:
                 - --numa
                 - distribute
                 - --alias
-                - "kimi-dev"
-            - name: qwen3-235b
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 6
-                limits:
-                  nvidia.com/gpu: 6
-              args:
-                - -ctv
-                - q8_0
-                - -ctk
-                - q8_0
-                - --presence-penalty 
-                - "1.0"
-                - --ctx-size
-                - "262144"
-                - --temp
-                - "0.6"
-                - --min-p
-                - "0.0"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "20"
-                - --no-mmap
-                - --jinja
-                - "-m"
-                - "/models/gguf/Qwen3-235B-A22B-2507/Qwen3-235B-A22B-Thinking-2507-UD-Q2_K_XL-00001-of-00002.gguf"
-                - "-ngl"
-                - "99"
-                - -fa
-                - -t
-                - "-1"
-                - --jinja
-                - --prio
-                - "3"
-                - --numa
-                - distribute
-                - --alias
-                - "qwen3-235b"
+                - "glm-steam"
+
             - name: qwen3-235b-q8
               cooldownPeriod: 3600
               device: cpu

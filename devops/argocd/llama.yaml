@@ -222,11 +222,11 @@ spec:
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
               args:
-                - --pipeline-parallel-size=3
+                - --data-parallel-size=4
                 - --port
                 - "8080"
                 - --model

@@ -227,6 +227,8 @@ spec:
                   nvidia.com/gpu: 4
               args:
                 - --data-parallel-size=4
+                - --kv-cache-dtype
+                - fp8_e5m2
                 - --port
                 - "8080"
                 - --model

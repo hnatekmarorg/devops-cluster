@@ -226,13 +226,11 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - --data-parallel-size=4
-                - --kv-cache-dtype
-                - fp8_e5m2
+                - --tensor-parallel-size=4
                 - --port
                 - "8080"
                 - --model
-                - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8/
+                - /models/fp8/Qwen3-Coder-30B-A3B-Instruct
                 - --served-model-name
                 - qwen3-coder-plus
                 - --enable-auto-tool-choice

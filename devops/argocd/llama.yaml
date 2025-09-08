@@ -120,7 +120,7 @@ spec:
                 - "131072"
                 - --no-mmap
                 - "-m"
-                - "/models/gguf/behemoth/TheDrummer_Behemoth-X-123B-v2-Q4_K_M-00001-of-00002.gguf"
+                - "/models/gguf/behemoth/q_4/TheDrummer_Behemoth-R1-123B-v2-Q4_K_M-00001-of-00002.gguf"
                 - "-ngl"
                 - "99"
                 - -fa

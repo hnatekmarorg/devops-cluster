@@ -166,28 +166,32 @@ spec:
                 - --alias
                 - "glm-steam"
 
-            - name: qwen3-235b-q8
+            - name: qwen3-235b-thinking
               cooldownPeriod: 3600
-              device: cpu
+              resources:
+                requests:
+                  nvidia.com/gpu: 6
+                limits:
+                  nvidia.com/gpu: 6
               args:
+                - --alias="qwen3-235b-thinking"
+                - --temp=0.6
+                - --min-p=0.0
+                - --top-p=0.95
+                - --top-k=20
+                - --presence-penalty=1.0
                 - -t
                 - "-1"
                 - --jinja
                 - -c
-                - "131072"
-                - -ngl
-                - "0"
+                - "262114"
+                - -fa
+                - "on"
                 - --no-mmap
                 - --numa
                 - distribute
-                - --rope-scaling 
-                - yarn 
-                - --rope-scale 
-                - "4" 
-                - --yarn-orig-ctx
-                - "32768"
                 - -m
-                - /models/gguf/Qwen-235B/Qwen3-235B-A22B-128K-UD-Q8_K_XL-00001-of-00006.gguf
+                - /models/gguf/Qwen-235B/Qwen3-235B-A22B-Thinking-2507-UD-Q3_K_XL-00001-of-00003.gguf
               selector: { }
               cpuResources:
                 requests:

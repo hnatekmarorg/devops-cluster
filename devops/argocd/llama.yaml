@@ -195,8 +195,6 @@ spec:
                 - "q8_0"
                 - -c
                 - "256000"
-                - -fa
-                - "on"
                 - --no-mmap
                 - --numa
                 - distribute

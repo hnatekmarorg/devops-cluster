@@ -194,7 +194,7 @@ spec:
                 - -ctk
                 - "q8_0"
                 - --ctx-size
-                - "256000"
+                - "250000"
                 - --numa
                 - distribute
                 - -m

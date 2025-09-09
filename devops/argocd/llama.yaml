@@ -165,7 +165,37 @@ spec:
                 - distribute
                 - --alias
                 - "glm-steam"
-
+            - name: qwen3-30b-instruct
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+              args:
+                - --alias
+                - "qwen3-30b-instruct"
+                - --temp
+                - "0.6"
+                - --min-p
+                - "0.0"
+                - --top-p
+                - "0.95"
+                - --top-k
+                - "20"
+                - --presence-penalty
+                - "1.0"
+                - -t
+                - "-1"
+                - --jinja
+                - --ctx-size
+                - "125000"
+                - -fa
+                - "on"
+                - --numa
+                - distribute
+                - -m
+                - /models/gguf/Qwen_Qwen3-30B-A3B-Instruct-2507-Q8_0.gguf
             - name: qwen3-235b-instruct
               cooldownPeriod: 3600
               resources:

@@ -194,14 +194,14 @@ spec:
                 - -ctk
                 - "q8_0"
                 - -c
-                - "250000"
+                - "256000"
                 - -fa
                 - "on"
                 - --no-mmap
                 - --numa
                 - distribute
                 - -m
-                - /models/gguf/Qwen-235B/Qwen3-235B-A22B-Thinking-2507-UD-Q3_K_XL-00001-of-00003.gguf
+                - /models/gguf/Qwen3-235B-A22B-2507/Qwen3-235B-A22B-Thinking-2507-UD-Q3_K_XL-00001-of-00003.gguf
               selector: { }
               cpuResources:
                 requests:

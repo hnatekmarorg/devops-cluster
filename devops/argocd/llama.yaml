@@ -165,6 +165,35 @@ spec:
                 - distribute
                 - --alias
                 - "glm-steam"
+            - name: qwen3-30b-thinking
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+              args:
+                - --alias
+                - "qwen3-30b-thinking"
+                - --temp
+                - "0.7"
+                - --min-p
+                - "0.0"
+                - --top-p
+                - "0.8"
+                - --top-k
+                - "20"
+                - -t
+                - "-1"
+                - --jinja
+                - --ctx-size
+                - "262144"
+                - -fa
+                - "on"
+                - --numa
+                - distribute
+                - -m
+                - /models/gguf/Qwen3-30B-A3B-Thinking-2507-UD-Q8_K_XL.gguf
             - name: qwen3-30b-instruct
               cooldownPeriod: 3600
               resources:
@@ -176,15 +205,13 @@ spec:
                 - --alias
                 - "qwen3-30b-instruct"
                 - --temp
-                - "0.6"
+                - "0.7"
                 - --min-p
                 - "0.0"
                 - --top-p
-                - "0.95"
+                - "0.8"
                 - --top-k
                 - "20"
-                - --presence-penalty
-                - "1.0"
                 - -t
                 - "-1"
                 - --jinja

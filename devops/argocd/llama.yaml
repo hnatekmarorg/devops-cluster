@@ -174,7 +174,8 @@ spec:
                 limits:
                   nvidia.com/gpu: 6
               args:
-                - --alias="qwen3-235b-thinking"
+                - --alias
+                - "qwen3-235b-thinking"
                 - --temp=0.6
                 - --min-p=0.0
                 - --top-p=0.95

@@ -189,12 +189,8 @@ spec:
                 - -t
                 - "-1"
                 - --jinja
-                - -ctv
-                - "q8_0"
-                - -ctk
-                - "q8_0"
                 - --ctx-size
-                - "250000"
+                - "125000"
                 - --numa
                 - distribute
                 - -m

@@ -191,6 +191,8 @@ spec:
                 - --jinja
                 - --ctx-size
                 - "125000"
+                - -fa
+                - "on"
                 - --numa
                 - distribute
                 - -m

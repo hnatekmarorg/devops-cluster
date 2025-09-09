@@ -193,7 +193,7 @@ spec:
                 - "q8_0"
                 - -ctk
                 - "q8_0"
-                - -c
+                - --ctx-size
                 - "256000"
                 - --no-mmap
                 - --numa

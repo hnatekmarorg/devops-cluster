@@ -166,6 +166,37 @@ spec:
                 - --alias
                 - "glm-steam"
 
+            - name: qwen3-235b-instruct
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 6
+                limits:
+                  nvidia.com/gpu: 6
+              args:
+                - --alias
+                - "qwen3-235b-instruct"
+                - --temp
+                - "0.6"
+                - --min-p
+                - "0.0"
+                - --top-p
+                - "0.95"
+                - --top-k
+                - "20"
+                - --presence-penalty
+                - "1.0"
+                - -t
+                - "-1"
+                - --jinja
+                - --ctx-size
+                - "125000"
+                - -fa
+                - "on"
+                - --numa
+                - distribute
+                - -m
+                - /models/gguf/Qwen3-235B-A22B-2507/Qwen3-235B-A22B-Instruct-2507-UD-Q3_K_XL-00001-of-00003.gguf
             - name: qwen3-235b-thinking
               cooldownPeriod: 3600
               resources:

@@ -223,35 +223,6 @@ spec:
                 - distribute
                 - -m
                 - /models/gguf/Qwen3-30B-A3B-Thinking-2507-UD-Q8_K_XL.gguf
-            - name: qwen3-30b-instruct
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 3
-                limits:
-                  nvidia.com/gpu: 3
-              args:
-                - --alias
-                - "qwen3-30b-instruct"
-                - --temp
-                - "0.7"
-                - --min-p
-                - "0.0"
-                - --top-p
-                - "0.8"
-                - --top-k
-                - "20"
-                - -t
-                - "-1"
-                - --jinja
-                - --ctx-size
-                - "125000"
-                - -fa
-                - "on"
-                - --numa
-                - distribute
-                - -m
-                - /models/gguf/Qwen_Qwen3-30B-A3B-Instruct-2507-Q8_0.gguf
             - name: hunyuan-a13b-instruct
               cooldownPeriod: 3600
               resources:
@@ -377,25 +348,25 @@ spec:
                 - glm45
                 - --enable-auto-tool-choice
                 - --enable-expert-parallel
-            - name: qwen3-coder
+            - name: qwen3-30b-instruct
               engine: vllm
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 3
                 limits:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 3
               args:
-                - --tensor-parallel-size=4
+                - --pipeline-parallel-size=3
                 - --port
                 - "8080"
                 - --model
-                - /models/fp8/Qwen3-Coder-30B-A3B-Instruct
+                - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
                 - --served-model-name
-                - qwen3-coder-plus
-                - --enable-auto-tool-choice
-                - --tool-call-parser
-                - qwen3_coder
+                - qwen3-30b-instruct
+                - --enable-auto-tool-choice 
+                - --tool-call-parser 
+                - hermes
                 - --enable-expert-parallel
   destination:
     server: https://kubernetes.default.svc

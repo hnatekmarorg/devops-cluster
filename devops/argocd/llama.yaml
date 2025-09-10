@@ -282,7 +282,7 @@ spec:
                 - --numa
                 - distribute
                 - -m
-                - /models/gguf/hyunyuan/Hunyuan-A13B-Instruct-UD-Q8_K_XL-00002-of-00002.gguf
+                - /models/gguf/hyunyuan/Hunyuan-A13B-Instruct-UD-Q8_K_XL-00001-of-00002.gguf
             - name: qwen3-235b-instruct
               cooldownPeriod: 3600
               resources:

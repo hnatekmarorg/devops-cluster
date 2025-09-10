@@ -281,6 +281,8 @@ spec:
                 - "on"
                 - --numa
                 - distribute
+                - -sm
+                - row
                 - -m
                 - /models/gguf/hyunyuan/Hunyuan-A13B-Instruct-UD-Q8_K_XL-00001-of-00002.gguf
             - name: qwen3-235b-instruct

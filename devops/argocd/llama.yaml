@@ -384,6 +384,7 @@ spec:
                 - /models/awq/Qwen2.5-VL-32B-Instruct-AWQ
                 - --served-model-name
                 - qwen2-32b-vl
+                - --limit-mm-per-prompt "image=8"
 
   destination:
     server: https://kubernetes.default.svc

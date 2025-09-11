@@ -368,6 +368,24 @@ spec:
                 - --tool-call-parser 
                 - hermes
                 - --enable-expert-parallel
+            - name: qwen2-32b-vl
+              engine: vllm
+              cooldownPeriod: 7200
+              resources:
+                requests:
+                  nvidia.com/gpu: 3
+                limits:
+                  nvidia.com/gpu: 3
+              args:
+                - --pipeline-parallel-size=3
+                - --port
+                - "8080"
+                - --model
+                - /models/awq/Qwen2.5-VL-32B-Instruct-AWQ
+                - --served-model-name
+                - qwen2-32b-vl
+                - --enable-auto-tool-choice 
+
   destination:
     server: https://kubernetes.default.svc
     namespace: inference

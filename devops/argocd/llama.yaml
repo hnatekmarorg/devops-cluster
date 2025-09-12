@@ -366,7 +366,6 @@ spec:
                 - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
                 - --served-model-name
                 - qwen3-30b-instruct
-                - --enable-auto-tool-choice 
                 - --enable-expert-parallel
             - name: qwen2-32b-vl
               engine: vllm

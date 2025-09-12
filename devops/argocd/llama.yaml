@@ -367,8 +367,6 @@ spec:
                 - --served-model-name
                 - qwen3-30b-instruct
                 - --enable-auto-tool-choice 
-                - --tool-call-parser 
-                - hermes
                 - --enable-expert-parallel
             - name: qwen2-32b-vl
               engine: vllm

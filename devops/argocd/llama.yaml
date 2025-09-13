@@ -164,38 +164,6 @@ spec:
                 - distribute
                 - --alias
                 - "behemoth"
-            - name: glm-steam
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 6
-                limits:
-                  nvidia.com/gpu: 6
-              args:
-                - --ctx-size
-                - "128000"
-                - --temp
-                - "0.6"
-                - --top-p
-                - "0.8"
-                - --top-k
-                - "20"
-                - --no-mmap
-                - --jinja
-                - "-m"
-                - "/models/gguf/glm-steam/TheDrummer_GLM-Steam-106B-A12B-v1-Q6_K-00001-of-00003.gguf"
-                - "-ngl"
-                - "99"
-                - -fa
-                - -t
-                - "-1"
-                - --jinja
-                - --prio
-                - "3"
-                - --numa
-                - distribute
-                - --alias
-                - "glm-steam"
             - name: qwen3-30b-thinking
               cooldownPeriod: 3600
               resources:
@@ -225,107 +193,32 @@ spec:
                 - distribute
                 - -m
                 - /models/gguf/Qwen3-30B-A3B-Thinking-2507-UD-Q8_K_XL.gguf
-            - name: hunyuan-a13b-instruct
+            - name: llama-3-3-nemotron-super
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 6
+                  nvidia.com/gpu: 3
                 limits:
-                  nvidia.com/gpu: 6
+                  nvidia.com/gpu: 3
               args:
-                - --alias
-                - "hunyuan-a13b-instruct"
-                - --temp
-                - "0.7"
-                - --min-p
-                - "0.05"
-                - --top-p
-                - "0.8"
-                - --top-k
-                - "20"
-                - --repeat-penalty
-                - "1.05"
-                - -t
-                - "-1"
-                - --jinja
-                - --ctx-size
-                - "32000"
-                - -fa
-                - "on"
-                - --numa
-                - distribute
-                - -sm
-                - row
-                - -m
-                - /models/gguf/hyunyuan/Hunyuan-A13B-Instruct-UD-Q8_K_XL-00001-of-00002.gguf
-            - name: qwen3-235b-instruct
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 6
-                limits:
-                  nvidia.com/gpu: 6
-              args:
-                - --alias
-                - "qwen3-235b-instruct"
-                - --temp
-                - "0.6"
-                - --min-p
-                - "0.0"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "20"
-                - --presence-penalty
-                - "1.0"
-                - -t
-                - "-1"
-                - --jinja
-                - --ctx-size
-                - "125000"
-                - -fa
-                - "on"
-                - --numa
-                - distribute
-                - -m
-                - /models/gguf/Qwen3-235B-A22B-2507/Qwen3-235B-A22B-Instruct-2507-UD-Q3_K_XL-00001-of-00003.gguf
-            - name: qwen3-235b-thinking
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 6
-                limits:
-                  nvidia.com/gpu: 6
-              args:
-                - --alias
-                - "qwen3-235b-thinking"
-                - --temp
-                - "0.6"
-                - --min-p
-                - "0.0"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "20"
-                - --presence-penalty
-                - "1.0"
-                - -t
-                - "-1"
-                - --jinja
-                - --ctx-size
-                - "125000"
-                - -fa
-                - "on"
-                - --numa
-                - distribute
-                - -m
-                - /models/gguf/Qwen3-235B-A22B-2507/Qwen3-235B-A22B-Thinking-2507-UD-Q3_K_XL-00001-of-00003.gguf
-              selector: { }
-              cpuResources:
-                requests:
-                  memory: "300Gi"
-                limits:
-                  memory: "300Gi"
+               - --ngl 
+               - "99"
+               - -m 
+               - /models/gguf/nemotron/Llama-3_3-Nemotron-Super-49B-v1_5-UD-Q6_K_XL.gguf 
+               - -fa 
+               - "on"
+               - --no-mmap 
+               - --ctx-size 
+               - "100000"
+               - -sm 
+               - row  
+               - --jinja 
+               - --alias 
+               - llama-3-3-nemotron-super
+               - --temp 
+               - "0.6"
+               - --top-p 
+               - "0.95"
             - name: glm-4-5-air
               engine: vllm
               cooldownPeriod: 7200

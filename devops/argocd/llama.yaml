@@ -324,7 +324,7 @@ spec:
                 - /models/fp8/Qwen2.5-VL-7B-Instruct
                 - --served-model-name
                 - qwen2-7b-vl
-                - --limit-mm-per-prompt 
+                - --limit-mm-per-prompt.image 
                 - "8"
 
   destination:

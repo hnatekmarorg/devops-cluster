@@ -308,7 +308,7 @@ spec:
                 - --served-model-name
                 - qwen2-32b-vl
                 - --limit-mm-per-prompt "image=8"            
-            - name: qwen2-32b-vl
+            - name: qwen2-7b-vl
               engine: vllm
               cooldownPeriod: 7200
               resources:

@@ -48,7 +48,7 @@ spec:
           {{- end }}
           imagePullPolicy: Always
           {{- if eq (.engine | default "llama") "vllm" }}
-          command: ["/usr/local/bin/vllm"]
+          command: ["/bin/bash"]
           {{- end }}
           env:
             - name: TIKTOKEN_ENCODINGS_BASE
@@ -56,7 +56,9 @@ spec:
             - name: TIKTOKEN_RS_CACHE_DIR
               value: "/models/gpt-cache/"
           command: ["/bin/bash"]
-          args: {{ toYaml .args | nindent 12}}
+          args: 
+            - /usr/local/bin/vllm
+            {{ toYaml .args | nindent 12}}
           volumeMounts:
             - mountPath: /models
               name: nas

@@ -49,10 +49,9 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - serve
+                - /models/fp8/gpt-oss-120b
                 - --tensor-parallel-size
                 - "4"
-                - /models/fp8/gpt-oss-120b
                 - --async-scheduling
                 - --tool-call-parser 
                 - openai
@@ -68,7 +67,6 @@ spec:
                 limits:
                   nvidia.com/gpu: 1
               args:
-                - serve
                 - /models/fp8/gpt-oss-20b
                 - --async-scheduling
                 - --tool-call-parser 

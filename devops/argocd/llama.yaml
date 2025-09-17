@@ -41,42 +41,39 @@ spec:
                 - --disable-auth
                 - "true"
             - name: gpt-oss
+              engine: vllm
               cooldownPeriod: 3600
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
               args:
-                - --jinja
-                - -c
-                - "105000" 
-                - --temp
-                - "1.0"
-                - --top-p
-                - "1"
-                - --top-k
-                - "0"
-                - --no-mmap
-                - --model
-                - "/models/gguf/gpt-oss/gpt-oss-120b-UD-Q8_K_XL-00001-of-00002.gguf"
-                - "-ngl"
-                - "99"
-                - -sm
-                - row
-                - -fa
-                - "on"
-                - -t
-                - "-1"
-                - --prio
-                - "3"
-                - --jinja
-                - --chat-template-kwargs 
-                - '{"reasoning_effort": "high"}'
-                - --numa
-                - distribute
-                - --alias
-                - "gpt-oss"
+                - --tensor-parallel-size
+                - "4"
+                - /models/fp8/gpt-oss-120b
+                - --async-scheduling
+                - --tool-call-parser 
+                - openai
+                - --enable-auto-tool-choice
+                - --served-model-name
+                - gpt-oss
+            - name: gpt-oss-20b
+              engine: vllm
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 1
+                limits:
+                  nvidia.com/gpu: 1
+              args:
+                - /models/fp8/gpt-oss-20b
+                - --async-scheduling
+                - --tool-call-parser 
+                - openai
+                - --enable-auto-tool-choice
+                - --served-model-name
+                - gpt-oss-20b
             - name: qwen3-32b
               cooldownPeriod: 3600
               resources:

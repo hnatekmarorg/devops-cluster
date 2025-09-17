@@ -58,7 +58,7 @@ spec:
           command: ["/bin/bash"]
           args: 
             - -c 
-            - "/usr/local/bin/vllm serve --host 0.0.0.0 --port 8080 {{ join " " .args }}"
+            - "/usr/local/bin/vllm serve {{ join " " .args }} --host 0.0.0.0 --port 8080"
           volumeMounts:
             - mountPath: /models
               name: nas

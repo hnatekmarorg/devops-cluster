@@ -50,6 +50,8 @@ spec:
           env:
             - name: TIKTOKEN_ENCODINGS_BASE
               value: "/models/gpt-cache/"
+            - name: TIKTOKEN_RS_CACHE_DIR
+              value: "/models/gpt-cache/"
           args: {{ toYaml .args | nindent 12}}
           volumeMounts:
             - mountPath: /models

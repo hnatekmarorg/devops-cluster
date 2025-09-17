@@ -47,6 +47,9 @@ spec:
           {{- end }}
           {{- end }}
           imagePullPolicy: Always
+          env:
+            - name: TIKTOKEN_ENCODINGS_BASE
+              value: "/models/gpt-cache/"
           args: {{ toYaml .args | nindent 12}}
           volumeMounts:
             - mountPath: /models

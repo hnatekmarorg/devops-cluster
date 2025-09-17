@@ -48,7 +48,7 @@ spec:
           {{- end }}
           imagePullPolicy: Always
           {{- if eq (.engine | default "llama") "vllm" }}
-          entrypoint: ["/usr/local/bin/vllm"]
+          command: ["/usr/local/bin/vllm"]
           {{- end }}
           env:
             - name: TIKTOKEN_ENCODINGS_BASE

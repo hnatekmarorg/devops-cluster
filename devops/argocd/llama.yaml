@@ -52,6 +52,8 @@ spec:
                 - /models/fp8/gpt-oss-120b
                 - --tensor-parallel-size
                 - "4"
+                - --gpu-memory-utilization 
+                - "0.85"
                 - --async-scheduling
                 - --tool-call-parser 
                 - openai

@@ -278,7 +278,6 @@ spec:
                 - --port
                 - "8080"
                 - --trust-remote-code
-                - --model
                 - /models/awq/GLM-4.5-Air-AWQ-FP16Mix
                 - --served-model-name
                 - glm-4-5-air

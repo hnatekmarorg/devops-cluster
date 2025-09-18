@@ -41,7 +41,6 @@ spec:
                 - --disable-auth
                 - "true"
             - name: gpt-oss
-              engine: vllm
               cooldownPeriod: 3600
               resources:
                 requests:
@@ -49,19 +48,35 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - /models/fp8/gpt-oss-120b
-                - --tensor-parallel-size
-                - "4"
-                - --gpu-memory-utilization 
-                - "0.85"
-                - --async-scheduling
-                - --tool-call-parser 
-                - openai
-                - --reasoning-parser 
-                - openai_gptoss
-                - --enable-auto-tool-choice
-                - --served-model-name
-                - gpt-oss
+                - --jinja
+                - -c
+                - "131072" 
+                - --temp
+                - "1.0"
+                - --top-p
+                - "1"
+                - --top-k
+                - "0"
+                - --no-mmap
+                - --model
+                - "/models/gguf/gpt-oss/gpt-oss-120b-UD-Q8_K_XL-00001-of-00002.gguf"
+                - "-ngl"
+                - "99"
+                - -sm
+                - row
+                - -fa
+                - "on"
+                - -t
+                - "-1"
+                - --prio
+                - "3"
+                - --jinja
+                - --chat-template-kwargs 
+                - '{"reasoning_effort": "high"}'
+                - --numa
+                - distribute
+                - --alias
+                - "gpt-oss"
             - name: gpt-oss-20b
               engine: vllm
               cooldownPeriod: 3600

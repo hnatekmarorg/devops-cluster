@@ -51,8 +51,6 @@ spec:
           command: ["/bin/bash"]
           {{- end }}
           env:
-            - name: VLLM_DEBUG_LOG_API_SERVER_RESPONSE
-              value: "true"
             - name: TIKTOKEN_ENCODINGS_BASE
               value: "/models/gpt-cache/"
             - name: TIKTOKEN_RS_CACHE_DIR

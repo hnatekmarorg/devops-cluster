@@ -77,6 +77,7 @@ spec:
                 - distribute
                 - --alias
                 - "gpt-oss"
+                
             - name: gpt-oss-20b
               engine: vllm
               cooldownPeriod: 3600

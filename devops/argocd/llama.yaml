@@ -94,35 +94,6 @@ spec:
                 - --enable-auto-tool-choice
                 - --served-model-name
                 - gpt-oss-20b
-            - name: qwen3-32b
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 3
-                limits:
-                  nvidia.com/gpu: 3
-              args:
-                - --alias
-                - "qwen3-32b"
-                - --temp
-                - "0.6"
-                - --min-p
-                - "0.0"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "20"
-                - -t
-                - "-1"
-                - --jinja
-                - --ctx-size
-                - "32768"
-                - -fa
-                - "on"
-                - --numa
-                - distribute
-                - -m
-                - /models/gguf/Qwen3-32B-128K-UD-Q8_K_XL.gguf
             - name: gemma3
               cooldownPeriod: 3600
               resources:
@@ -181,6 +152,30 @@ spec:
                 - distribute
                 - --alias
                 - "behemoth"
+            - name: behemoth-redux
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 6
+                limits:
+                  nvidia.com/gpu: 6
+              args:
+                - --ctx-size
+                - "128000"
+                - --no-mmap
+                - "-m"
+                - "/models/gguf/behemoth-redux/TheDrummer_Behemoth-ReduX-123B-v1-Q6_K/TheDrummer_Behemoth-ReduX-123B-v1-Q6_K-00003-of-00003.gguf"
+                - "-ngl"
+                - "99"
+                - -t
+                - "-1"
+                - --prio
+                - "3"
+                - --numa
+                - distribute
+                - --alias
+                - "behemoth-redux"
+
             - name: qwen3-30b-thinking
               cooldownPeriod: 3600
               resources:

@@ -161,7 +161,7 @@ spec:
                   nvidia.com/gpu: 6
               args:
                 - --ctx-size
-                - "128000"
+                - "64000"
                 - --no-mmap
                 - "-m"
                 - "/models/gguf/behemoth-redux/TheDrummer_Behemoth-ReduX-123B-v1-Q6_K-00001-of-00003.gguf"

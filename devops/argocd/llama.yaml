@@ -164,7 +164,7 @@ spec:
                 - "128000"
                 - --no-mmap
                 - "-m"
-                - "/models/gguf/behemoth-redux/TheDrummer_Behemoth-ReduX-123B-v1-Q6_K-00003-of-00003.gguf"
+                - "/models/gguf/behemoth-redux/TheDrummer_Behemoth-ReduX-123B-v1-Q6_K-00001-of-00003.gguf"
                 - "-ngl"
                 - "99"
                 - -t

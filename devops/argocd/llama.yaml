@@ -252,7 +252,6 @@ spec:
                 - --pipeline-parallel-size
                 - "2"
                 - --enable-auto-tool-choice 
-                - --enable-expert-parallel
                 - --tool-call-parser
                 - qwen3_coder
                 - --served-model-name

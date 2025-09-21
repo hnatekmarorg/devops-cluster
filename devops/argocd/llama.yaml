@@ -57,6 +57,7 @@ spec:
                 - "0.9"
                 - --min-p
                 - "0.01"
+                - --no-mmproj
                 - --no-mmap
                 - --model
                 - "/models/gguf/cogito/cogito-v2-preview-llama-109B-MoE-UD-Q6_K_XL-00001-of-00002.gguf"

@@ -40,6 +40,39 @@ spec:
                 - "true"
                 - --disable-auth
                 - "true"
+            - name: cogito
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 6
+                limits:
+                  nvidia.com/gpu: 6
+              args:
+                - --jinja
+                - -c
+                - "2000" 
+                - --temp
+                - "0.6"
+                - --top-p
+                - "0.9"
+                - --min-p
+                - "0.01"
+                - --no-mmap
+                - --model
+                - "/models/gguf/cogito/cogito-v2-preview-llama-109B-MoE-UD-Q6_K_XL-00001-of-00002.gguf"
+                - "-ngl"
+                - "99"
+                - -fa
+                - "on"
+                - -t
+                - "-1"
+                - --prio
+                - "3"
+                - --jinja
+                - --numa
+                - distribute
+                - --alias
+                - "cogito"
             - name: gpt-oss
               cooldownPeriod: 3600
               resources:

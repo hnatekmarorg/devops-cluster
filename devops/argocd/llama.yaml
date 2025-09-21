@@ -238,59 +238,25 @@ spec:
                 - -m
                 - /models/gguf/Qwen3-30B-A3B-Thinking-2507-UD-Q8_K_XL.gguf
             - name: qwen3-30b-coder
-              cooldownPeriod: 3600
+              engine: vllm
+              cooldownPeriod: 7200
               resources:
                 requests:
                   nvidia.com/gpu: 2
                 limits:
                   nvidia.com/gpu: 2
               args:
-               - -ngl 
-               - "99"
-               - -m 
-               - /models/gguf/Qwen3-Coder-30B-A3B-Instruct-UD-Q6_K_XL.gguf
-               - -fa 
-               - "on"
-               - --no-mmap 
-               - --ctx-size 
-               - "182500" 
-               - --jinja 
-               - --alias 
-               - qwen3-coder-30b
-               - --temp 
-               - "0.7"
-               - --top-p 
-               - "0.8"
-               - --top-k
-               - "20"
-               - --repeat-penalty
-               - "1.05"
-            - name: llama-3-3-nemotron-super
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 3
-                limits:
-                  nvidia.com/gpu: 3
-              args:
-               - -ngl 
-               - "99"
-               - -m 
-               - /models/gguf/nemotron/Llama-3_3-Nemotron-Super-49B-v1_5-UD-Q6_K_XL.gguf 
-               - -fa 
-               - "on"
-               - --no-mmap 
-               - --ctx-size 
-               - "100000"
-               - -sm 
-               - row  
-               - --jinja 
-               - --alias 
-               - llama-3-3-nemotron-super
-               - --temp 
-               - "0.6"
-               - --top-p 
-               - "0.95"
+                - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8/
+                - --max-model-len 
+                - "121000"
+                - --pipeline-parallel-size
+                - "2"
+                - --enable-auto-tool-choice 
+                - --enable-expert-parallel
+                - --tool-call-parser
+                - qwen3_coder
+                - --served-model-name
+                - qwen3-30b-coder
             - name: glm-4-5-air
               cooldownPeriod: 3600
               resources:

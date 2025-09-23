@@ -353,7 +353,6 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - --model
                 - /models/fp8/Seed-OSS-36B-Instruct-GPTQ-Int8/
                 - --served-model-name
                 - seed-oss-36b

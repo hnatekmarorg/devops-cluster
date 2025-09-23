@@ -344,7 +344,33 @@ spec:
                 - qwen2-7b-vl
                 - --limit-mm-per-prompt.image 
                 - "8"
-
+            - name: seed-oss
+              engine: vllm
+              cooldownPeriod: 7200
+              resources:
+                requests:
+                  nvidia.com/gpu: 4
+                limits:
+                  nvidia.com/gpu: 4
+              args:
+                - --model
+                - /models/fp8/Seed-OSS-36B-Instruct-GPTQ-Int8/
+                - --served-model-name
+                - seed-oss-36b
+                - --gpu-memory-utilization
+                - "0.85"
+                - --trust-remote-code
+                - --tensor-parallel-size
+                - "4"
+                - --max-model-len
+                - "160000"
+                - --enable-auto-tool-choice
+                - --tool-call-parser
+                - seed-oss
+                - --chat-template
+                - /models/fp8/Seed-OSS-36B-Instruct-GPTQ-Int8/chat_template.jinja
+                - --dtype 
+                - bfloat16
   destination:
     server: https://kubernetes.default.svc
     namespace: inference

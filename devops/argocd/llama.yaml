@@ -355,7 +355,7 @@ spec:
               args:
                 - /models/fp8/Seed-OSS-36B-Instruct-GPTQ-Int8/
                 - --served-model-name
-                - seed-oss-36b
+                - seed-oss
                 - --gpu-memory-utilization
                 - "0.85"
                 - --trust-remote-code
@@ -365,7 +365,7 @@ spec:
                 - "160000"
                 - --enable-auto-tool-choice
                 - --tool-call-parser
-                - seed-oss
+                - seed_oss
                 - --chat-template
                 - /models/fp8/Seed-OSS-36B-Instruct-GPTQ-Int8/chat_template.jinja
                 - --dtype 

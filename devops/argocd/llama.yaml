@@ -368,8 +368,6 @@ spec:
                 - seed_oss
                 - --chat-template
                 - /models/fp8/Seed-OSS-36B-Instruct-GPTQ-Int8/chat_template.jinja
-                - --dtype 
-                - bfloat16
   destination:
     server: https://kubernetes.default.svc
     namespace: inference

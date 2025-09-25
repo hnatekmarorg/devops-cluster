@@ -15,6 +15,7 @@ spec:
       releaseName: ingress-nginx
       valuesObject:
         controller:
+          allowSnippetAnnotations: true
           metrics:
             enabled: true
             serviceMonitor:

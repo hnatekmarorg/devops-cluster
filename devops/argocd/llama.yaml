@@ -18,6 +18,9 @@ spec:
       targetRevision: main
       helm:
         valuesObject:
+          llm:
+            vllm:
+              image: vllm/vllm-openai:nightly
           models:
             - name: exl
               cooldownPeriod: 3600
@@ -346,7 +349,7 @@ spec:
                 - "8"
             - name: qwen-next
               engine: vllm
-              cooldownPeriod: 7200
+              cooldownPeriod: 14400
               resources:
                 requests:
                   nvidia.com/gpu: 6

@@ -344,30 +344,25 @@ spec:
                 - qwen2-7b-vl
                 - --limit-mm-per-prompt.image 
                 - "8"
-            - name: seed-oss
+            - name: qwen-next
               engine: vllm
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 6
                 limits:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 6
               args:
-                - /models/fp8/Seed-OSS-36B-Instruct-GPTQ-Int8/
-                - --served-model-name
-                - seed-oss
-                - --gpu-memory-utilization
-                - "0.85"
-                - --trust-remote-code
+                - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/ 
+                - --pipeline-parallel-size
+                - "3"
                 - --tensor-parallel-size
-                - "4"
-                - --max-model-len
-                - "160000"
+                - "2" 
+                - --tool-call-parser 
+                - hermes 
                 - --enable-auto-tool-choice
-                - --tool-call-parser
-                - seed_oss
-                - --chat-template
-                - /models/fp8/Seed-OSS-36B-Instruct-GPTQ-Int8/chat_template.jinja
+                - --served-model-name
+                - qwen-next
   destination:
     server: https://kubernetes.default.svc
     namespace: inference

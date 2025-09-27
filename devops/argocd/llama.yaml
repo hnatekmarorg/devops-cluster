@@ -362,7 +362,7 @@ spec:
                 - --tensor-parallel-size
                 - "2" 
                 - --reasoning-parser 
-                - deepseek-r1
+                - deepseek_r1
                 - --tool-call-parser 
                 - hermes 
                 - --enable-auto-tool-choice

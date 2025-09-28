@@ -366,8 +366,37 @@ spec:
                 - --tool-call-parser 
                 - hermes 
                 - --enable-auto-tool-choice
+                - --no-enable-chunked-prefill
+                - --tokenizer-mode
+                - auto  
+                - --gpu-memory-utilization 
+                - "0.8"
                 - --served-model-name
                 - qwen-next
+            - name: qwen-next-instruct
+              engine: vllm
+              cooldownPeriod: 14400
+              resources:
+                requests:
+                  nvidia.com/gpu: 6
+                limits:
+                  nvidia.com/gpu: 6
+              args:
+                - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/ 
+                - --pipeline-parallel-size
+                - "3"
+                - --tensor-parallel-size
+                - "2" 
+                - --tool-call-parser 
+                - hermes 
+                - --enable-auto-tool-choice
+                - --no-enable-chunked-prefill
+                - --tokenizer-mode
+                - auto  
+                - --gpu-memory-utilization 
+                - "0.8"
+                - --served-model-name
+                - qwen-next-instruct
   destination:
     server: https://kubernetes.default.svc
     namespace: inference

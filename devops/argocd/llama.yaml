@@ -301,7 +301,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 3
               args:
-                -  /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
+                - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
                 - --pipeline-parallel-size
                 - "3"
                 - --enable-expert-parallel 
@@ -317,12 +317,11 @@ spec:
                 limits:
                   nvidia.com/gpu: 3
               args:
-                -  /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
+                - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
                 - --pipeline-parallel-size
                 - "3"
                 - --enable-expert-parallel 
                 - --enforce-eager 
-                - --enable-reasoning 
                 - --reasoning-parser 
                 - deepseek_r1
                 - --served-model-name

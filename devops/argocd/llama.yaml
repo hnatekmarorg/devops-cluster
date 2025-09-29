@@ -230,37 +230,27 @@ spec:
                 - --served-model-name
                 - qwen3-30b-coder
             - name: glm-4-5-air
-              cooldownPeriod: 3600
+              engine: vllm
+              cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 6
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 6
+                  nvidia.com/gpu: 4
               args:
-                - --jinja
-                - -c
-                - "128000" 
-                - --temp
-                - "0.6"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "40"
-                - --no-mmap
-                - --model
-                - "/models/gguf/glm-air/GLM-4.5-Air-Q6_K-00001-of-00002.gguf"
-                - "-ngl"
-                - "99"
-                - -fa
-                - "on"
-                - -t
-                - "-1"
-                - --prio
-                - "3"
-                - --jinja
-                - --numa
-                - distribute
-                - --alias
+                - /models/awq/GLM-4.5-Air-AWQ-4bit/ 
+                - --tensor-parallel-size
+                - "2"
+                - --pipeline-parallel-size
+                - "2"
+                - --max-model-len
+                - "125000"
+                - --tool-call-parser 
+                - glm45 
+                - --reasoning-parser
+                - glm45 
+                - --enable-auto-tool-choice
+                - --served-model-name
                 - "glm-4-5-air"
             - name: qwen3-30b-instruct
               engine: vllm

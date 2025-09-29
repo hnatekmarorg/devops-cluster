@@ -277,7 +277,6 @@ spec:
                 - --pipeline-parallel-size
                 - "3"
                 - --enable-expert-parallel 
-                - --enforce-eager 
                 - --tool-call-parser 
                 - hermes
                 - --enable-auto-tool-choice
@@ -296,7 +295,6 @@ spec:
                 - --pipeline-parallel-size
                 - "3"
                 - --enable-expert-parallel 
-                - --enforce-eager 
                 - --reasoning-parser 
                 - deepseek_r1
                 - --tool-call-parser 

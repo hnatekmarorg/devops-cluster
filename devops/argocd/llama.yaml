@@ -278,8 +278,6 @@ spec:
                 - "3"
                 - --enable-expert-parallel 
                 - --enforce-eager 
-                - --gpu-memory-utilization 
-                - "0.8"
                 - --tool-call-parser 
                 - hermes
                 - --enable-auto-tool-choice
@@ -299,8 +297,6 @@ spec:
                 - "3"
                 - --enable-expert-parallel 
                 - --enforce-eager 
-                - --gpu-memory-utilization 
-                - "0.8"
                 - --reasoning-parser 
                 - deepseek_r1
                 - --tool-call-parser 

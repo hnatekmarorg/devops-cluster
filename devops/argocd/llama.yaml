@@ -211,35 +211,7 @@ spec:
                 - --alias
                 - "behemoth-redux"
 
-            - name: qwen3-30b-thinking
-              cooldownPeriod: 3600
-              resources:
-                requests:
-                  nvidia.com/gpu: 3
-                limits:
-                  nvidia.com/gpu: 3
-              args:
-                - --alias
-                - "qwen3-30b-thinking"
-                - --temp
-                - "0.7"
-                - --min-p
-                - "0.0"
-                - --top-p
-                - "0.8"
-                - --top-k
-                - "20"
-                - -t
-                - "-1"
-                - --jinja
-                - --ctx-size
-                - "262144"
-                - -fa
-                - "on"
-                - --numa
-                - distribute
-                - -m
-                - /models/gguf/Qwen3-30B-A3B-Thinking-2507-UD-Q8_K_XL.gguf
+
             - name: qwen3-30b-coder
               engine: vllm
               cooldownPeriod: 7200
@@ -306,6 +278,9 @@ spec:
                 - "3"
                 - --enable-expert-parallel 
                 - --enforce-eager 
+                - --tool-call-parser 
+                - hermes
+                - --enable-auto-tool-choice
                 - --served-model-name
                 - qwen3-30b-instruct
             - name: qwen3-30b-thinking
@@ -324,6 +299,9 @@ spec:
                 - --enforce-eager 
                 - --reasoning-parser 
                 - deepseek_r1
+                - --tool-call-parser 
+                - hermes
+                - --enable-auto-tool-choice
                 - --served-model-name
                 - qwen3-30b-thinking
             - name: qwen2-32b-vl

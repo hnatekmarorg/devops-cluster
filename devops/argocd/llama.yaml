@@ -18,7 +18,9 @@ spec:
       targetRevision: main
       helm:
         valuesObject:
-
+          llm:
+            vllm:
+              image: vllm/vllm-openai:nightly
           models:
             - name: exl
               cooldownPeriod: 3600

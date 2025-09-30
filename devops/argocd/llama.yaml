@@ -226,7 +226,7 @@ spec:
                 - "2"
                 - --enable-auto-tool-choice 
                 - --max-model-len
-                - "128000"
+                - "64000"
                 - --tool-call-parser
                 - qwen3_coder
                 - --served-model-name

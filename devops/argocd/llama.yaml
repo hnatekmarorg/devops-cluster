@@ -224,11 +224,12 @@ spec:
                 - /models/awq/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit
                 - --dtype 
                 - float16
-                - --tensor-parallel-size
+                - --pipeline-parallel-size
                 - "2"
+                - --enable-expert-parallel
                 - --enable-auto-tool-choice 
                 - --max-model-len
-                - "64000"
+                - "252000"
                 - --tool-call-parser
                 - qwen3_coder
                 - --served-model-name

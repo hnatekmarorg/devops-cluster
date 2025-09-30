@@ -222,6 +222,8 @@ spec:
                   nvidia.com/gpu: 2
               args:
                 - /models/awq/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit
+                - --dtype 
+                - float16
                 - --tensor-parallel-size
                 - "2"
                 - --enable-auto-tool-choice 

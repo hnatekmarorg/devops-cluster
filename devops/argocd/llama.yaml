@@ -237,7 +237,6 @@ spec:
                 -  /models/awq/GLM-4.5-Air-AWQ-FP16Mix/ 
                 - --dtype 
                 - float16
-                - --enable-expert-parallel
                 - --tensor-parallel-size
                 - "2"
                 - --pipeline-parallel-size

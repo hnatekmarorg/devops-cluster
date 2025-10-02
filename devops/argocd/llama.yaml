@@ -234,7 +234,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 6
               args:
-                -  /models/awq/GLM-4.5-Air-AWQ-4bit/ 
+                -  /models/awq/GLM-4.5-Air-AWQ-FP16Mix/
                 - --enable-expert-parallel
                 - --tensor-parallel-size
                 - "2"

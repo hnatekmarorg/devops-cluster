@@ -230,11 +230,12 @@ spec:
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 6
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 6
+                  nvidia.com/gpu: 4
               args:
-                - /models/fp8/GLM-4.5-Air-FP8/
+                - /models/awq/GLM-4.5-Air-AWQ-4bit/
+                - --enable-expert-parallel
                 - --tensor-parallel-size
                 - "2"
                 - --pipeline-parallel-size

@@ -53,10 +53,6 @@ spec:
           env:
             - name: VLLM_USE_DEEP_GEMM
               value: "1"
-            - name: TIKTOKEN_ENCODINGS_BASE
-              value: "/models/gpt-cache/"
-            - name: TIKTOKEN_RS_CACHE_DIR
-              value: "/models/gpt-cache/"
           {{- if eq (.engine | default "llama") "vllm" }}
           args: 
             - -c 

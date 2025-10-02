@@ -239,7 +239,7 @@ spec:
                 - --tensor-parallel-size
                 - "2"
                 - --pipeline-parallel-size
-                - "3"
+                - "2"
                 - --max-model-len
                 - "125000"
                 - --tool-call-parser 

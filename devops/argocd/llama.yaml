@@ -225,7 +225,7 @@ spec:
                 - qwen3_coder
                 - --served-model-name
                 - qwen3-30b-coder
-            - name: glm-4-5-air
+            - name: qwen3-235b-thinking
               cooldownPeriod: 3600
               resources:
                 requests:
@@ -236,17 +236,10 @@ spec:
                 - --jinja
                 - --parallel
                 - "4"
-                - -c
-                - "128000" 
-                - --temp
-                - "0.6"
-                - --top-p
-                - "0.95"
-                - --top-k
-                - "40"
-                - --no-mmap
-                - --model
-                - "/models/gguf/glm-air/GLM-4.5-Air-Q6_K-00001-of-00002.gguf"
+                - -m 
+                - /models/gguf/qwen3-235B/Qwen3-235B-A22B-Thinking-2507-UD-Q2_K_XL-00001-of-00002.gguf 
+                - --ctx-size 
+                - "226000"
                 - "-ngl"
                 - "99"
                 - -fa
@@ -259,7 +252,7 @@ spec:
                 - --numa
                 - distribute
                 - --alias
-                - "glm-4-5-air"
+                - "qwen3-235b-thinking"
             - name: qwen3-30b-instruct
               engine: vllm
               cooldownPeriod: 7200

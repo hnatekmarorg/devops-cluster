@@ -253,6 +253,34 @@ spec:
                 - distribute
                 - --alias
                 - "qwen3-235b-thinking"
+            - name: qwen3-235b-instruct
+              cooldownPeriod: 3600
+              resources:
+                requests:
+                  nvidia.com/gpu: 6
+                limits:
+                  nvidia.com/gpu: 6
+              args:
+                - --jinja
+                - --parallel
+                - "4"
+                - -m 
+                - /models/gguf/qwen3-235B/Qwen3-235B-A22B-Instruct-2507-UD-Q2_K_XL-00002-of-00002.gguf
+                - --ctx-size 
+                - "226000"
+                - "-ngl"
+                - "99"
+                - -fa
+                - "on"
+                - -t
+                - "-1"
+                - --prio
+                - "3"
+                - --jinja
+                - --numa
+                - distribute
+                - --alias
+                - "qwen3-235b-instruct"
             - name: qwen3-30b-instruct
               engine: vllm
               cooldownPeriod: 7200

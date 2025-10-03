@@ -237,9 +237,9 @@ spec:
                 -  /models/awq/GLM-4.5-Air-AWQ-4bit/
                 - --enable-expert-parallel
                 - --tensor-parallel-size
-                - "2"
+                - "1"
                 - --pipeline-parallel-size
-                - "3"
+                - "6"
                 - --tool-call-parser 
                 - glm45 
                 - --reasoning-parser

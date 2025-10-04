@@ -315,7 +315,7 @@ spec:
               args:
                 - /models/fp16/Qwen3-VL-30B-A3B-Thinking/
                 - --max-model-len
-                - "132000"
+                - "131072"
                 - --async-scheduling 
                 - --mm-encoder-tp-mode 
                 - data

@@ -313,9 +313,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 4
               args:
-                - /models/fp16/Qwen3-VL-30B-A3B-Thinking/
-                - --max-model-len
-                - "32000"
+                - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
                 - --async-scheduling 
                 - --mm-encoder-tp-mode 
                 - data

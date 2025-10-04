@@ -1,7 +1,7 @@
 llm:
   host: llm.hnatekmar.dev
   vllm:
-    image: vllm/vllm-openai:v0.10.2
+    image: gitea.hnatekmar.xyz/public/vllm:qwen3-vl
   llama_cpp:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
     cpuImage: ghcr.io/ggml-org/llama.cpp:server

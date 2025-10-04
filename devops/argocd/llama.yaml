@@ -286,14 +286,19 @@ spec:
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
               args:
-                - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
-                - --pipeline-parallel-size
-                - "3"
-                - --enable-expert-parallel 
+                - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/    
+                - --async-scheduling 
+                - --mm-encoder-tp-mode 
+                - data
+                - --tensor-parallel-size
+                - "4"
+                - --mm-processor-cache-type
+                - shm
+                - --enable-expert-parallel
                 - --tool-call-parser 
                 - hermes
                 - --enable-auto-tool-choice
@@ -304,16 +309,19 @@ spec:
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 3
+                  nvidia.com/gpu: 4
               args:
-                - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
-                - --pipeline-parallel-size
-                - "3"
-                - --enable-expert-parallel 
-                - --reasoning-parser 
-                - deepseek_r1
+                - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/    
+                - --async-scheduling 
+                - --mm-encoder-tp-mode 
+                - data
+                - --tensor-parallel-size
+                - "4"
+                - --mm-processor-cache-type
+                - shm
+                - --enable-expert-parallel
                 - --tool-call-parser 
                 - hermes
                 - --enable-auto-tool-choice

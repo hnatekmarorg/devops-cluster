@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: n8n
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/n8nio/n8n.git
+    targetRevision: main
+    path: charts/n8n
+    helm:
+      values: |
+        n8n:
+          encryption_key: ""
+        
+        persistence:
+          enabled: true
+          type: dynamic
+          accessModes:
+            - ReadWriteOnce
+          size: 1Gi
+        
+        ingress:
+          enabled: true
+          annotations:
+            kubernetes.io/ingress.class: nginx
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+            cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+          hosts:
+            - host: n8n.hnatekmar.dev
+              paths: []
+          tls:
+            - secretName: n8n-tls-secret
+              hosts:
+                - n8n.hnatekmar.dev
+        
+        config:
+          host: n8n.hnatekmar.dev
+          port: 443
+          protocol: https
+          path: "/"
+          database:
+            type: sqlite
+        
+        extraEnv:
+          WEBHOOK_TUNNEL_URL: "https://n8n.hnatekmar.dev"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: n8n
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -7,6 +7,7 @@ spec:
   project: default
   source:
     repoURL:  oci://8gears.container-registry.com/library/n8n
+    path: .
     targetRevision: 0.2.0
     helm:
       values: |

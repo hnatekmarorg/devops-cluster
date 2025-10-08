@@ -6,8 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/n8nio/n8n.git
-    targetRevision: main
+    repoURL:  oci://8gears.container-registry.com/library/n8n
+    targetRevision: 0.2.0
     path: charts/n8n
     helm:
       values: |

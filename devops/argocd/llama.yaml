@@ -334,20 +334,18 @@ spec:
                 - --served-model-name
                 - qwen3-30b-thinking
   
-            - name: qwen-next
+            - name: qwen-next-thinking
               engine: vllm
               cooldownPeriod: 14400
               resources:
                 requests:
-                  nvidia.com/gpu: 6
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 6
+                  nvidia.com/gpu: 4
               args:
-                - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/ 
-                - --pipeline-parallel-size
-                - "3"
+                - /models/awq/Qwen3-Next-80B-A3B-Thinking-AWQ-4bit/
                 - --tensor-parallel-size
-                - "2" 
+                - "4" 
                 - --reasoning-parser 
                 - deepseek_r1
                 - --tool-call-parser 
@@ -359,7 +357,7 @@ spec:
                 - --gpu-memory-utilization 
                 - "0.8"
                 - --served-model-name
-                - qwen-next
+                - qwen-next-thinking
             - name: qwen-next-instruct
               engine: vllm
               cooldownPeriod: 14400

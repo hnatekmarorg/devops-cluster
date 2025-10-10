@@ -203,28 +203,30 @@ spec:
                 - "behemoth-redux"
 
 
-            - name: qwen3-30b-coder
+            - name: glm-air
               engine: vllm
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 4
                 limits:
-                  nvidia.com/gpu: 2
+                  nvidia.com/gpu: 4
               args:
-                - /models/awq/Qwen3-Coder-30B-A3B-Instruct-AWQ-4bit
-                - --dtype 
-                - float16
+                - /models/awq/GLM-4.5-Air-AWQ-4bit/
+                - --tensor-parallel-size
+                - "2"
                 - --pipeline-parallel-size
                 - "2"
                 - --enable-expert-parallel
                 - --enable-auto-tool-choice 
                 - --max-model-len
-                - "252000"
+                - "126000"
                 - --tool-call-parser
-                - qwen3_coder
+                - glm45
+                - --reasoning-parser
+                - glm45
                 - --served-model-name
-                - qwen3-30b-coder
+                - glm-air
             - name: qwen3-235b-thinking
               cooldownPeriod: 3600
               resources:

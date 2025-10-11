@@ -384,6 +384,31 @@ spec:
                 - "0.8"
                 - --served-model-name
                 - qwen-next-instruct
+            - name: qwen-embedding
+              engine: vllm
+              cooldownPeriod: 14400
+              resources:
+                requests:
+                  nvidia.com/gpu: 1
+                limits:
+                  nvidia.com/gpu: 1
+              args:
+                - /models/fp16/Qwen3-Embedding-8B/
+                - --served-model-name
+                - qwen-embedding
+            - name: qwen-reranker
+              engine: vllm
+              cooldownPeriod: 14400
+              resources:
+                requests:
+                  nvidia.com/gpu: 1
+                limits:
+                  nvidia.com/gpu: 1
+              args:
+                - /models/fp16/Qwen3-Reranker-8B/
+                - --served-model-name
+                - qwen-reranker
+
   destination:
     server: https://kubernetes.default.svc
     namespace: inference

@@ -317,16 +317,16 @@ spec:
               cooldownPeriod: 7200
               resources:
                 requests:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu: 2
                 limits:
-                  nvidia.com/gpu: 4
+                  nvidia.com/gpu:2
               args:
-                - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
+                - /models/fp8/Qwen3-Next-80B-A3B-Thinking-AWQ-4bit/
                 - --async-scheduling 
                 - --mm-encoder-tp-mode 
                 - data
                 - --tensor-parallel-size
-                - "4"
+                - "2"
                 - --mm-processor-cache-type
                 - shm
                 - --enable-expert-parallel

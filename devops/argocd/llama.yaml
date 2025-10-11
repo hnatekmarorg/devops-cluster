@@ -292,7 +292,6 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/ 
                 - /models/awq/Qwen3-VL-30B-A3B-Instruct-AWQ-4bit/ 
                 - --gpu-memory-utilization 
                 - "0.95"

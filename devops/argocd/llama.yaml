@@ -297,8 +297,6 @@ spec:
                 - "0.95"
                 - --limit-mm-per-prompt.video 
                 - "0"
-                - --gpu-memory-utilization
-                - "0.91"
                 - --max-model-len
                 - "210000"
                 - --async-scheduling 
@@ -321,8 +319,10 @@ spec:
                 limits:
                   nvidia.com/gpu:2
               args:
-                - /models/fp8/Qwen3-Next-80B-A3B-Thinking-AWQ-4bit/
+                - /models/fp8/Qwen3-VL-30B-A3B-Instruct-AWQ-4bit/
                 - --async-scheduling 
+                - --max-model-len
+                - "210000"
                 - --mm-encoder-tp-mode 
                 - data
                 - --tensor-parallel-size

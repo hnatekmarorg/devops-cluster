@@ -319,7 +319,7 @@ spec:
                 limits:
                   nvidia.com/gpu: 2
               args:
-                - /models/fp8/Qwen3-VL-30B-A3B-Thinking-AWQ-4bit/
+                - /models/awq/Qwen3-VL-30B-A3B-Thinking-AWQ-4bit/
                 - --async-scheduling 
                 - --max-model-len
                 - "210000"

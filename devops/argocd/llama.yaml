@@ -325,6 +325,8 @@ spec:
                 - --async-scheduling 
                 - --max-model-len
                 - "210000"
+                - --gpu-memory-utilization 
+                - "0.95"
                 - --mm-encoder-tp-mode 
                 - data
                 - --tensor-parallel-size

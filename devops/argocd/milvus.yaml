@@ -18,28 +18,29 @@ spec:
     automated:
       prune: true
       selfHeal: true
-  valuesObject: |
-    # Persistent volume configuration
-    persistence:
-      enabled: true
-      storageClass: longhorn
-    
-    # Ingress configuration for TLS
-    ingress:
-      enabled: true
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-cloudflare
-      hosts:
-        - host: milvus.hnatekmar.dev
-          paths:
-            - path: /
-              pathType: Prefix
-    
-    # Milvus configuration
-    milvus:
-      config:
-        standalone:
-          log:
-            level: debug
-          wal:
-            enable: true
+  helm:
+    valuesObject: |
+      # Persistent volume configuration
+      persistence:
+        enabled: true
+        storageClass: longhorn
+      
+      # Ingress configuration for TLS
+      ingress:
+        enabled: true
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+        hosts:
+          - host: milvus.hnatekmar.dev
+            paths:
+              - path: /
+                pathType: Prefix
+      
+      # Milvus configuration
+      milvus:
+        config:
+          standalone:
+            log:
+              level: debug
+            wal:
+              enable: true

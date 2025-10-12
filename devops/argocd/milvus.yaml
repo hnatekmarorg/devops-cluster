@@ -8,8 +8,9 @@ spec:
   source:
     repoURL: https://zilliztech.github.io/milvus-helm/
     chart: milvus
-    targetRevision: master
+    targetRevision: milvus-5.0.4
     helm:
+      releaseName: milvus
       valuesObject:
         # Persistent volume configuration
         persistence:
@@ -44,3 +45,4 @@ spec:
     automated:
       prune: true
       selfHeal: true
+      

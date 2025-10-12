@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/zilliztech/milvus-helm.git
     chart: charts/milvus
-    targetRevision: milvus-5.0.4
+    targetRevision: 2.6.3
     helm:
       valuesObject: |
         # Persistent volume configuration

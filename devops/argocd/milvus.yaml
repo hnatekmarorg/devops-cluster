@@ -8,7 +8,33 @@ spec:
   source:
     repoURL: https://github.com/zilliztech/milvus-helm.git
     chart: charts/milvus
-    targetRevision: main
+    targetRevision: milvus-5.0.4
+    helm:
+      valuesObject: |
+        # Persistent volume configuration
+        persistence:
+          enabled: true
+          storageClass: longhorn
+        
+        # Ingress configuration for TLS
+        ingress:
+          enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+          hosts:
+            - host: milvus.hnatekmar.dev
+              paths:
+                - path: /
+                  pathType: Prefix
+        
+        # Milvus configuration
+        milvus:
+          config:
+            standalone:
+              log:
+                level: debug
+              wal:
+                enable: true
   destination:
     server: https://kubernetes.default.svc
     namespace: milvus
@@ -18,29 +44,3 @@ spec:
     automated:
       prune: true
       selfHeal: true
-  helm:
-    valuesObject: |
-      # Persistent volume configuration
-      persistence:
-        enabled: true
-        storageClass: longhorn
-      
-      # Ingress configuration for TLS
-      ingress:
-        enabled: true
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt-cloudflare
-        hosts:
-          - host: milvus.hnatekmar.dev
-            paths:
-              - path: /
-                pathType: Prefix
-      
-      # Milvus configuration
-      milvus:
-        config:
-          standalone:
-            log:
-              level: debug
-            wal:
-              enable: true

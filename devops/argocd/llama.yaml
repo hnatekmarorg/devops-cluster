@@ -164,10 +164,10 @@ spec:
                   nvidia.com/gpu: 6
               args:
                 - --ctx-size
-                - "131072"
+                - "80000"
                 - --no-mmap
                 - "-m"
-                - "/models/gguf/behemoth/q_4/TheDrummer_Behemoth-R1-123B-v2-Q4_K_M-00001-of-00002.gguf"
+                - "/models/gguf/behemoth-r1/TheDrummer_Behemoth-R1-123B-v2-Q5_K_M-00001-of-00003.gguf"
                 - "-ngl"
                 - "99"
                 - -t

@@ -10,7 +10,7 @@ spec:
     chart: charts/milvus
     targetRevision: 2.6.3
     helm:
-      valuesObject: |
+      valuesObject:
         # Persistent volume configuration
         persistence:
           enabled: true

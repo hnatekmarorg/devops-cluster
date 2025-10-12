@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: milvus
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/zilliztech/milvus-helm.git
+    chart: charts/milvus
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: milvus
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
+  values: |
+    # Persistent volume configuration
+    persistence:
+      enabled: true
+      storageClass: longhorn
+    
+    # Ingress configuration for TLS
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+      hosts:
+        - host: milvus.hnatekmar.dev
+          paths:
+            - path: /
+              pathType: Prefix
+    
+    # Milvus configuration
+    milvus:
+      config:
+        standalone:
+          log:
+            level: debug
+          wal:
+            enable: true

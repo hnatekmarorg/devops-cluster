@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/zilliztech/milvus-helm.git
-    chart: charts/milvus
-    targetRevision: milvus-5.0.4
+    repoURL: https://zilliztech.github.io/milvus-helm/
+    chart: milvus
+    targetRevision: master
     helm:
       valuesObject:
         # Persistent volume configuration

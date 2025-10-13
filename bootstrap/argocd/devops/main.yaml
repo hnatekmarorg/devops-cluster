@@ -29,7 +29,7 @@ metadata:
   namespace: default
 spec:
   controlPlaneEndpoint:
-    host: 172.16.100.150
+    host: 172.16.100.10
     port: 6443
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3

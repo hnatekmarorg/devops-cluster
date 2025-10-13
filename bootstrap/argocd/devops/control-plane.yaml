@@ -49,5 +49,5 @@ spec:
     kind: MetalMachineTemplate
     name: main-cp
     namespace: default
-  replicas: 1
+  replicas: 3
   version: v1.34.1

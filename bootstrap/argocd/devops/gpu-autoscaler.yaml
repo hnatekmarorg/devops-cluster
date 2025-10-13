@@ -19,6 +19,10 @@ spec:
           - name: vfio_pci
           - name: uio_pci_generic
     - op: replace
+      path: /machine/kubelet/extraArgs
+      value:
+        register-with-taints: "node/type=storage:NoSchedule"
+    - op: replace
       path: /machine/sysctls
       value:
         net.core.bpf_jit_harden: 1

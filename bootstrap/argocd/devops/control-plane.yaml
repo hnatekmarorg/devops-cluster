@@ -39,6 +39,14 @@ spec:
             oidc-groups-claim: "groups"
             oidc-username-prefix: ""
             oidc-groups-prefix: ""
+        - op: add
+          path: /machine/network/interfaces
+          value:
+            - deviceSelector:
+                physical: true # should select any hardware network device, if you have just one, it will be selected
+              dhcp: true
+              vip:
+                ip: 172.16.100.10
         - op: replace
           path: /machine/install/disk
           value: /dev/sda

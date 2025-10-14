@@ -406,6 +406,8 @@ spec:
                   nvidia.com/gpu: 1
               args:
                 - /models/fp16/Qwen3-Reranker-8B/
+                - --max-model-len
+                - "30000"
                 - --served-model-name
                 - qwen-reranker
 

@@ -21,7 +21,7 @@ spec:
     - op: replace
       path: /machine/kubelet/extraArgs
       value:
-        register-with-taints: "node/type=gpu:NoSchedule"
+        register-with-taints: "nvidia.com/gpu=true:NoSchedule"
     - op: replace
       path: /machine/sysctls
       value:

@@ -6,7 +6,7 @@ spec:
   configPatches:
     - op: replace
       path: /machine/install/image
-      value: gitea.hnatekmar.xyz/public/image-factory/amd-gpu:v1.10.4
+      value: gitea.hnatekmar.xyz/public/image-factory/amd-gpu:v1.11.2
     - op: replace
       path: /machine/kernel
       value:

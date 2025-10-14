@@ -16,6 +16,11 @@ spec:
       labels:
         llm: {{.name}}
     spec:
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
       {{- if eq (.device | default "gpu") "gpu" }}
       runtimeClassName: nvidia
       {{- end }}

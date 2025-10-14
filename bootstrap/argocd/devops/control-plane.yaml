@@ -30,6 +30,9 @@ spec:
   controlPlaneConfig:
     controlplane:
       configPatches:
+        - op: replace
+          path: /machine/install/image
+          value: gitea.hnatekmar.xyz/public/image-factory/amd-cpu:v1.11.2
         - op: add
           path: /cluster/apiServer/extraArgs
           value:

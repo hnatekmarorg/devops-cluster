@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: silly-tavern
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+    targetRevision: main
+    path: devops/argocd/silly-tavern
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: silly-tavern
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true

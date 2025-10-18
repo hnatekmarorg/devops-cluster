@@ -7,13 +7,19 @@ This repository contains infrastructure-as-code (IaC) configurations for deployi
 ## 📁 Directory Structure
 
 - **`.gitignore`**: Excludes sensitive files and IDE artifacts.
-- **`bootstrap/argocd/devops/`**: Contains ArgoCD Application manifests for cluster components (control plane, CPU/GPU nodes, etc.).
-- **`charts/minio-crossplane/`**: Helm charts for deploying MinIO object storage via Crossplane.
+- **`bootstrap/argocd/devops/`**: Contains ArgoCD Application manifests for cluster components (control plane, CPU/GPU nodes, etc.):
+  - `main.yaml`: Main cluster definition
+  - `control-plane.yaml`: Control plane node definitions
+  - `cpu-static.yaml`: Static CPU worker node deployments
+  - `gpu-autoscaler.yaml`: GPU worker node deployments with autoscaling
+  - `storage-static.yaml`: Static storage worker node deployments
+- **`charts/`**: Helm charts for deploying applications and services:
+  - `llama-cpp/`: LLM inference service chart
 - **`devops/argocd/`**: ArgoCD Application manifests for services like Prometheus, Rook, MetalLB, and secrets.
 - **`manual/argocd/`**: Manual overrides for cluster-specific configurations.
 - **`scripts/`**: Shell scripts for SOPS encryption/decryption and key initialization.
 - **`scripts/decrypt.sh` / `scripts/encrypt.sh`**: Automate secret management with SOPS.
-- **`scripts/init-key.sh`**: Initializes the SOPS age key secret in Kubernetes.
+- **`scripts/init.sh`**: Initializes the SOPS age key secret in Kubernetes.
 
 ---
 
@@ -24,11 +30,12 @@ This repository contains infrastructure-as-code (IaC) configurations for deployi
    - `argo` CLI
    - `sops` (for secret management)
    - `helm` (for Crossplane/MinIO)
+   - `argocd` CLI (for ArgoCD management)
 
 2. **Initialize the Cluster**
    ```bash
    # Initialize SOPS key
-   ./scripts/init-key.sh
+   ./scripts/init.sh
 
    # Decrypt secrets (if needed)
    ./scripts/decrypt.sh
@@ -40,6 +47,12 @@ This repository contains infrastructure-as-code (IaC) configurations for deployi
 3. **Verify Deployment**
    ```bash
    kubectl get applications -n argocd
+   ```
+
+4. **Sync Applications**
+   ```bash
+   # Sync all applications in order (using sync waves)
+   argocd app sync --all
    ```
 
 ---
@@ -56,6 +69,13 @@ This repository contains infrastructure-as-code (IaC) configurations for deployi
 - Replace placeholder values in `charts/minio-crossplane/values.yaml` with your actual MinIO endpoint and credentials.
 - Ensure the control plane IP in `bootstrap/argocd/devops/main.yaml` matches your environment.
 - GPU/CPU node groups are defined in `bootstrap/argocd/devops/gpu.yaml` and `bootstrap/argocd/devops/cpu.yaml`.
+- ArgoCD applications are ordered using sync waves to ensure proper deployment sequence:
+  - Wave -1: Core networking components (MetalLB)
+  - Wave 0: Certificate management (cert-manager)
+  - Wave 1: Monitoring (Prometheus, KEDA)
+  - Wave 2: Ingress controller (nginx)
+  - Wave 3: Storage systems (Longhorn, NFS)
+  - Wave 4: Application services (searxng, silly-tavern, llama-cpp, etc.)
 
 ---
 
@@ -65,3 +85,45 @@ This repository contains infrastructure-as-code (IaC) configurations for deployi
 - Add new Helm charts to `charts/`.
 - Add manual overrides to `manual/argocd/` if needed.
 - Always encrypt secrets before committing.
+- When adding new ArgoCD applications, assign appropriate sync waves to ensure proper deployment order.
+
+## 🔄 Sync Waves Diagram
+
+Below is a visual representation of how the applications are synchronized using ArgoCD sync waves:
+
+```mermaid
+graph TD
+    subgraph "Sync Wave -1: Core Networking"
+        A[metallb]
+    end
+    
+    subgraph "Sync Wave 0: Certificate Management"
+        B[cert-manager]
+    end
+    
+    subgraph "Sync Wave 1: Monitoring & Scaling"
+        C[keda]
+        D[prometheus]
+    end
+    
+    subgraph "Sync Wave 2: Ingress Controller"
+        E[nginx]
+    end
+    
+    subgraph "Sync Wave 3: Storage Systems"
+        F[longhorn]
+        G[nfs-async]
+    end
+    
+    subgraph "Sync Wave 4: Application Services"
+        H[llama-cpp]
+        I[searxng]
+        J[silly-tavern]
+    end
+    
+    A --> B --> C --> E --> F --> H
+    A --> B --> D --> E --> F --> H
+    A --> B --> D --> E --> G --> H
+    A --> B --> D --> E --> G --> I
+    A --> B --> D --> E --> G --> J
+```

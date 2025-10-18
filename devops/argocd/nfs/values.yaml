@@ -1,0 +1,12 @@
+volume-name: nfs-async
+nfs:
+  server: 192.168.88.25
+  mountOptions:
+    - hard
+    - intr
+    - async
+    - proto=tcp
+    - noacl
+    - nfsvers=4.2
+    - noatime
+  path: /mnt/data/k8s

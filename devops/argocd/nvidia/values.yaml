@@ -1,0 +1,18 @@
+tolerations:
+  # This toleration is deprecated. Kept here for backward compatibility
+  # See https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
+  - key: CriticalAddonsOnly
+    operator: Exists
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  - key: "node/type"
+    operator: "Equal"
+    value: "gpu"
+    effect: "NoSchedule"
+
+runtimeClassName: nvidia
+gfd:
+  enabled: true
+nfd:
+  enabled: true

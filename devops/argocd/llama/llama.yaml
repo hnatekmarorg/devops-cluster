@@ -2,28 +2,37 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: searxng
+  name: llama-cpp
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
+  ignoreDifferences:
+    - kind: "*"
+      group: "*"
+      namespace: inference
+      jsonPointers:
+        - /spec/replicas
   sources:
-    - repoURL: https://github.com/trueforge-org/truecharts.git
-      targetRevision: HEAD
-      path: charts/stable/searxng
+    - name: chart
+      repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      path: charts/llama-cpp
+      targetRevision: main
       helm:
         valueFiles:
-          - $repo/devops/argocd/searxng/values.yaml
+          - $repo/devops/argocd/llama/values.yaml
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   destination:
     server: https://kubernetes.default.svc
+    namespace: inference
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=false
-      - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
+      - ServerSideApply=true

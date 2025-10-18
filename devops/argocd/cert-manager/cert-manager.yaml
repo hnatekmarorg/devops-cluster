@@ -1,8 +1,11 @@
+
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: cert-manager
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
   sources:
@@ -11,9 +14,11 @@ spec:
       targetRevision: 1.18.0
       helm:
         releaseName: cert-manager
-        valuesObject:
-          crds:
-            enabled: true
+        valueFiles:
+          - $repo/devops/argocd/cert-manager/values.yaml
+    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+      targetRevision: main
+      ref: repo
   destination:
     server: "https://kubernetes.default.svc"
     namespace: cert-manager

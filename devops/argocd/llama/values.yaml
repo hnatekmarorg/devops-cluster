@@ -1,3 +1,21 @@
+# Llama models deployed by this chart:
+# - exl (ctx: 2048, engine: tabby, replicas: 1, gpu: 6, auth: disabled)
+# - cogito (ctx: 2048, temp: 0.6, top_p: 0.9, min_p: 0.01, engine: tabby, gpu: 6)
+# - gpt-oss (ctx: 131072, temp: 1.0, top_p: 1, top_k: 0, engine: tabby, gpu: 4)
+# - gpt-oss-20b (engine: vllm, gpu: 1)
+# - glm-4-6 (ctx: 106000, top_p: 0.95, top_k: 40, engine: tabby, gpu: 6)
+# - behemoth (ctx: 80000, engine: tabby, gpu: 6)
+# - behemoth-redux (ctx: 64000, engine: tabby, gpu: 6)
+# - glm-air (engine: vllm, gpu: 4)
+# - qwen3-235b-thinking (ctx: 226000, engine: tabby, gpu: 6)
+# - qwen3-235b-instruct (ctx: 226000, engine: tabby, gpu: 6)
+# - qwen3-30b-instruct (engine: vllm, gpu: 2)
+# - qwen3-30b-thinking (engine: vllm, gpu: 2)
+# - qwen-coder (engine: vllm, gpu: 4)
+# - qwen-next-instruct (engine: vllm, gpu: 6)
+# - qwen-embedding (engine: vllm, gpu: 1)
+# - qwen-reranker (engine: vllm, gpu: 1)
+
 # Llama models configuration
 # Each model defines GPU resources, arguments, and other settings
 models:

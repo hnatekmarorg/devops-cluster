@@ -1,0 +1,97 @@
+name: Kind Integration Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  kind-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v4
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+
+    - name: Set up kind
+      uses: helm/kind-action@v1.8.0
+      with:
+        version: v0.20.0
+
+    - name: Create kind cluster
+      run: |
+        kind create cluster --name test-cluster
+        kubectl cluster-info --context kind-test-cluster
+
+    - name: Install ArgoCD
+      run: |
+        kubectl create namespace argocd
+        helm repo add argo https://argoproj.github.io/argo-helm
+        helm install argocd argo/argo-cd --namespace argocd --set global.image.tag=v2.7.10 --set controller.resources.limits.cpu=500m --set controller.resources.requests.cpu=250m --set server.resources.limits.cpu=500m --set server.resources.requests.cpu=250m
+
+    - name: Wait for ArgoCD to be ready
+      run: |
+        kubectl wait --namespace argocd \
+          --for=condition=ready pod \
+          --selector=app.kubernetes.io/name=argocd-server \
+          --timeout=300s
+
+    - name: Deploy ArgoCD applications
+      run: |
+        # Create temporary directory to avoid conflicts
+        mkdir -p /tmp/test-deployments
+        
+        # Copy necessary files to temp directory
+        cp -r bootstrap/argocd/* /tmp/test-deployments/
+        cp -r devops/argocd/* /tmp/test-deployments/
+        
+        # Remove secret files that might cause issues
+        rm -f /tmp/test-deployments/secrets/*
+        
+        # Apply the bootstrap configuration
+        kubectl apply -f /tmp/test-deployments/init.yaml
+        
+        # Apply devops ArgoCD configurations
+        kubectl apply -f /tmp/test-deployments/ --recursive
+
+    - name: Validate ArgoCD applications structure
+      run: |
+        # Check that ArgoCD applications were created
+        echo "Checking for ArgoCD applications..."
+        kubectl get applications -n argocd
+        
+        # Count applications
+        app_count=$(kubectl get applications -n argocd --no-headers | wc -l)
+        echo "Found $app_count ArgoCD applications"
+
+    - name: Verify basic application readiness
+      run: |
+        # Simple validation that core components are defined
+        echo "Validating ArgoCD application structure..."
+        
+        # Check if any application files exist in the directories
+        if [ -d "bootstrap/argocd" ]; then
+          echo "Bootstrap ArgoCD directory exists"
+          find bootstrap/argocd -name "*.yaml" -o -name "*.yml" | head -5
+        else
+          echo "ERROR: Bootstrap ArgoCD directory not found"
+          exit 1
+        fi
+        
+        if [ -d "devops/argocd" ]; then
+          echo "DevOps ArgoCD directory exists"
+          find devops/argocd -name "*.yaml" -o -name "*.yml" | head -5
+        else
+          echo "ERROR: DevOps ArgoCD directory not found"
+          exit 1
+        fi
+
+    - name: Cleanup
+      if: always()
+      run: |
+        kind delete cluster --name test-cluster

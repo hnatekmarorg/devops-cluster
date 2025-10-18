@@ -8,14 +8,21 @@ kind: Application
 metadata:
   name: crossplane
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
-  source:
-    chart: crossplane
-    repoURL: https://charts.crossplane.io/stable
-    targetRevision: 1.20.0
-    helm:
-      releaseName: crossplane
+  sources:
+    - chart: crossplane
+      repoURL: https://charts.crossplane.io/stable
+      targetRevision: 1.20.0
+      helm:
+        releaseName: crossplane
+        valueFiles:
+          - $repo/devops/argocd/crossplane/values.yaml
+    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+      targetRevision: main
+      ref: repo
   destination:
     server: "https://kubernetes.default.svc"
     namespace: crossplane-system
@@ -24,3 +31,5 @@ spec:
       prune: true
       selfHeal: true
       allowEmpty: false
+    syncOptions:
+      - CreateNamespace=false

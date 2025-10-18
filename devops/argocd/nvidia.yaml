@@ -10,40 +10,32 @@ metadata:
   name: nvidia-device-plugin
   labels:
     pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/warn-version: latest
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: nvidia-device-plugin
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
-  source:
-    chart: nvidia-device-plugin
-    repoURL: https://nvidia.github.io/k8s-device-plugin
-    targetRevision: 0.17.1
-    helm:
-      releaseName: nvidia-device-plugin
-      valuesObject:
-        tolerations:
-          # This toleration is deprecated. Kept here for backward compatibility
-          # See https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
-          - key: CriticalAddonsOnly
-            operator: Exists
-          - key: nvidia.com/gpu
-            operator: Exists
-            effect: NoSchedule
-          - key: "node/type"
-            operator: "Equal"
-            value: "gpu"
-            effect: "NoSchedule"
-
-
-        runtimeClassName: nvidia
-        gfd:
-          enabled: true
-        nfd:
-          enabled: true
+  sources:
+    - chart: nvidia-device-plugin
+      repoURL: https://nvidia.github.io/k8s-device-plugin
+      targetRevision: 0.17.1
+      helm:
+        releaseName: nvidia-device-plugin
+        valueFiles:
+          - $repo/devops/argocd/nvidia/values.yaml
+    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+      targetRevision: main
+      ref: repo
   destination:
     server: "https://kubernetes.default.svc"
     namespace: nvidia-device-plugin
@@ -53,4 +45,4 @@ spec:
       selfHeal: true # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
       allowEmpty: false # Allows deleting all application resources during automatic syncing ( false by default ).
     syncOptions:
-      - CreateNamespace=true
+      - CreateNamespace=false

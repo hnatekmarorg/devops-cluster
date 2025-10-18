@@ -15,6 +15,8 @@ kind: Application
 metadata:
   name: longhorn
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   syncPolicy:
     automated:
@@ -24,25 +26,14 @@ spec:
   sources:
     - chart: longhorn
       repoURL: https://charts.longhorn.io/
-      targetRevision: v1.9.0 # Replace with the Longhorn version you'd like to install or upgrade to
+      targetRevision: v1.9.0
       helm:
-        values: |
-          defaultSettings:
-            kubernetesClusterAutoscalerEnabled: true
-          preUpgradeChecker:
-            jobEnabled: false
-          longhornManager:
-            tolerations:
-            - key: "node/type"
-              operator: "Equal"
-              value: "storage"
-              effect: "NoSchedule"
-          longhornDriver:
-            tolerations:
-            - key: "node/type"
-              operator: "Equal"
-              value: "storage"
-              effect: "NoSchedule"
+        releaseName: longhorn
+        valueFiles:
+          - $repo/devops/argocd/longhorn/values.yaml
+    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+      targetRevision: main
+      ref: repo
   destination:
     server: https://kubernetes.default.svc
     namespace: longhorn-system

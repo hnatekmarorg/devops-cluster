@@ -29,6 +29,7 @@ spec:
         values: |
           defaultSettings:
             kubernetesClusterAutoscalerEnabled: true
+            storageNetwork: 192.168.88.0/24
           preUpgradeChecker:
             jobEnabled: false
           longhornManager:

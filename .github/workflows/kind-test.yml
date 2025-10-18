@@ -1,0 +1,47 @@
+name: KIND Test
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  kind-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v3
+
+      - name: Set up Kind
+        uses: helm/kind-action@v1
+    
+      - name: Create Kind cluster
+        run: |
+          kind create cluster --image kindest/node:v1.28.0
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
+      - name: Deploy ArgoCD
+        run: |
+          kubectl create namespace argocd
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm install argocd argo/argo-cd --namespace argocd --set global.rbac.create=true
+
+      - name: Deploy test applications
+        run: |
+          # Deploy test chart
+          helm install test-app ./charts/llama-cpp --namespace default
+          
+          # Wait for pods to be ready
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=llama-cpp --timeout=300s
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kind delete cluster

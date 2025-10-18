@@ -21,7 +21,6 @@ spec:
       ref: repo
   destination:
     server: "https://kubernetes.default.svc"
-    namespace: nfs-provisioner
   syncPolicy:
     automated:
       prune: true

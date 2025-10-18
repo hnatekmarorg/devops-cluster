@@ -1,4 +1,7 @@
+# Llama models configuration
+# Each model defines GPU resources, arguments, and other settings
 models:
+  # ExL model configuration
   - name: exl
     cooldownPeriod: 3600
     engine: tabby
@@ -20,6 +23,7 @@ models:
       - "true"
       - --disable-auth
       - "true"
+  # Cogito model configuration  
   - name: cogito
     cooldownPeriod: 3600
     resources:
@@ -54,6 +58,7 @@ models:
       - distribute
       - --alias
       - "cogito"
+  # GPT-OSS model configuration
   - name: gpt-oss
     cooldownPeriod: 3600
     resources:
@@ -89,6 +94,7 @@ models:
       - distribute
       - --alias
       - "gpt-oss"
+  # GPT-OSS 20B model configuration
   - name: gpt-oss-20b
     engine: vllm
     cooldownPeriod: 3600
@@ -105,6 +111,7 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - gpt-oss-20b
+  # GLM-4.6 model configuration
   - name: glm-4-6
     cooldownPeriod: 3600
     resources:
@@ -133,6 +140,7 @@ models:
       - distribute
       - --alias
       - glm-4-6
+  # Behemoth model configuration
   - name: behemoth
     cooldownPeriod: 3600
     resources:
@@ -156,6 +164,7 @@ models:
       - distribute
       - --alias
       - "behemoth"
+  # Behemoth Redux model configuration
   - name: behemoth-redux
     cooldownPeriod: 3600
     resources:
@@ -179,6 +188,7 @@ models:
       - distribute
       - --alias
       - "behemoth-redux"
+  # GLM-Air model configuration
   - name: glm-air
     engine: vllm
     cooldownPeriod: 7200
@@ -203,6 +213,7 @@ models:
       - glm45
       - --served-model-name
       - glm-air
+  # Qwen3-235B Thinking model configuration
   - name: qwen3-235b-thinking
     cooldownPeriod: 3600
     resources:
@@ -231,6 +242,7 @@ models:
       - distribute
       - --alias
       - "qwen3-235b-thinking"
+  # Qwen3-235B Instruct model configuration
   - name: qwen3-235b-instruct
     cooldownPeriod: 3600
     resources:
@@ -259,6 +271,7 @@ models:
       - distribute
       - --alias
       - "qwen3-235b-instruct"
+  # Qwen3-30B Instruct model configuration
   - name: qwen3-30b-instruct
     engine: vllm
     cooldownPeriod: 7200
@@ -284,6 +297,7 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen3-30b-instruct
+  # Qwen3-30B Thinking model configuration
   - name: qwen3-30b-thinking
     engine: vllm
     cooldownPeriod: 7200
@@ -313,6 +327,7 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen3-30b-thinking
+  # Qwen Coder model configuration
   - name: qwen-coder
     engine: vllm
     cooldownPeriod: 14400
@@ -323,6 +338,7 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8 --gpu-memory-util 0.8 --tensor-parallel-size 4 --served-model-name qwen-coder --enable-expert-parallel   --enable-auto-tool-choice --tool-call-parser qwen3_coder
+  # Qwen Next Instruct model configuration
   - name: qwen-next-instruct
     engine: vllm
     cooldownPeriod: 14400
@@ -345,6 +361,7 @@ models:
       - "0.8"
       - --served-model-name
       - qwen-next-instruct
+  # Qwen Embedding model configuration
   - name: qwen-embedding
     engine: vllm
     cooldownPeriod: 14400
@@ -357,6 +374,7 @@ models:
       - /models/fp16/Qwen3-Embedding-8B/
       - --served-model-name
       - qwen-embedding
+  # Qwen Reranker model configuration
   - name: qwen-reranker
     engine: vllm
     cooldownPeriod: 14400

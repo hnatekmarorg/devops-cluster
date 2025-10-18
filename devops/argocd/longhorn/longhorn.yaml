@@ -25,4 +25,3 @@ spec:
       ref: repo
   destination:
     server: https://kubernetes.default.svc
-    namespace: longhorn-system

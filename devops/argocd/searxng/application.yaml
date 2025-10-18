@@ -20,7 +20,6 @@ spec:
       ref: repo
   destination:
     server: https://kubernetes.default.svc
-    namespace: searxng
   syncPolicy:
     automated:
       prune: true

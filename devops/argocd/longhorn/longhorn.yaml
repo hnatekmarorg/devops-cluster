@@ -27,9 +27,9 @@ spec:
       targetRevision: v1.9.0 # Replace with the Longhorn version you'd like to install or upgrade to
       helm:
         values: |
-          defaultSettings:
-            kubernetesClusterAutoscalerEnabled: true
-            storageNetwork: 192.168.88.0/24
+           defaultSettings:
+             kubernetesClusterAutoscalerEnabled: true
+             storageNetwork: "192.168.88.0/24"
           preUpgradeChecker:
             jobEnabled: false
           longhornManager:

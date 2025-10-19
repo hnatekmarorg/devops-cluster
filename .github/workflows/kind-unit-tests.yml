@@ -45,6 +45,11 @@ jobs:
             sleep 10
           done
 
+      - name: Port forward ArgoCD server
+        run: |
+          kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+          sleep 5
+
       - name: ArgoCD login
         run: |
           argocd login localhost:8080 --username admin --password $(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 --decode)
@@ -146,6 +151,11 @@ jobs:
           kubectl wait --for=condition=Available -n monitoring deployment/prometheus-operator --timeout=300s
 
           echo "All tests passed!"
+
+      - name: Cleanup port forwarding
+        if: always()
+        run: |
+          pkill -f "kubectl port-forward svc/argocd-server"
 
       - name: Cleanup KinD cluster
         if: always()

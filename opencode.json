@@ -5,11 +5,11 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "qwen-coder",
       "options": {
-        "baseURL": "https://llm.hnatekmar.dev/qwen-coder/v1"
+        "baseURL": "https://llm.hnatekmar.dev/glm-air/v1"
       },
       "models": {
-        "qwen-coder": {
-          "name": "qwen-coder",
+        "glm-air": {
+          "name": "glm-air",
           "tool_call": true
         }
       }

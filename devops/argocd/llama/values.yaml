@@ -329,7 +329,7 @@ models:
       - --max-model-len
       - "118000"
       - --gpu-memory-utilization 
-      - "0.95"
+      - "0.91"
       - --pipeline-parallel-size
       - "2"
       - --enable-expert-parallel

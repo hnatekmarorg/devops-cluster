@@ -183,7 +183,7 @@ models:
       - --alias
       - "behemoth"
   # Behemoth Redux model configuration
-  - name: behemoth-redux
+  - name: monstral
     cooldownPeriod: 3600
     resources:
       requests:
@@ -195,7 +195,7 @@ models:
       - "64000"
       - --no-mmap
       - "-m"
-      - "/models/gguf/behemoth-redux/TheDrummer_Behemoth-ReduX-123B-v1-Q6_K-00001-of-00003.gguf"
+      - "/models/gguf/monstral/Monstral-123B-v2-Q5_K_M-00001-of-00003.gguf"
       - "-ngl"
       - "99"
       - -t
@@ -205,7 +205,7 @@ models:
       - --numa
       - distribute
       - --alias
-      - "behemoth-redux"
+      - "monstral"
   # GLM-Air model configuration
   - name: glm-air
     engine: vllm

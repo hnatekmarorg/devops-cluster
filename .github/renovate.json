@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "kubernetes": {
+    "fileMatch": ["\\.yaml$", "\\.yml$"]
+  },
+  "argocd": {
+    "managerFilePatterns": ["^devops/argocd/.+\\.yaml$"]
+  },
+  "regexManagers": [
+    {
+      "fileMatch": ["\\.yaml$", "\\.yml$"],
+      "matchStrings": [
+        "image:\\s+'?(?<depName>[^\\s:]+):(?<currentValue>[^\\s']+)'.*"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

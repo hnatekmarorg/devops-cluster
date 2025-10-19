@@ -139,7 +139,7 @@ models:
         nvidia.com/gpu: 6
     args:
       - --ctx-size
-      - "106000"
+      - "80000"
       - --top-p
       - "0.95"
       - --top-k

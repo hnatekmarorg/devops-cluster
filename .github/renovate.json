@@ -6,6 +6,9 @@
   "kubernetes": {
     "fileMatch": ["\\.yaml$", "\\.yml$"]
   },
+  "argocd": {
+    "managerFilePatterns": ["^devops/argocd/.+\\.yaml$"]
+  },
   "regexManagers": [
     {
       "fileMatch": ["\\.yaml$", "\\.yml$"],

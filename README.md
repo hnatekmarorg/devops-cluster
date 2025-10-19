@@ -65,3 +65,7 @@ This repository contains infrastructure-as-code (IaC) configurations for deployi
 - Add new Helm charts to `charts/`.
 - Add manual overrides to `manual/argocd/` if needed.
 - Always encrypt secrets before committing.
+
+## 🤖 Renovate Automation
+
+This repository uses [Renovate](https://github.com/renovatebot/renovate) to automatically keep dependencies up-to-date. The configuration is defined in `.github/renovate.json` and the workflow is triggered hourly via `.github/workflows/renovate.yml` using the `gha-runner-scale-set-hnatekmarorg` runner.

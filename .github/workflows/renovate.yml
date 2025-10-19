@@ -1,0 +1,18 @@
+name: Renovate
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour
+  workflow_dispatch:
+
+jobs:
+  renovate:
+    runs-on: gha-runner-scale-set-hnatekmarorg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Renovate
+        uses: renovatebot/github-action@v39.3.3
+        with:
+          configurationFile: .github/renovate.json

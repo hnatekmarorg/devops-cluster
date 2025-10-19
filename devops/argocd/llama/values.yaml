@@ -325,18 +325,13 @@ models:
       limits:
         nvidia.com/gpu: 2
     args:
-      - /models/awq/Qwen3-VL-30B-A3B-Thinking-AWQ-4bit/
-      - --async-scheduling 
+      - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
       - --max-model-len
-      - "180000"
+      - "118000"
       - --gpu-memory-utilization 
       - "0.95"
-      - --mm-encoder-tp-mode 
-      - data
-      - --tensor-parallel-size
+      - --pipeline-parallel-size
       - "2"
-      - --mm-processor-cache-type
-      - shm
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1

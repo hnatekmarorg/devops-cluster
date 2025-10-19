@@ -19,6 +19,7 @@ spec:
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
+      path: devops/argocd/nfs
   destination:
     server: "https://kubernetes.default.svc"
   syncPolicy:
@@ -27,4 +28,4 @@ spec:
       selfHeal: true
       allowEmpty: false
     syncOptions:
-      - CreateNamespace=false
+      - CreateNamespace=true

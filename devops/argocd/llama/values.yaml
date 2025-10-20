@@ -324,7 +324,7 @@ models:
       limits:
         nvidia.com/gpu: 3
     args:
-      - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
+      - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
       - --max-model-len
       - "230000"
       - --gpu-memory-utilization 

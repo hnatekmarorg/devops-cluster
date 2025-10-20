@@ -7,7 +7,7 @@ on:
 
 jobs:
   renovate:
-    runs-on: gha-runner-scale-set-hnatekmarorg
+    runs-on: dind
     steps:
       - name: Checkout
         uses: actions/checkout@v4

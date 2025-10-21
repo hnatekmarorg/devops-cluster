@@ -384,19 +384,17 @@ models:
     cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 6
       limits:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 6
     args:
       - /models/fp8/Qwen3-VL-32B-Thinking-FP8/
       - --gpu-memory-utilization 
       - "0.95"
       - --tensor-parallel-size
-      - "4"
-      - --mm-processor-cache-gb 
-      - "0"
-      - --max-model-len
-      - "106000"
+      - "2"
+      - --pipeline-parallel-size
+      - "3"
       - --async-scheduling
       - --mm-processor-cache-type
       - shm

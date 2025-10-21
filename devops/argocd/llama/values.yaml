@@ -389,8 +389,6 @@ models:
         nvidia.com/gpu: 6
     args:
       - /models/fp8/Qwen3-VL-32B-Thinking-FP8/
-      - --gpu-memory-utilization 
-      - "0.95"
       - --tensor-parallel-size
       - "2"
       - --pipeline-parallel-size

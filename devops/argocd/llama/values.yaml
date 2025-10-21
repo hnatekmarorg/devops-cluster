@@ -379,31 +379,53 @@ models:
       - "0.8"
       - --served-model-name
       - qwen-next-instruct
-  # Qwen Embedding model configuration
-  - name: qwen-embedding
+  - name: qwen3-32b-thinking
     engine: vllm
-    cooldownPeriod: 14400
+    cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 1
+        nvidia.com/gpu: 4
       limits:
-        nvidia.com/gpu: 1
+        nvidia.com/gpu: 4
     args:
-      - /models/fp16/Qwen3-Embedding-8B/
+      - /models/fp8/Qwen3-VL-32B-Thinking-FP8/
+      - --gpu-memory-utilization 
+      - "0.95"
+      - --tensor-parallel-size
+      - "4"
+      - --async-scheduling
+      - --mm-processor-cache-type
+      - shm
+      - --enable-expert-parallel
+      - --reasoning-parser 
+      - deepseek_r1
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
       - --served-model-name
-      - qwen-embedding
-  # Qwen Reranker model configuration
-  - name: qwen-reranker
+      - qwen3-32b-thinking
+  - name: qwen3-32b-thinking
     engine: vllm
-    cooldownPeriod: 14400
+    cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 1
+        nvidia.com/gpu: 4
       limits:
-        nvidia.com/gpu: 1
+        nvidia.com/gpu: 4
     args:
-      - /models/fp16/Qwen3-Reranker-8B/
-      - --max-model-len
-      - "30000"
+      - /models/fp8/Qwen3-VL-32B-Instruct-FP8/
+      - --gpu-memory-utilization 
+      - "0.95"
+      - --tensor-parallel-size
+      - "4"
+      - --async-scheduling
+      - --mm-processor-cache-type
+      - shm
+      - --enable-expert-parallel
+      - --reasoning-parser 
+      - deepseek_r1
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
       - --served-model-name
-      - qwen-reranker
+      - qwen3-32b-thinking

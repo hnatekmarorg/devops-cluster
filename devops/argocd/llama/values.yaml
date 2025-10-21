@@ -395,7 +395,6 @@ models:
       - "2"
       - --pipeline-parallel-size
       - "3"
-      - --async-scheduling
       - --mm-processor-cache-type
       - shm
       - --reasoning-parser 

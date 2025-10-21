@@ -407,7 +407,7 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen3-32b-thinking
-  - name: qwen3-32b-thinking
+  - name: qwen3-32b-instruct
     engine: vllm
     cooldownPeriod: 7200
     resources:

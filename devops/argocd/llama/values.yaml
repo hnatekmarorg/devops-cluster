@@ -329,7 +329,7 @@ models:
       - --limit-mm-per-prompt.video
       - "0"
       - --max-model-len
-      - "97000"
+      - "96000"
       - --gpu-memory-utilization 
       - "0.95"
       - --tensor-parallel-size

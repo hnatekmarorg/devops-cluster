@@ -231,64 +231,7 @@ models:
       - glm45
       - --served-model-name
       - glm-air
-  # Qwen3-235B Thinking model configuration
-  - name: qwen3-235b-thinking
-    cooldownPeriod: 3600
-    resources:
-      requests:
-        nvidia.com/gpu: 6
-      limits:
-        nvidia.com/gpu: 6
-    args:
-      - --jinja
-      - --parallel
-      - "4"
-      - -m 
-      - /models/gguf/qwen3-235B/Qwen3-235B-A22B-Thinking-2507-UD-Q2_K_XL-00001-of-00002.gguf 
-      - --ctx-size 
-      - "226000"
-      - "-ngl"
-      - "99"
-      - -fa
-      - "on"
-      - -t
-      - "-1"
-      - --prio
-      - "3"
-      - --jinja
-      - --numa
-      - distribute
-      - --alias
-      - "qwen3-235b-thinking"
-  # Qwen3-235B Instruct model configuration
-  - name: qwen3-235b-instruct
-    cooldownPeriod: 3600
-    resources:
-      requests:
-        nvidia.com/gpu: 6
-      limits:
-        nvidia.com/gpu: 6
-    args:
-      - --jinja
-      - --parallel
-      - "4"
-      - -m 
-      - /models/gguf/qwen3-235B/Qwen3-235B-A22B-Instruct-2507-UD-Q2_K_XL-00001-of-00002.gguf
-      - --ctx-size 
-      - "226000"
-      - "-ngl"
-      - "99"
-      - -fa
-      - "on"
-      - -t
-      - "-1"
-      - --prio
-      - "3"
-      - --jinja
-      - --numa
-      - distribute
-      - --alias
-      - "qwen3-235b-instruct"
+
   # Qwen3-30B Instruct model configuration
   - name: qwen3-30b-instruct
     engine: vllm
@@ -321,19 +264,21 @@ models:
     cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 2
+        nvidia.com/gpu: 4
       limits:
-        nvidia.com/gpu: 2
+        nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
-      - --limit-mm-per-prompt.video
-      - "0"
-      - --max-model-len
-      - "80000"
       - --gpu-memory-utilization 
       - "0.95"
+      - --async-scheduling
       - --tensor-parallel-size
-      - "2"
+      - "4"
+      - --mm-encoder-tp-mode 
+      - data
+      - --mm-processor-cache-type
+      - shm
+      - --enable-expert-parallel
       - --async-scheduling
       - --mm-processor-cache-type
       - shm
@@ -384,21 +329,21 @@ models:
     cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 6
+        nvidia.com/gpu: 4
       limits:
-        nvidia.com/gpu: 6
+        nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-32B-Thinking-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
       - --limit-mm-per-prompt.video
       - "0"
       - --max-model-len
-      - "200000"
+      - "189000"
       - --tensor-parallel-size
       - "2"
       - --pipeline-parallel-size
       - "3"
-      - --mm-processor-cache-type
-      - shm
       - --reasoning-parser 
       - deepseek_r1
       - --tool-call-parser 
@@ -416,10 +361,12 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-32B-Instruct-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
       - --limit-mm-per-prompt.video
       - "0"
       - --gpu-memory-utilization 
-      - "0.95"
+      - "0.96"
       - --tensor-parallel-size
       - "4"
       - --async-scheduling
@@ -432,3 +379,59 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen3-32b-thinking
+  - name: qwen3-8b-instruct
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 2
+      limits:
+        nvidia.com/gpu: 2
+    args:
+      - /models/fp8/Qwen3-VL-8B-Instruct-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --gpu-memory-utilization 
+      - "0.96"
+      - --max-model-len
+      - "215000"
+      - --tensor-parallel-size
+      - "2"
+      - --async-scheduling
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-8b-instruct
+  - name: qwen3-8b-thinking
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 2
+      limits:
+        nvidia.com/gpu: 2
+    args:
+      - /models/fp8/Qwen3-VL-8B-Thinking-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --gpu-memory-utilization 
+      - "0.96"
+      - --max-model-len
+      - "215000"
+      - --tensor-parallel-size
+      - "2"
+      - --async-scheduling
+      - --mm-processor-cache-type
+      - shm
+      - --reasoning-parser 
+      - deepseek_r1
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-8b-thinking

@@ -5,6 +5,8 @@ metadata:
   name: {{.name}}
   labels:
     llm: {{.name}}
+    scale.off-replicas: "0"
+    scale.on-replicas: "1"
 spec:
   replicas: 0
   selector:
@@ -15,8 +17,6 @@ spec:
       name: {{.name}}
       labels:
         llm: {{.name}}
-        scale.off-replicas: "0"
-        scale.on-replicas: "1"
     spec:
       tolerations:
         - key: nvidia.com/gpu

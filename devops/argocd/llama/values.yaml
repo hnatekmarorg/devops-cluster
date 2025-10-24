@@ -376,7 +376,7 @@ models:
       - hermes
       - --enable-auto-tool-choice
       - --served-model-name
-      - qwen3-32b-thinking
+      - qwen3-32b-instruct
   - name: qwen3-8b-instruct
     engine: vllm
     cooldownPeriod: 7200

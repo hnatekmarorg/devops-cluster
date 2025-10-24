@@ -341,9 +341,7 @@ models:
       - --max-model-len
       - "189000"
       - --tensor-parallel-size
-      - "2"
-      - --pipeline-parallel-size
-      - "3"
+      - "4"
       - --reasoning-parser 
       - deepseek_r1
       - --tool-call-parser 

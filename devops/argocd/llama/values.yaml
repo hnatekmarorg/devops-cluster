@@ -367,6 +367,8 @@ models:
       - "0.96"
       - --tensor-parallel-size
       - "4"
+      - --max-model-len
+      - "189000"
       - --async-scheduling
       - --mm-processor-cache-type
       - shm

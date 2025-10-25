@@ -13,8 +13,8 @@
           "tool_call": true
         }
       }
-    }
-        "qwen-next-instruct": {
+    },
+    "qwen-next-instruct": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "qwen-next-instruct",
       "options": {

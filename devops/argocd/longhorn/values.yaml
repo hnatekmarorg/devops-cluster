@@ -9,6 +9,8 @@ longhornManager:
     value: "storage"
     effect: "NoSchedule"
 longhornDriver:
+  storageNetwork: 192.186.88.1/24
+
   tolerations:
   - key: "node/type"
     operator: "Equal"

@@ -339,7 +339,7 @@ models:
       - --reasoning-parser 
       - deepseek_r1
       - --served-model-name
-      - qwen-next-instruct
+      - qwen-next-thinking
   - name: qwen3-32b-thinking
     engine: vllm
     cooldownPeriod: 7200

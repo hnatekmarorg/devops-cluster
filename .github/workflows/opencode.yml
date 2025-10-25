@@ -26,4 +26,4 @@ jobs:
         env:
           OPENCODE_API_KEY: sk- # Dummy key 
         with:
-          model: hnatekmar/qwen-coder
+          model: glm-air/glm-air

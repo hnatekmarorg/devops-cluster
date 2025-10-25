@@ -26,4 +26,4 @@ jobs:
         env:
           OPENCODE_API_KEY: sk- # Dummy key 
         with:
-          model: qwen-next-thinking/qwen-next-thinking
+          model: qwen-next-instruct/qwen-next-instruct

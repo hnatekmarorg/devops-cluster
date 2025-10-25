@@ -253,6 +253,8 @@ models:
       - --mm-processor-cache-type
       - shm
       - --enable-expert-parallel
+      - --mm-processor-cache-gb 
+      - "0"
       - --tool-call-parser 
       - hermes
       - --enable-auto-tool-choice
@@ -272,6 +274,8 @@ models:
       - --gpu-memory-utilization 
       - "0.95"
       - --async-scheduling
+      - --mm-processor-cache-gb 
+      - "0"
       - --tensor-parallel-size
       - "4"
       - --mm-encoder-tp-mode 

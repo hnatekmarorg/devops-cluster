@@ -1,20 +1,26 @@
 # Authentik configuration values
 # This follows the same pattern as other applications in this cluster
 
-# Use internal postgresql and redis - these will be managed by the authentik helm chart
+# Use environment variables from existing authentik-init secret
 authentik:
-  secret_key: "PleaseGenerateA50CharKey12345678901234567890"  # Will be overridden by the existing secret
-  postgresql:
-    password: "ThisIsNotASecurePassword123"  # Will be overridden by the existing secret
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-init
+          key: SECRET_KEY
   redis:
     enabled: true
 
-# Enable internal postgresql and redis
 postgresql:
   enabled: true
-  auth:
-    password: "ThisIsNotASecurePassword123"
   architecture: standalone
+  env:
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-init
+          key: database_postgres_password
   image:
     tag: "17.6-bookworm"
 

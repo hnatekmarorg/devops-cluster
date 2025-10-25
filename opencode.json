@@ -52,8 +52,9 @@
             "top_p": 0.8,
             "min_p": 0,
             "presence_penalty": 1
-          },
+          }
         }
       }
+    }
   }
 }

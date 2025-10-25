@@ -305,21 +305,39 @@ models:
     cooldownPeriod: 14400
     resources:
       requests:
-        nvidia.com/gpu: 6
+        nvidia.com/gpu: 4
       limits:
-        nvidia.com/gpu: 6
+        nvidia.com/gpu: 4
     args:
-      - /models/awq/Qwen3-Next-80B-A3B-Instruct-AWQ-4bit/
+      - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
+      - --enable-expert-parallel
       - --tensor-parallel-size
       - "4" 
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice
       - --no-enable-chunked-prefill
-      - --tokenizer-mode
-      - auto  
-      - --gpu-memory-utilization 
-      - "0.8"
+      - --served-model-name
+      - qwen-next-instruct
+  - name: qwen-next-thinking
+    engine: vllm
+    cooldownPeriod: 14400
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
+      - --enable-expert-parallel
+      - --tensor-parallel-size
+      - "4" 
+      - --tool-call-parser 
+      - hermes 
+      - --enable-auto-tool-choice
+      - --no-enable-chunked-prefill
+      - --reasoning-parser 
+      - deepseek_r1
       - --served-model-name
       - qwen-next-instruct
   - name: qwen3-32b-thinking

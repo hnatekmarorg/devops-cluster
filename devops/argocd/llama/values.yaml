@@ -243,11 +243,11 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
       - --tensor-parallel-size
       - "4"
       - --enable-expert-parallel
-      - --mm-processor-cache-gb 
-      - "0"
       - --tool-call-parser 
       - hermes
       - --enable-auto-tool-choice
@@ -268,7 +268,6 @@ models:
       - "0"
       - --tensor-parallel-size
       - "4"
-      - --enable-expert-parallel
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1
@@ -299,7 +298,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
+      - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
       - --enable-expert-parallel
       - --tensor-parallel-size
       - "4" 
@@ -319,7 +318,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
+      - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/
       - --enable-expert-parallel
       - --tensor-parallel-size
       - "4" 

@@ -302,6 +302,7 @@ models:
   # Qwen Next Instruct model configuration
   - name: qwen-next-instruct
     engine: vllm
+    image: vllm/vllm-openai:v0.10.2
     cooldownPeriod: 14400
     resources:
       requests:
@@ -321,6 +322,7 @@ models:
       - qwen-next-instruct
   - name: qwen-next-thinking
     engine: vllm
+    image: vllm/vllm-openai:v0.10.2
     cooldownPeriod: 14400
     resources:
       requests:

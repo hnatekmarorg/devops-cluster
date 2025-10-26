@@ -243,8 +243,6 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
-      - --mm-processor-cache-gb 
-      - "0"
       - --tensor-parallel-size
       - "4"
       - --enable-expert-parallel

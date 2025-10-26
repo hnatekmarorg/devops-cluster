@@ -245,12 +245,8 @@ models:
       - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
       - --limit-mm-per-prompt.video
       - "0"
-      - --gpu-memory-utilization
-      - "0.92"
-      - --mm-encoder-tp-mode
-      - data
-      - --mm-processor-cache-gb
-      - "0"
+      - --mm-processor-cache-type
+      - shm
       - --tensor-parallel-size
       - "4"
       - --enable-expert-parallel

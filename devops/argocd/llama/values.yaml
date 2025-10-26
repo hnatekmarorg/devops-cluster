@@ -243,6 +243,12 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --mm-encoder-tp-mode
+      - data
+      - --mm-processor-cache-gb
+      - "0"
       - --tensor-parallel-size
       - "4"
       - --enable-expert-parallel
@@ -288,7 +294,6 @@ models:
   # Qwen Next Instruct model configuration
   - name: qwen-next-instruct
     engine: vllm
-    image: vllm/vllm-openai:v0.10.2
     cooldownPeriod: 14400
     resources:
       requests:
@@ -308,7 +313,6 @@ models:
       - qwen-next-instruct
   - name: qwen-next-thinking
     engine: vllm
-    image: vllm/vllm-openai:v0.10.2
     cooldownPeriod: 14400
     resources:
       requests:

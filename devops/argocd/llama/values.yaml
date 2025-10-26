@@ -302,6 +302,8 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
+      - --max-model-len
+      - "120000"
       - --enable-expert-parallel
       - --tensor-parallel-size
       - "4" 
@@ -321,6 +323,8 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/
+      - --max-model-len
+      - "120000"
       - --enable-expert-parallel
       - --tensor-parallel-size
       - "4" 

@@ -60,7 +60,7 @@ spec:
           command: ["/bin/bash"]
           {{- end }}
           env:
-            - name: VLLM_USE_DEEP_GEMM
+            - name: OMP_NUM_THREADS
               value: "1"
           {{- if eq (.engine | default "llama") "vllm" }}
           args: 

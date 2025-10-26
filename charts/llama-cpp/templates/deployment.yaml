@@ -42,7 +42,9 @@ spec:
             {{- else }}
             {{toYaml .cpuResources | nindent 12}}
             {{- end }}
-          {{- if eq (.engine | default "llama") "vllm" }}
+          {{- if .image }}
+          image: {{ .image }}
+          {{- else if eq (.engine | default "llama") "vllm" }}
           image: {{ $.Values.llm.vllm.image }}
           {{- else if eq (.engine | default "llama") "tabby" }}
           image: ghcr.io/theroyallab/tabbyapi:latest

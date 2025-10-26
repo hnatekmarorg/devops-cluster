@@ -25,20 +25,6 @@ models:
       limits:
         nvidia.com/gpu: 1
     cooldownPeriod: 120
-  - name: qwen3
-    args:
-      - --jinja
-      - "-m"
-      - "/models/gguf/Qwen3-32B-Q5_K_M.gguf"
-      - "-ngl"
-      - "99"
-    selector: {}
-    resources:
-      requests:
-        nvidia.com/gpu: 1
-      limits:
-        nvidia.com/gpu: 1
-    cooldownPeriod: 120
   # Example tabbyapi model configuration
   - name: tabby-qwen3
     engine: tabby

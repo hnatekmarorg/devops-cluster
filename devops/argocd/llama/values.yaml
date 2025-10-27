@@ -392,8 +392,6 @@ models:
         nvidia.com/gpu: 1
     args:
       - /models/fp8/Qwen3-VL-8B-Instruct-FP8/
-      - --mm-processor-cache-gb 
-      - "0"
       - --limit-mm-per-prompt.video
       - "0"
       - --mm-encoder-tp-mode 
@@ -415,8 +413,6 @@ models:
         nvidia.com/gpu: 1
     args:
       - /models/fp8/Qwen3-VL-8B-Thinking-FP8/
-      - --mm-processor-cache-gb 
-      - "0"
       - --limit-mm-per-prompt.video
       - "0"
       - --gpu-memory-utilization 

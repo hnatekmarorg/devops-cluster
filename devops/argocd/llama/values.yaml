@@ -301,10 +301,8 @@ models:
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
       - --enable-expert-parallel
-      - --tensor-parallel-size
-      - "2"
       - --pipeline-parallel
-      - "3"
+      - "6"
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice

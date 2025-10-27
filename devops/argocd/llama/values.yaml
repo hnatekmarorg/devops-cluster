@@ -295,14 +295,14 @@ models:
     cooldownPeriod: 14400
     resources:
       requests:
-        nvidia.com/gpu: 6
+        nvidia.com/gpu: 4
       limits:
-        nvidia.com/gpu: 6
+        nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
       - --enable-expert-parallel
-      - --pipeline-parallel
-      - "6"
+      - -pp
+      - "4" 
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice
@@ -319,10 +319,8 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/
-      - --max-model-len
-      - "100000"
       - --enable-expert-parallel
-      - --tensor-parallel-size
+      - -pp
       - "4" 
       - --tool-call-parser 
       - hermes 
@@ -461,7 +459,7 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen3-4b-instruct
-  - name: qwen3-8b-thinking
+  - name: qwen3-4b-thinking
     engine: vllm
     cooldownPeriod: 7200
     resources:

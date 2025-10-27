@@ -306,7 +306,6 @@ models:
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice
-      - --no-enable-chunked-prefill
       - --served-model-name
       - qwen-next-instruct
   - name: qwen-next-thinking
@@ -325,7 +324,6 @@ models:
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice
-      - --no-enable-chunked-prefill
       - --reasoning-parser 
       - deepseek_r1
       - --served-model-name

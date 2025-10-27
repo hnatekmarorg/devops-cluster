@@ -295,16 +295,16 @@ models:
     cooldownPeriod: 14400
     resources:
       requests:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 6
       limits:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 6
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
-      - --max-model-len
-      - "100000"
       - --enable-expert-parallel
       - --tensor-parallel-size
-      - "4" 
+      - "2"
+      - --pipeline-parallel
+      - "3"
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice

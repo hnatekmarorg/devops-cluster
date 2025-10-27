@@ -395,7 +395,7 @@ models:
       - --mm-encoder-tp-mode 
       - data
       - --max-model-len
-      - "60000"
+      - "50000"
       - --tool-call-parser 
       - hermes
       - --enable-auto-tool-choice
@@ -418,7 +418,7 @@ models:
       - --mm-encoder-tp-mode 
       - data
       - --max-model-len
-      - "60000"
+      - "50000"
       - --mm-processor-cache-type
       - shm
       - --reasoning-parser 

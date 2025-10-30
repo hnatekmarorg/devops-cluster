@@ -17,6 +17,10 @@ spec:
       labels:
         llm: vllm-test
     spec:
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
       runtimeClassName: nvidia
       volumes:
         - name: shm

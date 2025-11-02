@@ -183,7 +183,41 @@ models:
       - --alias
       - "behemoth"
   # Behemoth Redux model configuration
-  - name: monstral
+  - name: qwen3-235b-instruct
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "220000"
+      
+      - --no-mmap
+      - -m
+      - /models/gguf/qwen3-vl-235b/Qwen3-VL-235B-A22B-Instruct-1M-UD-Q2_K_XL-00001-of-00002.gguf
+      - --parallel 
+      - "4"
+      - --mmproj
+      - /models/gguf/qwen3-vl-235b/mmproj-BF16.gguf
+      - --top-p
+      - "0.8"
+      - --top-k
+      - "20"
+      - --temp 
+      - "0.7"
+      - --min-p 
+      - "0.0"
+      - --flash-attn 
+      - "on"
+      - --presence-penalty 
+      - "1.5"
+      - --numa
+      - distribute
+      - --alias
+      - "qwen3-235b-instruct"
+    - name: monstral
     cooldownPeriod: 3600
     resources:
       requests:

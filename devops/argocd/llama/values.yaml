@@ -216,7 +216,7 @@ models:
       - distribute
       - --alias
       - "qwen3-235b-instruct"
-    - name: monstral
+  - name: monstral
     cooldownPeriod: 3600
     resources:
       requests:

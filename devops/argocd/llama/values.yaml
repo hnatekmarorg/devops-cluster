@@ -193,6 +193,7 @@ models:
     args:
       - --ctx-size
       - "220000"
+      - --jinja
       - --no-mmap
       - -m
       - /models/gguf/qwen3-vl-235b/Qwen3-VL-235B-A22B-Instruct-1M-UD-Q2_K_XL-00001-of-00002.gguf

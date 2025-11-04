@@ -78,6 +78,7 @@ models:
       - "cogito"
   # GPT-OSS model configuration
   - name: gpt-oss
+    engine: vllm
     cooldownPeriod: 3600
     resources:
       requests:
@@ -85,33 +86,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - --jinja
-      - -c
-      - "131072" 
-      - --temp
-      - "1.0"
-      - --top-p
-      - "1"
-      - --top-k
-      - "0"
-      - --no-mmap
-      - --model
-      - "/models/gguf/gpt-oss/gpt-oss-120b-UD-Q8_K_XL-00002-of-00002.gguf"
-      - "-ngl"
-      - "99"
-      - -fa
-      - "on"
-      - -t
-      - "-1"
-      - --prio
-      - "3"
-      - --jinja
-      - --chat-template-kwargs 
-      - '{"reasoning_effort": "high"}'
-      - --numa
-      - distribute
-      - --alias
-      - "gpt-oss"
+      - /models/fp8/gpt-oss-120b/ -tp 2 -pp 2 --tool-call-parser openai --served-model-name gpt-oss
   # GPT-OSS 20B model configuration
   - name: gpt-oss-20b
     engine: vllm

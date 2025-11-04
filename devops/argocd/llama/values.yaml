@@ -309,8 +309,12 @@ models:
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
       - --enable-expert-parallel
+      - -tp
+      - "2"
       - -pp
-      - "4" 
+      - "2" 
+      - --max-model-len 
+      - "210000"
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice
@@ -327,8 +331,12 @@ models:
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/
       - --enable-expert-parallel
+      - -tp
+      - "2"
       - -pp
-      - "4" 
+      - "2" 
+      - --max-model-len 
+      - "210000"
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice

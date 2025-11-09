@@ -465,32 +465,14 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen3-4b-instruct
-  - name: qwen3-4b-thinking
+  - name: glm-4-32b
     engine: vllm
     cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 1
+        nvidia.com/gpu: 4
       limits:
-        nvidia.com/gpu: 1
+        nvidia.com/gpu: 4
     args:
-      - /models/fp8/Qwen3-VL-4B-Thinking-FP8/
-      - --mm-processor-cache-gb 
-      - "0"
-      - --limit-mm-per-prompt.video
-      - "0"
-      - --gpu-memory-utilization 
-      - "0.96"
-      - --mm-encoder-tp-mode 
-      - data
-      - --max-model-len
-      - "100000"
-      - --mm-processor-cache-type
-      - shm
-      - --reasoning-parser 
-      - deepseek_r1
-      - --tool-call-parser 
-      - hermes
-      - --enable-auto-tool-choice
-      - --served-model-name
-      - qwen3-4b-thinking
+      - /models/fp16/GLM-4-32B-0414/ -pp 2 -tp 2 --enable-auto-tool-choice --tool-call-parser pythonic --served-model-name glm-4-32b
+      

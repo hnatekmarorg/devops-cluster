@@ -1,0 +1,59 @@
+# ./devops/argocd/comfyui/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: comfyui-pvc
+  namespace: comfyui
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: longhorn 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comfyui
+  namespace: comfyui
+  labels:
+    scale.off-replicas: "0"
+    scale.on-replicas: "1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: comfyui
+  template:
+    metadata:
+      labels:
+        app: comfyui
+    spec:
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: comfyui
+          image: zeroclue/comfyui:production-torch2.8.0-cu126
+          ports:
+            - containerPort: 8188
+          env:
+            - name: PRESET_DOWNLOAD
+              value: "WAN_22_5B_TIV2"
+            - name: IMAGE_PRESET_DOWNLOAD
+              value: "SDXL_BASE_V1"
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+            requests:
+              nvidia.com/gpu: 1
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: comfyui-pvc
+

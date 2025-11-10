@@ -1,0 +1,14 @@
+# ./devops/argocd/comfyui/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: comfyui
+  namespace: comfyui
+spec:
+  selector:
+    app: comfyui
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: ClusterIP

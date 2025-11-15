@@ -41,8 +41,7 @@ models:
       - "true"
       - --disable-auth
       - "true"
-  # Cogito model configuration  
-  - name: cogito
+  - name: precog
     cooldownPeriod: 3600
     resources:
       requests:
@@ -50,32 +49,20 @@ models:
       limits:
         nvidia.com/gpu: 6
     args:
-      - --jinja
-      - -c
-      - "256000" 
-      - --temp
-      - "0.6"
-      - --top-p
-      - "0.9"
-      - --min-p
-      - "0.01"
-      - --no-mmproj
-      - --no-mmap
-      - --model
-      - "/models/gguf/cogito/cogito-v2-preview-llama-109B-MoE-UD-Q6_K_XL-00001-of-00002.gguf"
+      - -m 
+      - /models/gguf/precog/TheDrummer_Precog-123B-v1-Q5_K_M-00001-of-00003.gguf 
+      - --ctx-size
+      - "131072"
       - "-ngl"
       - "99"
-      - -fa
-      - "on"
       - -t
       - "-1"
       - --prio
       - "3"
-      - --jinja
       - --numa
       - distribute
       - --alias
-      - "cogito"
+      - "precog"
   # GPT-OSS model configuration
   - name: gpt-oss
     engine: vllm

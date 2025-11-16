@@ -72,7 +72,7 @@ models:
       limits:
         nvidia.com/gpu: 2
     args:
-      - /models/fp8/Precog-24B-v1_Compressed-Tensors -tp 2 --served-model-name precog-24b
+      - /models/fp8/Precog-24B-v1_Compressed-Tensors --max-model-len 110000 -tp 2 --served-model-name precog-24b
   # GPT-OSS model configuration
   - name: gpt-oss
     engine: vllm

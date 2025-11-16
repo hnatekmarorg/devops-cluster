@@ -7,7 +7,7 @@ metadata:
 spec:
   credentials:
     secretRef:
-      key: kubeconfig
+      key: value
       name: main-kubeconfig
       namespace: default
     source: Secret

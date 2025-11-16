@@ -30,7 +30,7 @@ spec:
         - name: comfyui
           image: yanwk/comfyui-boot:cu124-slim
           ports:
-            - containerPort: 3000
+            - containerPort: 8188
           volumeMounts:
             - name: nas
               mountPath: /root

@@ -5,7 +5,7 @@ metadata:
   name: searxng
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: default
   sources:
@@ -20,10 +20,11 @@ spec:
       ref: repo
   destination:
     server: https://kubernetes.default.svc
+    namespace: searxng
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=false
+      - CreateNamespace=true
       - ApplyOutOfSyncOnly=true

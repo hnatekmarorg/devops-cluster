@@ -1,8 +1,2 @@
 controller:
   allowSnippetAnnotations: true
-  metrics:
-    enabled: true
-    serviceMonitor:
-      enabled: true
-      additionalLabels:
-        release: "prometheus"

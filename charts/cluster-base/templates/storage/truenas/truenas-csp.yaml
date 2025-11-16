@@ -16,6 +16,8 @@ spec:
         releaseName: truenas-csp
         valuesObject:
           targetPortal: proxmox-public
+          hpe-csi-driver:
+            logLevel: trace
   destination:
     server: "https://kubernetes.default.svc"
     namespace: hpe-storage

@@ -1,4 +1,6 @@
 ingress:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
   tls:
     - hosts:
         - scale.hnatekmar.dev

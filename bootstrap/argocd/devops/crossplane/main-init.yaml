@@ -1,4 +1,4 @@
-apiVersion: kubernetes.crossplane.io/v1alpha1
+apiVersion: kubernetes.crossplane.io/v1alpha2
 kind: Object
 metadata:
   name: main-init
@@ -31,5 +31,4 @@ spec:
           targetRevision: HEAD
           path: devops/argocd
   providerConfigRef:
-    kind: ClusterProviderConfig
     name: main

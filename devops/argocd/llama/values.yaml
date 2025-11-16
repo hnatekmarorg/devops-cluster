@@ -63,7 +63,7 @@ models:
       - distribute
       - --alias
       - "precog"
-  - name: precog
+  - name: precog-24b
     cooldownPeriod: 3600
     resources:
       requests:
@@ -71,7 +71,7 @@ models:
       limits:
         nvidia.com/gpu: 2
     args:
-      - /models/fp8/Precog-24B-v1_Compressed-Tensors -tp 2 precog-24
+      - /models/fp8/Precog-24B-v1_Compressed-Tensors -tp 2 precog-24b
   # GPT-OSS model configuration
   - name: gpt-oss
     engine: vllm

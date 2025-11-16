@@ -1,0 +1,465 @@
+# Llama models deployed by this chart:
+# - exl (ctx: 2048, engine: tabby, replicas: 1, gpu: 6, auth: disabled)
+# - cogito (ctx: 2048, temp: 0.6, top_p: 0.9, min_p: 0.01, engine: tabby, gpu: 6)
+# - gpt-oss (ctx: 131072, temp: 1.0, top_p: 1, top_k: 0, engine: tabby, gpu: 4)
+# - gpt-oss-20b (engine: vllm, gpu: 1)
+# - glm-4-6 (ctx: 106000, top_p: 0.95, top_k: 40, engine: tabby, gpu: 6)
+# - behemoth (ctx: 80000, engine: tabby, gpu: 6)
+# - behemoth-redux (ctx: 64000, engine: tabby, gpu: 6)
+# - glm-air (engine: vllm, gpu: 4)
+# - qwen3-235b-thinking (ctx: 226000, engine: tabby, gpu: 6)
+# - qwen3-235b-instruct (ctx: 226000, engine: tabby, gpu: 6)
+# - qwen3-30b-instruct (engine: vllm, gpu: 2)
+# - qwen3-30b-thinking (engine: vllm, gpu: 2)
+# - qwen-coder (engine: vllm, gpu: 4)
+# - qwen-next-instruct (engine: vllm, gpu: 6)
+# - qwen-embedding (engine: vllm, gpu: 1)
+# - qwen-reranker (engine: vllm, gpu: 1)
+
+# Llama models configuration
+# Each model defines GPU resources, arguments, and other settings
+models:
+  # ExL model configuration
+  - name: exl
+    cooldownPeriod: 3600
+    engine: tabby
+    replicas: 1
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - main.py
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --model-dir
+      - /models/exl2
+      - --inline-model-loading
+      - "true"
+      - --disable-auth
+      - "true"
+  - name: precog
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - -m 
+      - /models/gguf/precog/TheDrummer_Precog-123B-v1-Q5_K_M-00001-of-00003.gguf 
+      - --ctx-size
+      - "131072"
+      - "-ngl"
+      - "99"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - distribute
+      - --alias
+      - "precog"
+  # GPT-OSS model configuration
+  - name: gpt-oss
+    engine: vllm
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/gpt-oss-120b/ -tp 2 -pp 2 --tool-call-parser openai --served-model-name gpt-oss
+  # GPT-OSS 20B model configuration
+  - name: gpt-oss-20b
+    engine: vllm
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+      limits:
+        nvidia.com/gpu: 1
+    args:
+      - /models/fp8/gpt-oss-20b
+      - --tool-call-parser 
+      - openai
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - gpt-oss-20b
+  # GLM-4.6 model configuration
+  - name: glm-4-6
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "80000"
+      - --top-p
+      - "0.95"
+      - --top-k
+      - "40"
+      - --no-mmap
+      - --jinja
+      - -m
+      - "/models/gguf/glm-4.6/GLM-4.6-UD-IQ1_S-00001-of-00002.gguf"
+      - "-ngl"
+      - "99"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - distribute
+      - --alias
+      - glm-4-6
+  # Behemoth model configuration
+  - name: behemoth
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "80000"
+      - --no-mmap
+      - "-m"
+      - "/models/gguf/behemoth-r1/TheDrummer_Behemoth-R1-123B-v2-Q5_K_M-00001-of-00003.gguf"
+      - "-ngl"
+      - "99"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - distribute
+      - --alias
+      - "behemoth"
+  # Behemoth Redux model configuration
+  - name: qwen3-235b-instruct
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "200000"
+      - --jinja
+      - --no-mmap
+      - -m
+      - /models/gguf/qwen3-vl-235b/Qwen3-VL-235B-A22B-Instruct-1M-UD-Q2_K_XL-00001-of-00002.gguf
+      - --parallel 
+      - "4"
+      - --mmproj
+      - /models/gguf/qwen3-vl-235b/mmproj-BF16.gguf
+      - --top-p
+      - "0.8"
+      - --top-k
+      - "20"
+      - --temp 
+      - "0.7"
+      - --min-p 
+      - "0.0"
+      - --flash-attn 
+      - "on"
+      - --presence-penalty 
+      - "1.5"
+      - --numa
+      - distribute
+      - --alias
+      - "qwen3-235b-instruct"
+  - name: monstral
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "64000"
+      - --no-mmap
+      - "-m"
+      - "/models/gguf/monstral/Monstral-123B-v2-Q5_K_M-00001-of-00003.gguf"
+      - "-ngl"
+      - "99"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - distribute
+      - --alias
+      - "monstral"
+  # GLM-Air model configuration
+  - name: glm-air
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/awq/GLM-4.5-Air-AWQ-4bit/
+      - --tensor-parallel-size
+      - "2"
+      - --pipeline-parallel-size
+      - "2"
+      - --enable-expert-parallel
+      - --enable-auto-tool-choice 
+      - --max-model-len
+      - "126000"
+      - --tool-call-parser
+      - glm45
+      - --reasoning-parser
+      - glm45
+      - --served-model-name
+      - glm-air
+
+  # Qwen3-30B Instruct model configuration
+  - name: qwen3-30b-instruct
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --mm-processor-cache-gb 
+      - "0"
+      - --tensor-parallel-size
+      - "4"
+      - --enable-expert-parallel
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-30b-instruct
+  # Qwen3-30B Thinking model configuration
+  - name: qwen3-30b-thinking
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
+      - --tensor-parallel-size
+      - "4"
+      - --enable-expert-parallel
+      - --reasoning-parser 
+      - deepseek_r1
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-30b-thinking
+  # Qwen Coder model configuration
+  - name: qwen-coder
+    engine: vllm
+    cooldownPeriod: 14400
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8 --gpu-memory-util 0.8 --tensor-parallel-size 4 --served-model-name qwen-coder --enable-expert-parallel   --enable-auto-tool-choice --tool-call-parser qwen3_coder
+  # Qwen Next Instruct model configuration
+  - name: qwen-next-instruct
+    engine: vllm
+    cooldownPeriod: 14400
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
+      - --enable-expert-parallel
+      - -tp
+      - "2"
+      - -pp
+      - "2" 
+      - --max-model-len 
+      - "210000"
+      - --tool-call-parser 
+      - hermes 
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen-next-instruct
+  - name: qwen-next-thinking
+    engine: vllm
+    cooldownPeriod: 14400
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/
+      - --enable-expert-parallel
+      - -tp
+      - "2"
+      - -pp
+      - "2" 
+      - --max-model-len 
+      - "210000"
+      - --tool-call-parser 
+      - hermes 
+      - --enable-auto-tool-choice
+      - --reasoning-parser 
+      - deepseek_r1
+      - --served-model-name
+      - qwen-next-thinking
+  - name: qwen3-32b-thinking
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-VL-32B-Thinking-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --max-model-len
+      - "150000"
+      - --tensor-parallel-size
+      - "4"
+      - --reasoning-parser 
+      - deepseek_r1
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-32b-thinking
+  - name: qwen3-32b-instruct
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-VL-32B-Instruct-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --tensor-parallel-size
+      - "4"
+      - --max-model-len
+      - "150000"
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-32b-instruct
+  - name: qwen3-8b-instruct
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+      limits:
+        nvidia.com/gpu: 1
+    args:
+      - /models/fp8/Qwen3-VL-8B-Instruct-FP8/
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --mm-encoder-tp-mode 
+      - data
+      - --max-model-len
+      - "50000"
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-8b-instruct
+  - name: qwen3-8b-thinking
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+      limits:
+        nvidia.com/gpu: 1
+    args:
+      - /models/fp8/Qwen3-VL-8B-Thinking-FP8/
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --gpu-memory-utilization 
+      - "0.96"
+      - --mm-encoder-tp-mode 
+      - data
+      - --max-model-len
+      - "50000"
+      - --mm-processor-cache-type
+      - shm
+      - --reasoning-parser 
+      - deepseek_r1
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-8b-thinking
+  - name: qwen3-4b-instruct
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+      limits:
+        nvidia.com/gpu: 1
+    args:
+      - /models/fp8/Qwen3-VL-4B-Instruct-FP8/
+      - --mm-processor-cache-gb 
+      - "0"
+      - --limit-mm-per-prompt.video
+      - "0"
+      - --gpu-memory-utilization 
+      - "0.96"
+      - --mm-encoder-tp-mode 
+      - data
+      - --max-model-len
+      - "100000"
+      - --tool-call-parser 
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-4b-instruct
+  - name: glm-4-32b
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp16/GLM-4-32B-0414/ -pp 2 -tp 2 --enable-auto-tool-choice --tool-call-parser pythonic --served-model-name glm-4-32b
+      

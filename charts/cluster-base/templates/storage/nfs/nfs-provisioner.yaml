@@ -29,6 +29,7 @@ spec:
             path: /mnt/data/k8s
   destination:
     server: "https://kubernetes.default.svc"
+    namespace: nfs
   syncPolicy:
     automated:
       prune: true

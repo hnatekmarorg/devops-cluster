@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: nginx
+  name: truenas-scp
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
@@ -16,9 +16,9 @@ spec:
         releaseName: truenas-csp
         valuesObject:
           targetPortal: proxmox-public
-
   destination:
     server: "https://kubernetes.default.svc"
+    namespace: hpe-storage
   syncPolicy:
     automated: # automated sync by default retries failed attempts 5 times with following delays between attempts ( 5s, 10s, 20s, 40s, 80s ); retry controlled using `retry` field.
       prune: true # Specifies if resources should be pruned during auto-syncing ( false by default ).

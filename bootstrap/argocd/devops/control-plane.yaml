@@ -2,6 +2,8 @@ apiVersion: metal.sidero.dev/v1alpha2
 kind: ServerClass
 metadata:
   name: control-plane
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   selector:
     matchLabels:
@@ -12,6 +14,8 @@ kind: MetalMachineTemplate
 metadata:
   name: main-cp
   namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   template:
     spec:

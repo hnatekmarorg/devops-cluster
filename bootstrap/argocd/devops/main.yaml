@@ -3,6 +3,8 @@ kind: Cluster
 metadata:
   name: main
   namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   clusterNetwork:
     pods:
@@ -37,6 +39,8 @@ kind: TalosConfigTemplate
 metadata:
   name: main-workers
   namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   template:
     spec:

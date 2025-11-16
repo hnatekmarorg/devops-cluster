@@ -2,6 +2,8 @@ apiVersion: metal.sidero.dev/v1alpha2
 kind: ServerClass
 metadata:
   name: worker-cpu
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   configPatches:
     - op: replace

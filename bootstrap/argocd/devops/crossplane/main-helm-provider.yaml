@@ -1,0 +1,11 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: main
+spec:
+  credentials:
+    secretRef:
+      key: kubeconfig
+      name: main-kubeconfig
+      namespace: default
+    source: Secret

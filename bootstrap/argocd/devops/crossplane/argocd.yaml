@@ -1,0 +1,16 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: argocd
+spec:
+  deletionPolicy: Delete
+  providerConfigRef:
+    name: main
+  forProvider:
+    namespace: argocd
+    chart:
+      name: argo-cd
+      repository: https://argoproj.github.io/argo-helm
+      version: 9.0.3
+    values:
+      fullnameOverride: argocd

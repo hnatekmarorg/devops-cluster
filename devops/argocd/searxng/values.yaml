@@ -21,7 +21,9 @@ ingress:
 # --- Persistence ---
 persistence:
   enabled: true
-  storageClass: longhorn
+  storageClass: nfs-client
+  annotations:
+    nfs.io/storage-path: "searxng"
   accessModes:
     - ReadWriteOnce
   size: 10Gi

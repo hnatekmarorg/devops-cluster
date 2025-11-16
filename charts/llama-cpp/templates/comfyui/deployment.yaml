@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: comfyui
-  namespace: comfyui
   labels:
     scale.off-replicas: "0"
     scale.on-replicas: "1"

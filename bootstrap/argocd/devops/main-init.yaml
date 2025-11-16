@@ -1,0 +1,33 @@
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: main-init
+spec:
+  forProvider:
+    manifest:
+      apiVersion: argoproj.io/v1alpha1
+      kind: Application
+      metadata:
+        name: init
+        namespace: argocd
+      spec:
+        project: default
+        syncPolicy:
+          syncOptions:
+            - ServerSideApply=true
+          automated:
+            prune: true # Specifies if resources should be pruned during auto-syncing ( false by default ).
+            selfHeal: true # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+            allowEmpty: false # Allows deleting all application resources during automatic syncing ( false by default ).
+        destination:
+          server: "https://kubernetes.default.svc"
+          namespace: argocd
+        source:
+          directory:
+            recurse: true
+          repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+          targetRevision: HEAD
+          path: devops/argocd
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: main

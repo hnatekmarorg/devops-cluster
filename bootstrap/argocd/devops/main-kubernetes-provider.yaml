@@ -1,0 +1,11 @@
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: main
+spec:
+  credentials:
+    secretRef:
+      key: kubeconfig
+      name: main-kubeconfig
+      namespace: default
+    source: Secret

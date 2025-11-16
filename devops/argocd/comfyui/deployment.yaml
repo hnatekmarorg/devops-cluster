@@ -28,7 +28,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: comfyui
-          image: zeroclue/comfyui:production-torch2.8.0-cu126
+          image: zeroclue/comfyui:production-torch2.8.0-cu128
           ports:
             - containerPort: 3000
           env:

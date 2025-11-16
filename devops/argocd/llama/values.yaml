@@ -65,6 +65,7 @@ models:
       - "precog"
   - name: precog-24b
     cooldownPeriod: 3600
+    engine: vllm
     resources:
       requests:
         nvidia.com/gpu: 2

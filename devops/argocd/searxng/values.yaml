@@ -3,7 +3,7 @@
 # --- Global settings ---
 global:
   # Use Longhorn storage class
-  storageClass: longhorn
+  storageClass: nfs-client
 
 # --- Service & Ingress ---
 ingress:

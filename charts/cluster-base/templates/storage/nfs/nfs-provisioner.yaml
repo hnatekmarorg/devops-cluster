@@ -16,6 +16,10 @@ spec:
         releaseName: nfs-subdir-external-provisioner
         valuesObject:
           volume-name: nfs-async
+          storageClass:
+            name: nfs-client
+            pathPattern: "${.PVC.annotations.nfs.io/storage-path}"
+            onDelete: delete
           nfs:
             server: 192.168.88.25
             mountOptions:
@@ -26,7 +30,7 @@ spec:
               - noacl
               - nfsvers=4.2
               - noatime
-            path: /mnt/data/k8s
+            path: /mnt/data/k8s/clusters/main
   destination:
     server: "https://kubernetes.default.svc"
     namespace: nfs

@@ -2,6 +2,8 @@ apiVersion: kubernetes.crossplane.io/v1alpha1
 kind: Object
 metadata:
   name: main-init
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   forProvider:
     manifest:

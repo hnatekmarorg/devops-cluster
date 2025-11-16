@@ -2,30 +2,30 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: crossplane
+  name: cluster-base
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
   sources:
-    - chart: crossplane
-      repoURL: https://charts.crossplane.io/stable
-      targetRevision: 1.20.0
+    - name: chart
+      repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      path: charts/cluster-base
+      targetRevision: main
       helm:
-        releaseName: crossplane
-        valueFiles:
-          - $repo/devops/argocd/crossplane/values.yaml
+        valuesObject: {}
     - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   destination:
-    server: "https://kubernetes.default.svc"
-    namespace: crossplane-system
+    server: https://kubernetes.default.svc
+    namespace: inference
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-      allowEmpty: false
     syncOptions:
-      - CreateNamespace=true
+      - CreateNamespace=false
+      - RespectIgnoreDifferences=true
+      - ServerSideApply=true

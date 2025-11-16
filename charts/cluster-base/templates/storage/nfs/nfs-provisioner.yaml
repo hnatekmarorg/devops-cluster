@@ -1,4 +1,4 @@
-
+{{ if .Values.onprem }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -14,12 +14,19 @@ spec:
       targetRevision: 4.0.18
       helm:
         releaseName: nfs-subdir-external-provisioner
-        valueFiles:
-          - $repo/devops/argocd/nfs/values.yaml
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
-      targetRevision: main
-      ref: repo
-      path: devops/argocd/nfs
+        valuesObject:
+          volume-name: nfs-async
+          nfs:
+            server: 192.168.88.25
+            mountOptions:
+              - hard
+              - intr
+              - async
+              - proto=tcp
+              - noacl
+              - nfsvers=4.2
+              - noatime
+            path: /mnt/data/k8s
   destination:
     server: "https://kubernetes.default.svc"
   syncPolicy:
@@ -29,3 +36,4 @@ spec:
       allowEmpty: false
     syncOptions:
       - CreateNamespace=true
+{{end}}

@@ -14,11 +14,9 @@ spec:
       targetRevision: 4.11.3
       helm:
         releaseName: ingress-nginx
-        valueFiles:
-          - $repo/devops/argocd/nginx/values.yaml
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
-      targetRevision: main
-      ref: repo
+        valuesObject:
+          controller:
+            allowSnippetAnnotations: true
   destination:
     server: "https://kubernetes.default.svc"
   syncPolicy:

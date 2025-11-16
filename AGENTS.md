@@ -7,7 +7,7 @@ This repository contains configuration of 2 kubernetes clusters:
 
 All clusters are managed by [argocd](https://argo-cd.readthedocs.io/en/stable/)
 
-There are also supporting helm charts inside ./charts/
+There are also supporting helm charts inside ./charts/ check ./charts/README.md for details
 
 ## Bootstrapping cluster
 

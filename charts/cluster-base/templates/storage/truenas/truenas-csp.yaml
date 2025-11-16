@@ -1,0 +1,29 @@
+{{ if .Values.onprem }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  sources:
+    - chart: truenas-csp
+      repoURL: https://hpe-storage.github.io/truenas-csp
+      targetRevision: 1.2.2
+      helm:
+        releaseName: truenas-csp
+        valuesObject:
+          targetPortal: proxmox-public
+
+  destination:
+    server: "https://kubernetes.default.svc"
+  syncPolicy:
+    automated: # automated sync by default retries failed attempts 5 times with following delays between attempts ( 5s, 10s, 20s, 40s, 80s ); retry controlled using `retry` field.
+      prune: true # Specifies if resources should be pruned during auto-syncing ( false by default ).
+      selfHeal: true # Specifies if partial app sync should be executed when resources are changed only in target Kubernetes cluster and no git change detected ( false by default ).
+      allowEmpty: false # Allows deleting all application resources during automatic syncing ( false by default ).
+    syncOptions:
+      - CreateNamespace=false
+{{end}}

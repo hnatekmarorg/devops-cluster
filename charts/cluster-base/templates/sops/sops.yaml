@@ -11,11 +11,14 @@ spec:
       targetRevision: 0.22.0
       helm:
         releaseName: sops-secrets-operator
-        valueFiles:
-          - $repo/devops/argocd/sops/sops-values.yaml
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
-      targetRevision: main
-      ref: repo
+        valuesObject:
+          secretsAsFiles:
+            - mountPath: /etc/sops-age-key-file
+              name: sops-age-key-file
+              secretName: sops-age-key-file
+          extraEnv:
+            - name: SOPS_AGE_KEY_FILE
+              value: /etc/sops-age-key-file/key
   destination:
     server: "https://kubernetes.default.svc"
     namespace: sops

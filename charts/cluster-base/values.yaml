@@ -1,0 +1,2 @@
+# If it is onprem cluster chart deploys additional things such as storage solutions
+onprem: true

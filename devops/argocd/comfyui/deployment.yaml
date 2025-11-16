@@ -28,17 +28,12 @@ spec:
           effect: NoSchedule
       containers:
         - name: comfyui
-          image: zeroclue/comfyui:base-torch2.8.0-cu126
+          image: yanwk/comfyui-boot:cu124-slim
           ports:
             - containerPort: 3000
-          env:
-            - name: PRESET_DOWNLOAD
-              value: "WAN_22_5B_TIV2"
-            - name: IMAGE_PRESET_DOWNLOAD
-              value: "SDXL_BASE_V1"
           volumeMounts:
             - name: nas
-              mountPath: /workspace
+              mountPath: /root
           resources:
             limits:
               nvidia.com/gpu: 1

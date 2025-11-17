@@ -1,0 +1,13 @@
+apiVersion: vault.upbound.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: openbao-hnatekmar-xyz
+  namespace: crossplane-system
+spec:
+  address: https://openbao.hnatekmar.xyz
+  credentials:
+    secretRef:
+      key: token
+      name: openbao-hnatekmar-xyz
+      namespace: crossplane-system
+    source: Secret

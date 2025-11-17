@@ -1,0 +1,22 @@
+apiVersion: vault.vault.upbound.io/v1alpha1
+kind: Mount
+metadata:
+  name: kubernetes-main
+spec:
+  deletionPolicy: Delete
+  forProvider:
+    path: kubernetes/main
+    type: kv-v2
+  providerConfigRef:
+    name: openbao-hnatekmar-xyz
+---
+apiVersion: kv.vault.upbound.io/v1alpha1
+kind: SecretBackendV2
+metadata:
+  name: kubernetes-main
+spec:
+  forProvider:
+    mountRef:
+      name: kubernetes-main
+  providerConfigRef:
+    name: openbao-hnatekmar-xyz

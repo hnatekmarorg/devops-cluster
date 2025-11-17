@@ -288,7 +288,9 @@ models:
     args:
       - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
       - -pp
-      - "4"
+      - "2"
+      - -tp
+      - "2"
       - --enable-expert-parallel
       - --tool-call-parser 
       - hermes
@@ -307,7 +309,9 @@ models:
     args:
       - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
       - -pp
-      - "4"
+      - "2"
+      - -tp
+      - "2"
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1

@@ -1,0 +1,22 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xclusters.hnatekmar.xyz
+spec:
+  group: hnatekmar.xyz
+  names:
+    kind: XCluster
+    plural: xclusters
+  versions:
+    - name: v1alpha1
+      referenceable: true
+      served: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            helm-provider:
+              type: object
+              properties:
+                name:
+                  type: string

@@ -13,7 +13,7 @@ authentik:
     enabled: true
 
 postgresql:
-  enabled: true
+  host: "postgresql"
   architecture: standalone
   env:
     - name: POSTGRES_PASSWORD
@@ -33,8 +33,6 @@ redis:
     registry: docker.io
     repository: library/redis
     tag: "8.2.1"
-
-
 
 # Server configuration
 server:

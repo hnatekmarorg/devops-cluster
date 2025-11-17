@@ -65,12 +65,3 @@ serviceAccount:
 # Worker configuration
 worker:
   replicas: 1
-
-# Resource limits (adjust based on your needs)
-resources:
-  requests:
-    memory: "512Mi"
-    cpu: "250m"
-  limits:
-    memory: "2Gi"
-    cpu: "1000m"

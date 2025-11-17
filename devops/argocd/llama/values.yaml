@@ -16,8 +16,9 @@
 # - qwen-embedding (engine: vllm, gpu: 1)
 # - qwen-reranker (engine: vllm, gpu: 1)
 
-vllm:
-  image: vllm/vllm-openai:v0.9.2
+llm:
+  vllm:
+    image: vllm/vllm-openai:v0.9.2
 
 # Llama models configuration
 # Each model defines GPU resources, arguments, and other settings

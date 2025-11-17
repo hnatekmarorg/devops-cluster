@@ -237,8 +237,29 @@ models:
       - --served-model-name
       - glm-air
 
+  # Qwen3-30B Thinking model configuration
+  - name: qwen3-30b-vl-thinking
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
+      - --tensor-parallel-size
+      - "4"
+      - --enable-expert-parallel
+      - --reasoning-parser
+      - deepseek_r1
+      - --tool-call-parser
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-30b-vl-thinking
   # Qwen3-30B Instruct model configuration
-  - name: qwen3-30b-instruct
+  - name: qwen3-30b-vl-instruct
     engine: vllm
     cooldownPeriod: 7200
     resources:
@@ -248,12 +269,26 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
-      - --limit-mm-per-prompt.video
-      - "0"
-      - --mm-processor-cache-gb 
-      - "0"
       - --tensor-parallel-size
       - "4"
+      - --enable-expert-parallel
+      - --tool-call-parser
+      - hermes
+      - --enable-auto-tool-choice
+      - --served-model-name
+      - qwen3-30b-vl-instruct
+  - name: qwen3-30b-instruct
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 3
+      limits:
+        nvidia.com/gpu: 3
+    args:
+      - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
+      - -pp
+      - "3"
       - --enable-expert-parallel
       - --tool-call-parser 
       - hermes
@@ -266,15 +301,13 @@ models:
     cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 3
       limits:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 3
     args:
-      - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
-      - --mm-processor-cache-gb 
-      - "0"
-      - --tensor-parallel-size
-      - "4"
+      - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
+      - -pp
+      - "3"
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1
@@ -300,16 +333,14 @@ models:
     cooldownPeriod: 14400
     resources:
       requests:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 3
       limits:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 3
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
       - --enable-expert-parallel
-      - -tp
-      - "2"
       - -pp
-      - "2" 
+      - "3"
       - --max-model-len 
       - "210000"
       - --tool-call-parser 

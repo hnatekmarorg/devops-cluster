@@ -34,7 +34,7 @@ spec:
             path: /mnt/data/k8s/ai
       containers:
         - name: test
-          image: lmsysorg/sglang:v0.5.1.post3-cu128-b200 # ghcr.io/ggml-org/llama.cpp:full-cuda
+          image: gitea.hnatekmar.xyz/public/vllm:qwen3-vl
           imagePullPolicy: Always
           resources:
             requests:

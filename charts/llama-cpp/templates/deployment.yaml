@@ -60,8 +60,12 @@ spec:
           command: ["/bin/bash"]
           {{- end }}
           env:
-            - name: OMP_NUM_THREADS
-              value: "1"
+            {{- if .env }}
+            {{- range .env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{ end -}}
           {{- if eq (.engine | default "llama") "vllm" }}
           args: 
             - -c 

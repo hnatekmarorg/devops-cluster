@@ -248,8 +248,12 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-30B-A3B-Thinking-FP8/
-      - --tensor-parallel-size
-      - "4"
+      - -pp
+      - "2"
+      - -tp
+      - "2"
+      - --mm-encoder-tp-mode
+      - data
       - --enable-expert-parallel
       - --reasoning-parser
       - deepseek_r1
@@ -269,8 +273,12 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
-      - --tensor-parallel-size
-      - "4"
+      - -pp
+      - "2"
+      - -tp
+      - "2"
+      - --mm-encoder-tp-mode
+      - data
       - --enable-expert-parallel
       - --tool-call-parser
       - hermes
@@ -279,6 +287,9 @@ models:
       - qwen3-30b-vl-instruct
   - name: qwen3-30b-instruct
     engine: vllm
+    env:
+      - name: VLLM_USE_FLASHINFER_MOE_FP16
+        value: "1"
     cooldownPeriod: 7200
     resources:
       requests:
@@ -286,7 +297,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
+      - /models/fp16/Qwen3-30B-A3B-Instruct-2507/
       - -pp
       - "2"
       - -tp
@@ -301,13 +312,16 @@ models:
   - name: qwen3-30b-thinking
     engine: vllm
     cooldownPeriod: 7200
+    env:
+      - name: VLLM_USE_FLASHINFER_MOE_FP16
+        value: "1"
     resources:
       requests:
         nvidia.com/gpu: 4
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
+      - /models/fp16/Qwen3-30B-A3B-Thinking-2507/
       - -pp
       - "2"
       - -tp

@@ -9,7 +9,7 @@ data:
       {{.name | quote}}:
         cmd: sleep infinity
         healthCheckTimeout: 999999
-        checkEndpoint: None
+        checkEndpoint: none
         proxy: {{printf "https://%s/%s" $.Values.llm.host .name }}
     {{end}}
 ---

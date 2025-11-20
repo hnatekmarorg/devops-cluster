@@ -9,8 +9,8 @@ data:
       {{.name | quote}}:
         cmd: sleep infinity
         healthCheckTimeout: 999999
-        checkEndpoint: /models
-        proxy: {{printf "https://%s/%s/v1" $.Values.llm.host .name }}
+        checkEndpoint: /v1/models
+        proxy: {{printf "https://%s/%s" $.Values.llm.host .name }}
     {{end}}
 ---
 apiVersion: apps/v1

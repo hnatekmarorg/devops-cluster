@@ -39,7 +39,7 @@ spec:
                 path: config.yaml
       containers:
         - name: llama-swap
-          image: ghcr.io/mostlygeek/llama-swap:cpu
+          image: ghcr.io/mostlygeek/llama-swap:v173-cpu-b7108
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: /mnt

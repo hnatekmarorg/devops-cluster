@@ -19,6 +19,16 @@
 # Llama models configuration
 # Each model defines GPU resources, arguments, and other settings
 models:
+  - name: deepseek-ocr
+    image: vllm/vllm-openai:v0.11.2
+    engine: vllm
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+      limits:
+        nvidia.com/gpu: 1
+    args:
+      - /models/fp16/DeepSeek-OCR --logits_processors vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor --no-enable-prefix-caching --mm-processor-cache-gb 0 --served-model-name deepseek-ocr
   # ExL model configuration
   - name: exl
     cooldownPeriod: 3600

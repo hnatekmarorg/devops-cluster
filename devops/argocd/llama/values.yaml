@@ -20,7 +20,7 @@
 # Each model defines GPU resources, arguments, and other settings
 models:
   - name: deepseek-ocr
-    image: vllm/vllm-openai:v0.11.2
+    image: vllm/vllm-openai:v0.11.1
     engine: vllm
     resources:
       requests:

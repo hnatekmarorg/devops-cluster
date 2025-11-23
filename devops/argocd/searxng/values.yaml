@@ -5,6 +5,9 @@ global:
   # Use Longhorn storage class
   storageClass: nfs-client
 
+mount:
+  enabled: true
+
 # --- Service & Ingress ---
 ingress:
   main:

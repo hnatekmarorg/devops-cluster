@@ -6,9 +6,11 @@ data:
   litellm_config.yaml: |
     model_list:
     {{range .Values.models}}
-      - model: openai/{{.name}}
-        api_base: {{printf "https://%s/%s/v1" $.Values.llm.host .name }}
-        api_key: sk-dummy
+      - model_name: {{.name}}
+        litellm_params:
+          model: "openai/{{.name}}"
+          api_base: {{printf "https://%s/%s/v1" $.Values.llm.host .name }}
+          api_key: sk-dummy
     {{end}}
 ---
 apiVersion: apps/v1

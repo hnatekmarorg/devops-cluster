@@ -12,7 +12,7 @@ ingress:
     primary: true
     className: nginx
     hosts:
-      - searxng.hnatekmar.dev
+      - host: searxng.hnatekmar.dev
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-cloudflare
     tls:

@@ -311,11 +311,9 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp16/Qwen3-30B-A3B-Instruct-2507/
-      - -pp
-      - "2"
+      - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
       - -tp
-      - "2"
+      - "4"
       - --enable-expert-parallel
       - --tool-call-parser 
       - hermes
@@ -336,11 +334,9 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp16/Qwen3-30B-A3B-Thinking-2507/
-      - -pp
-      - "2"
+      - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
       - -tp
-      - "2"
+      - "4"
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1

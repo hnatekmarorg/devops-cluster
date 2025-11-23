@@ -9,6 +9,7 @@ global:
 ingress:
   main:
     enabled: true
+    primary: true
     className: nginx
     hosts:
       - searxng.hnatekmar.dev

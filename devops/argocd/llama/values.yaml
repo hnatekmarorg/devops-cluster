@@ -312,6 +312,8 @@ models:
       - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
       - -tp
       - "4"
+      - --gpu-memory-util
+      - "0.85"
       - --enable-expert-parallel
       - --tool-call-parser 
       - hermes
@@ -332,6 +334,8 @@ models:
       - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
       - -tp
       - "4"
+      - --gpu-memory-util
+      - "0.85"
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1

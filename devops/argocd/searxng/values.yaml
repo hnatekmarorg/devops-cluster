@@ -7,16 +7,17 @@ global:
 
 # --- Service & Ingress ---
 ingress:
-  enabled: true
-  className: nginx
-  hosts:
-    - searxng.hnatekmar.dev
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
-  tls:
-    - secretName: searxng-tls
-      hosts:
-        - searxng.hnatekmar.dev
+  main:
+    enabled: true
+    className: nginx
+    hosts:
+      - searxng.hnatekmar.dev
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    tls:
+      - secretName: searxng-tls
+        hosts:
+          - searxng.hnatekmar.dev
 
 # --- Persistence ---
 persistence:

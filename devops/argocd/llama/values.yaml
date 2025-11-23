@@ -87,6 +87,7 @@ models:
   - name: gpt-oss
     engine: vllm
     cooldownPeriod: 3600
+    image: vllm/vllm-openai:v0.11.1
     resources:
       requests:
         nvidia.com/gpu: 4
@@ -97,6 +98,7 @@ models:
   # GPT-OSS 20B model configuration
   - name: gpt-oss-20b
     engine: vllm
+    image: vllm/vllm-openai:v0.11.1
     cooldownPeriod: 3600
     resources:
       requests:
@@ -224,6 +226,7 @@ models:
   # GLM-Air model configuration
   - name: glm-air
     engine: vllm
+    image: vllm/vllm-openai:v0.11.1
     cooldownPeriod: 7200
     resources:
       requests:
@@ -297,6 +300,7 @@ models:
       - qwen3-30b-vl-instruct
   - name: qwen3-30b-instruct
     engine: vllm
+    image: vllm/vllm-openai:v0.11.1
     env:
       - name: VLLM_USE_FLASHINFER_MOE_FP16
         value: "1"
@@ -321,6 +325,7 @@ models:
   # Qwen3-30B Thinking model configuration
   - name: qwen3-30b-thinking
     engine: vllm
+    image: vllm/vllm-openai:v0.11.1
     cooldownPeriod: 7200
     env:
       - name: VLLM_USE_FLASHINFER_MOE_FP16

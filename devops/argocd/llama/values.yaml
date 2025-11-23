@@ -350,9 +350,9 @@ models:
     cooldownPeriod: 14400
     resources:
       requests:
-        nvidia.com/gpu: 3
+        nvidia.com/gpu: 2
       limits:
-        nvidia.com/gpu: 3
+        nvidia.com/gpu: 2
     args:
       - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8 --gpu-memory-util 0.85 --tensor-parallel-size 2 --max-model-len 98000 --served-model-name qwen-coder --enable-expert-parallel   --enable-auto-tool-choice --tool-call-parser qwen3_coder
   # Qwen Next Instruct model configuration

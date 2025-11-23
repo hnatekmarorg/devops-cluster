@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: llm-proyx
+  name: llm-proxy
 data:
   litellm_config.yaml: |
     model_list:

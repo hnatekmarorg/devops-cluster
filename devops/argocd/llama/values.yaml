@@ -310,8 +310,10 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
+      - -pp
+      - "2"
       - -tp
-      - "4"
+      - "2"
       - --gpu-memory-util
       - "0.85"
       - --enable-expert-parallel
@@ -332,8 +334,10 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
+      - -pp
+      - "2"
       - -tp
-      - "4"
+      - "2"
       - --gpu-memory-util
       - "0.85"
       - --enable-expert-parallel

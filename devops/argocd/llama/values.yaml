@@ -363,6 +363,7 @@ models:
   - name: qwen-next-instruct
     engine: vllm
     cooldownPeriod: 14400
+    image: vllm/vllm-openai:v0.11.1
     resources:
       requests:
         nvidia.com/gpu: 4
@@ -385,6 +386,7 @@ models:
   - name: qwen-next-thinking
     engine: vllm
     cooldownPeriod: 14400
+    image: vllm/vllm-openai:v0.11.1
     resources:
       requests:
         nvidia.com/gpu: 4

@@ -333,15 +333,15 @@ models:
     cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 3
+        nvidia.com/gpu: 4
       limits:
-        nvidia.com/gpu: 3
+        nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
       - --dtype 
       - float16
-      - -pp
-      - "3"
+      - -tp
+      - "4"
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1

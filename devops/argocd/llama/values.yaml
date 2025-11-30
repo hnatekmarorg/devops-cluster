@@ -342,6 +342,8 @@ models:
       - float16
       - -tp
       - "4"
+      - --gpu-memory-util
+      - "0.85"
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1

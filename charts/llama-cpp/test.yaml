@@ -52,3 +52,54 @@ spec:
               name: http
       restartPolicy: Always
       securityContext: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sglang-test
+  labels:
+    llm: sglang-test
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      llm: sglang-test
+  template:
+    metadata:
+      name: sglang-test
+      labels:
+        llm: sglang-test
+    spec:
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      runtimeClassName: nvidia
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+        - name: nas
+          nfs:
+            server: 192.168.88.25
+            path: /mnt/data/k8s/ai
+      containers:
+        - name: test
+          image: lmsysorg/sglang:v0.5.5.post3-cu129-amd64
+          imagePullPolicy: Always
+          resources:
+            requests:
+              nvidia.com/gpu: 5
+            limits:
+              nvidia.com/gpu: 5
+          command: ["bash"]
+          args: ["-c", "sleep infinity"]
+          volumeMounts:
+            - mountPath: /models
+              name: nas
+            - mountPath: /dev/shm
+              name: shm
+          ports:
+            - containerPort: 8080

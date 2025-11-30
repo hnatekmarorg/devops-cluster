@@ -307,15 +307,19 @@ models:
     cooldownPeriod: 7200
     resources:
       requests:
-        nvidia.com/gpu: 3
+        nvidia.com/gpu: 2
       limits:
-        nvidia.com/gpu: 3
+        nvidia.com/gpu: 2
     args:
       - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
       - --dtype 
       - float16
-      - -pp
-      - "3"
+      - -tp
+      - "2"
+      - --max-model-len
+      - "80000"
+      - --gpu-memory-util 
+      - "0.85"
       - --enable-expert-parallel
       - --tool-call-parser 
       - hermes

@@ -60,6 +60,8 @@ spec:
           command: ["/bin/bash"]
           {{- end }}
           env:
+            - name: CUDA_DEVICE_ORDER
+              value: PCI_BUS_ID
             {{- if .env }}
             {{- range .env }}
             - name: {{ .name }}

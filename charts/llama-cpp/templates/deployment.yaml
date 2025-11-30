@@ -62,6 +62,8 @@ spec:
           env:
             - name: CUDA_DEVICE_ORDER
               value: PCI_BUS_ID
+            - name: VLLM_ATTENTION_BACKEND
+              value: FLASH_ATTN
             {{- if .env }}
             {{- range .env }}
             - name: {{ .name }}

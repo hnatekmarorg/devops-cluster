@@ -316,8 +316,6 @@ models:
       - float16
       - -pp
       - "3"
-      - --gpu-memory-util
-      - "0.85"
       - --enable-expert-parallel
       - --tool-call-parser 
       - hermes
@@ -340,8 +338,6 @@ models:
       - float16
       - -pp
       - "3"
-      - --gpu-memory-util
-      - "0.85"
       - --enable-expert-parallel
       - --reasoning-parser 
       - deepseek_r1

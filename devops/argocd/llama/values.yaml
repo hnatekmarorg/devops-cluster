@@ -287,8 +287,6 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-VL-30B-A3B-Instruct-FP8/
-      - --dtype 
-      - float16
       - -pp
       - "2"
       - -tp
@@ -312,8 +310,6 @@ models:
         nvidia.com/gpu: 2
     args:
       - /models/fp8/Qwen3-30B-A3B-Instruct-2507-FP8/
-      - --dtype 
-      - float16
       - -tp
       - "2"
       - --max-model-len
@@ -338,8 +334,6 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/fp8/Qwen3-30B-A3B-Thinking-2507-FP8/
-      - --dtype 
-      - float16
       - -tp
       - "4"
       - --gpu-memory-util
@@ -362,7 +356,7 @@ models:
       limits:
         nvidia.com/gpu: 2
     args:
-      - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8 --dtype float16 --gpu-memory-util 0.85 --tensor-parallel-size 2 --max-model-len 80000 --served-model-name qwen-coder --enable-expert-parallel   --enable-auto-tool-choice --tool-call-parser qwen3_coder
+      - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8 --gpu-memory-util 0.85 --tensor-parallel-size 2 --max-model-len 80000 --served-model-name qwen-coder --enable-expert-parallel   --enable-auto-tool-choice --tool-call-parser qwen3_coder
   # Qwen Next Instruct model configuration
   - name: qwen-next-instruct
     engine: vllm

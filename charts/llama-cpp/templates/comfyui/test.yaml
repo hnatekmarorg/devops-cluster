@@ -34,7 +34,7 @@ spec:
             path: /mnt/data/k8s/ai
       containers:
         - name: test
-          image: vllm/vllm-openai:v0.11.0
+          image: vllm/vllm-openai:v0.11.1
           imagePullPolicy: Always
           resources:
             requests:

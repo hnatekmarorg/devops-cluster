@@ -454,6 +454,17 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen3-32b-instruct
+  - name: kimi-linear
+    engine: vllm
+    image: vllm/vllm-openai:v0.11.1
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/awq/Kimi-Linear-48B-A3B-Instruct-AWQ-8bit/ --served-model-name kimi-linear --tensor-parallel-size 4   --trust-remote-code --enable-expert-parallel --max-model-len 903000
   - name: qwen3-8b-instruct
     engine: vllm
     cooldownPeriod: 7200

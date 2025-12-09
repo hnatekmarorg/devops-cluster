@@ -464,7 +464,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/awq/Kimi-Linear-48B-A3B-Instruct-AWQ-8bit/ --served-model-name kimi-linear --tensor-parallel-size 4   --trust-remote-code --enable-expert-parallel --max-model-len 903000
+      - /models/awq/Kimi-Linear-48B-A3B-Instruct-AWQ-8bit/ --enable-auto-tool-choice --tool-call-parser kimi_k2 --served-model-name kimi-linear --tensor-parallel-size 4   --trust-remote-code --enable-expert-parallel --max-model-len 903000
   - name: qwen3-8b-instruct
     engine: vllm
     cooldownPeriod: 7200

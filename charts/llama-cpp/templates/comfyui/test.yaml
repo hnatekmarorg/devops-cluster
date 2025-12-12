@@ -126,6 +126,8 @@ spec:
     metadata:
       labels:
         app: llamacpp-test
+        scale.off-replicas: "0"
+        scale.on-replicas: "1"
     spec:
       runtimeClassName: nvidia
       tolerations:

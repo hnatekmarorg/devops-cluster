@@ -391,44 +391,44 @@ models:
   - name: qwen-next-instruct
     engine: vllm
     cooldownPeriod: 14400
-    image: vllm/vllm-openai:v0.11.1
+    image: vllm/vllm-openai:v0.12.0
     resources:
       requests:
         nvidia.com/gpu: 4
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/
+      - /models/awq/Qwen3-Next-80B-A3B-Instruct-AWQ-4bit/
       - --enable-expert-parallel
       - -tp
-      - "2"
-      - -pp
-      - "2"
-      - --max-model-len 
-      - "210000"
+      - "4" 
+      - --gpu-memory-util
+      - "0.8"
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen-next-instruct
+      - --speculative-config
+      - |
+        '{\"method\":\"qwen3_next_mtp\",\"num_speculative_tokens\":2}'
+        
   - name: qwen-next-thinking
     engine: vllm
     cooldownPeriod: 14400
-    image: vllm/vllm-openai:v0.11.1
+    image: vllm/vllm-openai:v0.12.0
     resources:
       requests:
         nvidia.com/gpu: 4
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/
+      - /models/awq/Qwen3-Next-80B-A3B-Thinking-AWQ-4bit/
       - --enable-expert-parallel
       - -tp
-      - "2"
-      - -pp
-      - "2" 
-      - --max-model-len 
-      - "210000"
+      - "4" 
+      - --gpu-memory-util
+      - "0.8"
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice
@@ -436,6 +436,10 @@ models:
       - deepseek_r1
       - --served-model-name
       - qwen-next-thinking
+      - --speculative-config
+      - |
+        '{\"method\":\"qwen3_next_mtp\",\"num_speculative_tokens\":2}'
+        
   - name: qwen3-32b-thinking
     engine: vllm
     cooldownPeriod: 7200

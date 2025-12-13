@@ -86,7 +86,23 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/Qwen3-32B-FP8/ -tp 4 --gpu-memory-util 0.86 --hf-overrides '{"rope_type":"yarn","factor":4.0,"original_max_position_embeddings":32768}'  --max-model-len 131072 --enable-auto-tool-choice --tool-call-parser hermes --reasoning-parser qwen3 --served-model qwen3-32b
+      - /models/fp8/Qwen3-32B-FP8/
+      - -tp
+      - "4"
+      - --gpu-memory-util
+      - "0.86"
+      - --max-model-len
+      - "131072"
+      - --enable-auto-tool-choice
+      - --tool-call-parser
+      - hermes
+      - --reasoning-parser
+      - qwen3
+      - --served-model
+      - qwen3-32b
+      - --hf-overrides
+      - |
+        '{\"rope_type\":\"yarn\",\"factor\":4.0,\"original_max_position_embeddings\":32768}'
   - name: precog-24b
     cooldownPeriod: 3600
     engine: vllm

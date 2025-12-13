@@ -568,6 +568,7 @@ models:
       - qwen3-4b-instruct
   - name: l3-electra
     engine: vllm
+    image: vllm/vllm-openai:v0.12.0
     cooldownPeriod: 7200
     resources:
       requests:

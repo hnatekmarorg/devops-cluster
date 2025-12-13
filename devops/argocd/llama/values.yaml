@@ -409,9 +409,6 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen-next-instruct
-      - --speculative-config
-      - |
-        '{\"method\":\"qwen3_next_mtp\",\"num_speculative_tokens\":2}'
         
   - name: qwen-next-thinking
     engine: vllm
@@ -436,9 +433,6 @@ models:
       - deepseek_r1
       - --served-model-name
       - qwen-next-thinking
-      - --speculative-config
-      - |
-        '{\"method\":\"qwen3_next_mtp\",\"num_speculative_tokens\":2}'
         
   - name: qwen3-32b-thinking
     engine: vllm

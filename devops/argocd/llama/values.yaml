@@ -566,6 +566,18 @@ models:
       - --enable-auto-tool-choice
       - --served-model-name
       - qwen3-4b-instruct
+  - name: l3-electra
+    engine: vllm
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+      limits:
+        nvidia.com/gpu: 1
+    args:
+      - /models/awq/L3.3-Electra-R1-70b-AWQ/ -tp 4 --gpu-memory-util 0.88 --max-num-seqs 128 
+      - --served-model-name
+      - l3-electra
   - name: glm-4-32b
     engine: vllm
     cooldownPeriod: 7200

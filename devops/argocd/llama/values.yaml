@@ -316,7 +316,33 @@ models:
       - glm45
       - --served-model-name
       - glm-air
-
+  - name: glm-air-q6
+    engine: vllm
+    image: vllm/vllm-openai:v0.12.0
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "0"
+      - -np
+      - "2"
+      - --no-mmap
+      - "-m"
+      - "/models/gguf/glm-air/GLM-4.5-Air-Q6_K-00001-of-00002.gguf"
+      - "-ngl"
+      - "99"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - numactl
+      - --alias
+      - "glm-air-q6"
   # Qwen3-30B Thinking model configuration
   - name: qwen3-30b-vl-thinking
     engine: vllm

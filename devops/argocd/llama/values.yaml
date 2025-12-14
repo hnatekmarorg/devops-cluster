@@ -291,7 +291,7 @@ models:
   # GLM-Air model configuration
   - name: glm-air
     engine: vllm
-    image: vllm/vllm-openai:v0.11.1
+    image: vllm/vllm-openai:v0.12.0
     cooldownPeriod: 7200
     resources:
       requests:
@@ -306,8 +306,10 @@ models:
       - "2"
       - --enable-expert-parallel
       - --enable-auto-tool-choice 
+      - --max-num-seqs
+      - "64"
       - --max-model-len
-      - "126000"
+      - "120000"
       - --tool-call-parser
       - glm45
       - --reasoning-parser

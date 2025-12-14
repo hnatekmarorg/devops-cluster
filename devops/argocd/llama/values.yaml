@@ -172,6 +172,40 @@ models:
       - distribute
       - --alias
       - glm-4-6
+  - name: glm-4-6-q4
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "202752"
+      - --temp 
+      - "1.0"
+      - --top-p
+      - "0.95"
+      - --top-k
+      - "40"
+      - --no-mmap
+      - --jinja
+      - -fa
+      - on
+      - -m
+      - "/models/gguf/glm-4.6/GLM-4.6-UD-Q4_K_XL-00001-of-00005.gguf"
+      - "-ngl"
+      - "99"
+      - --threads
+      - "-1"
+      - --prio
+      - "3"
+      - --n-cpu-moe 
+      - "87"
+      - --numa
+      - numactl
+      - --alias
+      - glm-4-6-q4
   # Behemoth model configuration
   - name: behemoth
     cooldownPeriod: 3600
@@ -193,7 +227,7 @@ models:
       - --prio
       - "3"
       - --numa
-      - distribute
+      - numactl
       - --alias
       - "behemoth"
   # Behemoth Redux model configuration

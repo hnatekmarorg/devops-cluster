@@ -317,8 +317,6 @@ models:
       - --served-model-name
       - glm-air
   - name: glm-air-q6
-    engine: vllm
-    image: vllm/vllm-openai:v0.12.0
     cooldownPeriod: 7200
     resources:
       requests:
@@ -329,6 +327,8 @@ models:
       - --ctx-size
       - "0"
       - --no-mmap
+      - "-np"
+      - "2"
       - "-m"
       - "/models/gguf/glm-air/GLM-4.5-Air-Q6_K-00001-of-00002.gguf"
       - "-ngl"

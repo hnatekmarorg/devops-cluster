@@ -328,8 +328,6 @@ models:
     args:
       - --ctx-size
       - "0"
-      - -np
-      - "2"
       - --no-mmap
       - "-m"
       - "/models/gguf/glm-air/GLM-4.5-Air-Q6_K-00001-of-00002.gguf"

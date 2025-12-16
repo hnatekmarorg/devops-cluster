@@ -553,6 +553,17 @@ models:
         nvidia.com/gpu: 4
     args:
       - /models/awq/Kimi-Linear-48B-A3B-Instruct-AWQ-8bit/ --served-model-name kimi-linear --tensor-parallel-size 4   --trust-remote-code --enable-expert-parallel --max-model-len 903000
+  - name: nemotron-3-nano
+    engine: vllm
+    image: vllm/vllm-openai:v0.12.0
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp16/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/ -tp 4 --trust-remote-code --max-model-len 1000000 --trust-remote-code   --enable-auto-tool-choice   --tool-call-parser qwen3_coder   --reasoning-parser-plugin /models/fp16/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/nano_v3_reasoning_parser.py   --reasoning-parser nano_v3 --max-model-len 1000000 --served-model-name nemotron-3-nano
   - name: qwen3-8b-instruct
     engine: vllm
     cooldownPeriod: 7200

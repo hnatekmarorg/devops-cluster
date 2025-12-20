@@ -17,9 +17,6 @@ server:
     annotations: {}
     hosts:
       - host: openbao.hnatekmar.dev
-        paths:
-          - path: /
-            pathType: Prefix
         tls: 
            - hosts:
               - openbao.hnatekmar.dev

@@ -11,6 +11,7 @@ ui:
   enabled: true
 
 server:
+  affinity: ""
   ingress:
     enabled: true
     className: nginx

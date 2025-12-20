@@ -27,3 +27,10 @@ server:
     pullPolicy: IfNotPresent
   dataStorage:
     storageClass: "nfs-client"
+    annotations:
+      nfs.io/storage-path: "openbao-hnatekmar-dev-data"
+  auditStorage:
+    storageClass: "nfs-client"
+    annotations:
+      nfs.io/storage-path: "openbao-hnatekmar-dev-audit"
+    

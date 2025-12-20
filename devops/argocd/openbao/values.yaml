@@ -4,29 +4,29 @@
 
 replicaCount: 1
 
-image:
-  repository: openbao/openbao
-  tag: "latest"
-  pullPolicy: IfNotPresent
-
-service:
-  type: ClusterIP
-  port: 80
-
 # Additional configuration can be added here...
 
-ingress:
-  enabled: true
-  className: nginx
-  annotations: {}
-  hosts:
-    - host: openbao.hnatekmar.dev
-      paths:
-        - path: /
-          pathType: Prefix
-      tls: []
-  ui:
-    enabled: true
 
-dataStorage:
-  storageClass: "nfs-client"
+ui:
+  enabled: true
+
+server:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: openbao.hnatekmar.dev
+        paths:
+          - path: /
+            pathType: Prefix
+        tls: 
+           - hosts:
+              - openbao.hnatekmar.dev
+             secretName: openbao-tls
+  image:
+    repository: openbao/openbao
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  dataStorage:
+    storageClass: "nfs-client"

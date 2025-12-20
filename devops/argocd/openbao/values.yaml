@@ -16,13 +16,11 @@ server:
     enabled: true
     ingressClassName: nginx
     annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-cloudflare
-    hosts:
-      - host: openbao.hnatekmar.dev
-        tls: 
-           - hosts:
-              - openbao.hnatekmar.dev
-             secretName: openbao-tls
+      cert-manager.io/cluster-issuer: letsencrypt-cloudflare    
+    tls: 
+      - hosts:
+          - openbao.hnatekmar.dev
+        secretName: openbao-tls
   image:
     repository: openbao/openbao
     tag: "latest"

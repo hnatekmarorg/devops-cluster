@@ -1,0 +1,32 @@
+# Default values for openbao.
+# This is a YAML file that lists values that can be configured.
+# For full list of available values, see the chart's README.
+
+replicaCount: 1
+
+image:
+  repository: openbao/openbao
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Additional configuration can be added here...
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: openbao.hnatekmar.dev
+      paths:
+        - path: /
+          pathType: Prefix
+      tls: []
+  ui:
+    enabled: true
+
+dataStorage:
+  storageClass: "nfs-client"

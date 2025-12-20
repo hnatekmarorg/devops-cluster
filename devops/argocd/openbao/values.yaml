@@ -14,8 +14,9 @@ server:
   affinity: ""
   ingress:
     enabled: true
-    className: nginx
-    annotations: {}
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-cloudflare
     hosts:
       - host: openbao.hnatekmar.dev
         tls: 

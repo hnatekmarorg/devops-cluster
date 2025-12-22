@@ -650,3 +650,16 @@ models:
       - /models/awq/L3.3-Electra-R1-70b-AWQ/ -tp 4 --gpu-memory-util 0.88 --max-num-seqs 128 
       - --served-model-name
       - l3-electra
+  - name: devstral-small-2
+    engine: vllm
+    image: vllm/vllm-openai:v0.13.0
+    cooldownPeriod: 7200
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp16/Devstral-Small-2-24B-Instruct-2512/ --max-model-len 262144 --tensor-parallel-size 4 --tool-call-parser mistral --enable-auto-tool-choice
+      - --served-model-name
+      - devstral-small-2

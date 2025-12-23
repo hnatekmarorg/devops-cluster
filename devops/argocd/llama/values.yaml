@@ -242,6 +242,36 @@ models:
       - numactl
       - --alias
       - "behemoth"
+
+  - name: minimax-m2
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "128000"
+      - --temp
+      - "1.0"
+      - --top-p
+      - "0.95"
+      - --top-k
+      - "40"
+      - --no-mmap
+      - "-m"
+      - "/models/gguf/minimax-m2/cerebras_MiniMax-M2-REAP-162B-A10B-Q4_K_S-00001-of-00003.gguf"
+      - "-ngl"
+      - "99"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - numactl
+      - --alias
+      - "minimax-m2"
   # Behemoth Redux model configuration
   - name: qwen3-235b-instruct
     cooldownPeriod: 3600

@@ -136,7 +136,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/gpt-oss-120b-Derestricted-MXFP4/ -tp 4  --enable-expert-parallel --tool-call-parser openai --served-model-name gpt-oss  --gpu-memory-util 0.86
+      - /models/fp8/gpt-oss-120b-Derestricted-MXFP4/ -tp 4  --enable-expert-parallel --tool-call-parser openai --served-model-name gpt-oss-derestricted  --gpu-memory-util 0.86
 
   # GPT-OSS 20B model configuration
   - name: gpt-oss-20b

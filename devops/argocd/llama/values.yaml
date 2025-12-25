@@ -483,6 +483,9 @@ models:
   - name: qwen-coder
     engine: vllm
     cooldownPeriod: 14400
+    env:
+      - name: VLLM_ATTENTION_BACKEND
+        value: FLASHINFER
     resources:
       requests:
         nvidia.com/gpu: 2
@@ -490,7 +493,7 @@ models:
         nvidia.com/gpu: 2
     image: vllm/vllm-openai:v0.13.0
     args:
-      - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8 --enforce-eager --disable-log-requests --max-num-batched-tokens 4096 --enable-prefix-caching --enable-chunked-prefill --gpu-memory-util 0.85 --tensor-parallel-size 2 --max-model-len 32000 --served-model-name qwen-coder --enable-expert-parallel
+      - /models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8/models/fp8/Qwen3-Coder-30B-A3B-Instruct-FP8 --tensor-parallel-size 2 --max-model-len 16384 --gpu-memory-util 0.85 --kv-cache-dtype fp8 --enable-prefix-caching --enable-chunked-prefill --max-num-batched-tokens 4096 --served-model-name qwen-coder --disable-log-requests
   # Qwen Next Instruct model configuration
   - name: qwen-next-instruct
     engine: vllm

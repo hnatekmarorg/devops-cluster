@@ -483,6 +483,9 @@ models:
   - name: qwen-coder
     engine: vllm
     cooldownPeriod: 14400
+    env:
+      - name: VLLM_LOGGING_LEVEL
+        value: DEBUG
     resources:
       requests:
         nvidia.com/gpu: 2

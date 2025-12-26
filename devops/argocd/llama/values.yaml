@@ -193,14 +193,21 @@ models:
         nvidia.com/gpu: 6
     args:
       - --ctx-size
-      - "202752"
+      - "150000"
+      - -ctk 
+      - q8_0 
+      - -ctv 
+      - q8_0  
+      - --ubatch-size
+      - "512"
+      - --batch-size 
+      - "2048"
       - --temp 
       - "1.0"
       - --top-p
       - "0.95"
       - --top-k
       - "40"
-      - --no-mmap
       - --jinja
       - "-fa"
       - "on"
@@ -213,7 +220,7 @@ models:
       - --prio
       - "3"
       - --n-cpu-moe 
-      - "87"
+      - "84"
       - --numa
       - numactl
       - --alias

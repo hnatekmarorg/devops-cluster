@@ -701,7 +701,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/awq/L3.3-Electra-R1-70b-AWQ/ -tp 4 --gpu-memory-util 0.88 --max-num-seqs 128 
+      - /models/fp8/L3.3-Electra-R1-70b-FP8-Dynamic/ -tp 4 --max-num-seqs 4 --max-model-len 50000
       - --served-model-name
       - l3-electra
   - name: devstral-small-2

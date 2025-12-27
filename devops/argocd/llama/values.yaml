@@ -165,15 +165,13 @@ models:
         nvidia.com/gpu: 6
     args:
       - --ctx-size
-      - "128000"
+      - "64000"
       - --top-p
       - "0.95"
       - --top-k
       - "40"
       - --no-mmap
       - --jinja
-      - -ctk
-      - q8_0
       - --temp
       - "1.0"
       - -fa

@@ -165,15 +165,21 @@ models:
         nvidia.com/gpu: 6
     args:
       - --ctx-size
-      - "64000"
+      - "128000"
       - --top-p
       - "0.95"
       - --top-k
       - "40"
       - --no-mmap
       - --jinja
+      - -ctk
+      - q8_0
+      - --temp
+      - "1.0"
+      - -fa
+      - "on"
       - -m
-      - "/models/gguf/glm-4-6-reap/GLM-4.6-REAP-268B-A32B-Q2_K_L-00001-of-00002.gguf"
+      - "/models/gguf/glm-4.6-reap-268/GLM-4.6-REAP-268B-A32B-UD-Q2_K_XL-00001-of-00003.gguf"
       - "-ngl"
       - "99"
       - -t

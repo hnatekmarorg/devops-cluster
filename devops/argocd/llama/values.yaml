@@ -299,22 +299,18 @@ models:
       - --no-mmap
       - -m
       - /models/gguf/qwen3-235B/Qwen_Qwen3-235B-A22B-Thinking-2507-IQ3_XS-00001-of-00003.gguf
-      - --parallel 
-      - "4"
-      - --mmproj
-      - /models/gguf/qwen3-vl-235b/mmproj-BF16.gguf
       - --top-p
-      - "0.8"
+      - "0.95"
       - --top-k
       - "20"
       - --temp 
-      - "0.7"
+      - "0.6"
       - --min-p 
       - "0.0"
       - --flash-attn 
       - "on"
       - --presence-penalty 
-      - "1.5"
+      - "0"
       - --numa
       - distribute
       - --alias

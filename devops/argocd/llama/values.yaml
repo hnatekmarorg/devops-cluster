@@ -285,7 +285,7 @@ models:
       - --alias
       - "minimax-m2"
   # Behemoth Redux model configuration
-  - name: qwen3-235b-instruct
+  - name: qwen3-235b-thinking
     cooldownPeriod: 3600
     resources:
       requests:
@@ -294,11 +294,11 @@ models:
         nvidia.com/gpu: 6
     args:
       - --ctx-size
-      - "200000"
+      - "212992"
       - --jinja
       - --no-mmap
       - -m
-      - /models/gguf/qwen3-vl-235b/Qwen3-VL-235B-A22B-Instruct-1M-UD-Q2_K_XL-00001-of-00002.gguf
+      - /models/gguf/qwen3-235B/Qwen_Qwen3-235B-A22B-Thinking-2507-IQ3_XS-00001-of-00003.gguf
       - --parallel 
       - "4"
       - --mmproj
@@ -318,7 +318,7 @@ models:
       - --numa
       - distribute
       - --alias
-      - "qwen3-235b-instruct"
+      - "qwen3-235b-thinking"
   - name: monstral
     cooldownPeriod: 3600
     resources:

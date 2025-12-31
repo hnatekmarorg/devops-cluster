@@ -29,6 +29,17 @@ models:
         nvidia.com/gpu: 1
     args:
       - /models/fp16/DeepSeek-OCR --logits_processors vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor --no-enable-prefix-caching --mm-processor-cache-gb 0 --served-model-name deepseek-ocr
+  - name: HY-MT1
+    image: vllm/vllm-openai:v0.12.0
+    engine: vllm
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+      limits:
+        nvidia.com/gpu: 1
+    args:
+      - /models/fp16/HY-MT1.5-1.8B/ --served-model-name HY-MT1
+
   # ExL model configuration
   - name: exl
     cooldownPeriod: 3600

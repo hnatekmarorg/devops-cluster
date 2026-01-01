@@ -513,21 +513,18 @@ models:
     engine: vllm
     cooldownPeriod: 14400
     image: vllm/vllm-openai:v0.12.0
+    env:
+      - mame: VLLM_USE_FLASHINFER
+        value: "1"
+      - name: VLLM_PP_LAYER_PARTITION
+        value: "7,8,9,9,8,7"
     resources:
       requests:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 6
       limits:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 6
     args:
-      - /models/awq/Qwen3-Next-80B-A3B-Instruct-AWQ-4bit/
-      - --enable-expert-parallel
-      - -tp
-      - "4" 
-      - --gpu-memory-util
-      - "0.8"
-      - --tool-call-parser 
-      - hermes 
-      - --enable-auto-tool-choice
+      - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/ --pipeline-parallel-size 6 --trust-remote-code  --enable-auto-tool-choice --tool-call-parser hermes 
       - --served-model-name
       - qwen-next-instruct
         
@@ -535,18 +532,19 @@ models:
     engine: vllm
     cooldownPeriod: 14400
     image: vllm/vllm-openai:v0.12.0
+    env:
+      - mame: VLLM_USE_FLASHINFER
+        value: "1"
+      - name: VLLM_PP_LAYER_PARTITION
+        value: "7,8,9,9,8,7"
     resources:
       requests:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 6
       limits:
-        nvidia.com/gpu: 4
+        nvidia.com/gpu: 6
     args:
-      - /models/awq/Qwen3-Next-80B-A3B-Thinking-AWQ-4bit/
-      - --enable-expert-parallel
-      - -tp
-      - "4" 
-      - --gpu-memory-util
-      - "0.8"
+      - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/
+      - --pipeline-parallel-size 6 
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice

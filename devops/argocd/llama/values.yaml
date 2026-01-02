@@ -514,14 +514,25 @@ models:
     cooldownPeriod: 14400
     image: vllm/vllm-openai:v0.12.0
     env:
+      # Optimized for  48 layers: 4090 (Index 1) gets 10 layers, 3090s get 7-8.
+      - name: VLLM_PP_LAYER_PARTITION
+        value: "7,10,8,8,8,7"
+      
+      # Prevents the "No available shared memory broadcast block" timeout
       - name: VLLM_ENGINE_ITERATION_TIMEOUT_S
         value: "300"
+      
+      # Essential for mixed GPU architectures (3090 + 4090)
       - name: VLLM_USE_CUSTOM_ALL_REDUCE
         value: "0"
+      
+      # Fixes P2P communication issues between Ampere and Ada architectures
+      - name: NCCL_P2P_DISABLE
+        value: "1"
+      
+      # Keeps memory usage efficient for MoE models
       - name: VLLM_ATTENTION_BACKEND
         value: "FLASHINFER"
-      - name: VLLM_PP_LAYER_PARTITION
-        value: "7,8,9,9,8,7"
     resources:
       requests:
         nvidia.com/gpu: 6
@@ -537,14 +548,25 @@ models:
     cooldownPeriod: 14400
     image: vllm/vllm-openai:v0.12.0
     env:
+      # Optimized for  48 layers: 4090 (Index 1) gets 10 layers, 3090s get 7-8.
+      - name: VLLM_PP_LAYER_PARTITION
+        value: "7,10,8,8,8,7"
+      
+      # Prevents the "No available shared memory broadcast block" timeout
       - name: VLLM_ENGINE_ITERATION_TIMEOUT_S
         value: "300"
+      
+      # Essential for mixed GPU architectures (3090 + 4090)
       - name: VLLM_USE_CUSTOM_ALL_REDUCE
         value: "0"
+      
+      # Fixes P2P communication issues between Ampere and Ada architectures
+      - name: NCCL_P2P_DISABLE
+        value: "1"
+      
+      # Keeps memory usage efficient for MoE models
       - name: VLLM_ATTENTION_BACKEND
         value: "FLASHINFER"
-      - name: VLLM_PP_LAYER_PARTITION
-        value: "7,8,9,9,8,7"
     resources:
       requests:
         nvidia.com/gpu: 6

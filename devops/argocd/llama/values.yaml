@@ -537,8 +537,6 @@ models:
     env:
       - name: VLLM_ENGINE_ITERATION_TIMEOUT_S
         value: "300"
-      - name: VLLM_ATTENTION_BACKEND
-        value: "FLASHINFER"
       - name: VLLM_PP_LAYER_PARTITION
         value: "7,8,9,9,8,7"
     resources:

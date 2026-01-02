@@ -36,9 +36,9 @@ spec:
           imagePullPolicy: Always
           resources:
             requests:
-              nvidia.com/gpu: 6
+              nvidia.com/gpu: 5
             limits:
-              nvidia.com/gpu: 6
+              nvidia.com/gpu: 5
           command: ["bash"]
           args: ["-c", "sleep infinity"]
           volumeMounts:

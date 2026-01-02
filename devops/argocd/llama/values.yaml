@@ -551,8 +551,28 @@ models:
       limits:
         nvidia.com/gpu: 6
     args:
-      - vllm serve /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/ --pipeline-parallel-size 6      --distributed-executor-backend mp     --trust-remote-code   --served-model-name qwen-next-thinking --enable-auto-tool-choice     --tool-call-parser qwen3_xml --reasoning-parser deepseek_r1
-        
+      - vllm serve /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/ --pipeline-parallel-size 6      --distributed-executor-backend mp     --trust-remote-code   --served-model-name qwen-next-thinking --enable-auto-tool-choice     --tool-call-parser hermes --reasoning-parser deepseek_r1
+  - name: qwen-next-thinking-tools
+    engine: vllm
+    cooldownPeriod: 14400
+    image: vllm/vllm-openai:v0.12.0
+    env:
+      - name: VLLM_ENGINE_ITERATION_TIMEOUT_S
+        value: "300"
+      - name: VLLM_ATTENTION_BACKEND
+        value: "FLASHINFER"
+      - name: VLLM_USE_CUSTOM_ALL_REDUCE
+        value: "0"
+      - name: VLLM_PP_LAYER_PARTITION
+        value: "7,8,9,9,8,7"
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - vllm serve /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/ --pipeline-parallel-size 6      --distributed-executor-backend mp     --trust-remote-code   --served-model-name qwen-next-thinking-tools --enable-auto-tool-choice     --tool-call-parser hermes
+
   - name: qwen3-32b-thinking
     engine: vllm
     cooldownPeriod: 7200

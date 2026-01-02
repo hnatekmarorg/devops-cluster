@@ -514,8 +514,6 @@ models:
     cooldownPeriod: 14400
     image: vllm/vllm-openai:v0.12.0
     env:
-      - name: VLLM_USE_FLASHINFER
-        value: "1"
       - name: VLLM_PP_LAYER_PARTITION
         value: "7,8,9,9,8,7"
     resources:
@@ -533,8 +531,6 @@ models:
     cooldownPeriod: 14400
     image: vllm/vllm-openai:v0.12.0
     env:
-      - name: VLLM_USE_FLASHINFER
-        value: "1"
       - name: VLLM_PP_LAYER_PARTITION
         value: "7,8,9,9,8,7"
     resources:

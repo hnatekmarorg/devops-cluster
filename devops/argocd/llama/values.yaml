@@ -544,12 +544,13 @@ models:
         nvidia.com/gpu: 6
     args:
       - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/
+      - --trust-remote-code
       - --pipeline-parallel-size 6 
       - --tool-call-parser 
       - hermes 
       - --enable-auto-tool-choice
       - --reasoning-parser 
-      - deepseek_r1
+      - qwen3
       - --served-model-name
       - qwen-next-thinking
         

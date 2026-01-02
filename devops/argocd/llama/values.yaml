@@ -518,8 +518,6 @@ models:
         value: "300"
       - name: VLLM_ATTENTION_BACKEND
         value: "FLASHINFER"
-      - name: VLLM_USE_CUSTOM_ALL_REDUCE
-        value: "0"
       - name: VLLM_PP_LAYER_PARTITION
         value: "7,8,9,9,8,7"
     resources:
@@ -541,8 +539,6 @@ models:
         value: "300"
       - name: VLLM_ATTENTION_BACKEND
         value: "FLASHINFER"
-      - name: VLLM_USE_CUSTOM_ALL_REDUCE
-        value: "0"
       - name: VLLM_PP_LAYER_PARTITION
         value: "7,8,9,9,8,7"
     resources:
@@ -551,7 +547,7 @@ models:
       limits:
         nvidia.com/gpu: 6
     args:
-      - vllm serve /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/ --pipeline-parallel-size 6      --distributed-executor-backend mp     --trust-remote-code   --served-model-name qwen-next-thinking --enable-auto-tool-choice     --tool-call-parser hermes --reasoning-parser deepseek_r1
+      - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/ --pipeline-parallel-size 6      --distributed-executor-backend mp     --trust-remote-code   --served-model-name qwen-next-thinking --enable-auto-tool-choice     --tool-call-parser hermes --reasoning-parser deepseek_r1
   - name: qwen-next-thinking-tools
     engine: vllm
     cooldownPeriod: 14400

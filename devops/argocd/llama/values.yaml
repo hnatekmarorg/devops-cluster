@@ -534,8 +534,7 @@ models:
       limits:
         nvidia.com/gpu: 6
     args:
-      - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/ - --gpu-memory-utilization 0.88 --cuda-graph-sizes 1  --pipeline-parallel-size 6 --distributed-executor-backend mp --trust-remote-code  --enable-auto-tool-choice --tool-call-parser hermes --trust-remote-code
-      - --swap-space 16
+      - /models/fp8/Qwen3-Next-80B-A3B-Instruct-FP8/ --gpu-memory-utilization 0.88 --cuda-graph-sizes 1  --pipeline-parallel-size 6 --distributed-executor-backend mp --trust-remote-code  --enable-auto-tool-choice --tool-call-parser hermes
       - --served-model-name
       - qwen-next-instruct
         

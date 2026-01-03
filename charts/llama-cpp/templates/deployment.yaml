@@ -18,6 +18,7 @@ spec:
       labels:
         llm: {{.name}}
     spec:
+      hostIPC: true
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
@@ -30,13 +31,15 @@ spec:
         - name: shm
           emptyDir:
             medium: Memory
-            sizeLimit: 16Gi
+            sizeLimit: 32Gi
         - name: nas
           nfs:
             server: 192.168.88.25
             path: /mnt/data/k8s/ai
       containers:
         - name: llamacpp
+          securityContext:
+            privileged: true
           resources:
             {{- if eq (.device | default "gpu") "gpu" }}
             {{toYaml .resources | nindent 12}}

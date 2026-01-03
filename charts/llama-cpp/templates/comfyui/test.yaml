@@ -9,7 +9,7 @@ metadata:
 spec:
   strategy:
     type: Recreate
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       llm: lamacpp-test
@@ -66,7 +66,7 @@ metadata:
 spec:
   strategy:
     type: Recreate
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       llm: vllm-test
@@ -127,7 +127,7 @@ metadata:
 spec:
   strategy:
     type: Recreate
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       llm: sglang-test
@@ -179,7 +179,7 @@ kind: Deployment
 metadata:
   name: llamacpp-test
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: llamacpp-test-gpu
@@ -211,52 +211,6 @@ spec:
             nvidia.com/gpu: 1
           limits:
             nvidia.com/gpu: 1
-        command: ["bash"]
-        args: ["-c", "sleep infinity"]
-        ports:
-          - containerPort: 8080
-            protocol: TCP
-            name: http
-        volumeMounts:
-          - mountPath: /models
-            name: nas
-          - mountPath: /dev/shm
-            name: shm
-      restartPolicy: Always
-      securityContext: {}
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: llamacpp-test
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: llamacpp-test
-  template:
-    metadata:
-      labels:
-        app: llamacpp-test
-        scale.off-replicas: "0"
-        scale.on-replicas: "1"
-    spec:
-      runtimeClassName: nvidia
-      tolerations:
-        - key: nvidia.com/gpu
-          operator: Exists
-          effect: NoSchedule
-      volumes:
-        - name: shm
-          emptyDir:
-            medium: Memory
-        - name: nas
-          nfs:
-            server: 192.168.88.25
-            path: /mnt/data/k8s/ai
-      containers:
-      - name: llamacpp-test
-        image: ghcr.io/ggml-org/llama.cpp:full
         command: ["bash"]
         args: ["-c", "sleep infinity"]
         ports:

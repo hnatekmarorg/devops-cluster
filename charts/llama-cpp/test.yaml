@@ -28,6 +28,7 @@ spec:
         - name: shm
           emptyDir:
             medium: Memory
+            sizeLimit: "32Gi"
         - name: nas
           nfs:
             server: 192.168.88.25

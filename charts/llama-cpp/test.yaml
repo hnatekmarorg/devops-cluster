@@ -17,6 +17,8 @@ spec:
       labels:
         llm: vllm-test
     spec:
+      hostIPC: true
+      
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
@@ -34,6 +36,8 @@ spec:
         - name: test
           image: vllm/vllm-openai:latest
           imagePullPolicy: Always
+          securityContext:
+            privileged: true
           resources:
             requests:
               nvidia.com/gpu: 5

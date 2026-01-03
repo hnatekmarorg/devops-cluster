@@ -522,10 +522,6 @@ models:
         value: "1"                      # Stability for mixed cards
       - name: VLLM_ENGINE_ITERATION_TIMEOUT_S
         value: "300"                    # Increases timeout tolerance
-      - name: VLLM_USE_FLASHINFER_MOE_FP8
-        value: "1"                      # Stable MoE kernels
-      - name: VLLM_ATTENTION_BACKEND
-        value: "FLASHINFER"
     resources:
       requests:
         nvidia.com/gpu: 6

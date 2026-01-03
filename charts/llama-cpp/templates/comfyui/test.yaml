@@ -76,6 +76,7 @@ spec:
       labels:
         llm: vllm-test
     spec:
+      hostIPC: true
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
@@ -85,6 +86,7 @@ spec:
         - name: shm
           emptyDir:
             medium: Memory
+            sizeLimit: "32Gi"
         - name: nas
           nfs:
             server: 192.168.88.25
@@ -93,6 +95,8 @@ spec:
         - name: test
           image: vllm/vllm-openai:v0.12.0
           imagePullPolicy: Always
+          securityContext:
+            privileged: true
           resources:
             requests:
               nvidia.com/gpu: 6

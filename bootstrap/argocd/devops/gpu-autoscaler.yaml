@@ -6,7 +6,7 @@ spec:
   configPatches:
     - op: replace
       path: /machine/install/image
-      value: factory.talos.dev/metal-installer/b7d054023045e51f6d3bd99da3ea547c35673521c8eefa4aa6077257d51d7e39:v1.11.6
+      value: factory.talos.dev/metal-installer/aa4564945219f0b369c4ae15711473fc3057985be00b94bffa56786189226870:v1.12.1
     - op: replace
       path: /machine/kernel
       value:
@@ -15,9 +15,6 @@ spec:
           - name: nvidia_uvm
           - name: nvidia_drm
           - name: nvidia_modeset
-          - name: nvme_tcp
-          - name: vfio_pci
-          - name: uio_pci_generic
     - op: replace
       path: /machine/kubelet/extraArgs
       value:
@@ -26,7 +23,6 @@ spec:
       path: /machine/sysctls
       value:
         net.core.bpf_jit_harden: 1
-        vm.nr_hugepages: "1024"
   selector:
     matchLabels:
       node/type: "gpu-autoscale"

@@ -10,7 +10,10 @@ tolerations:
     operator: "Equal"
     value: "gpu"
     effect: "NoSchedule"
-
+    
+image:
+  tag: "v0.18.1"
+  
 runtimeClassName: nvidia
 gfd:
   enabled: true

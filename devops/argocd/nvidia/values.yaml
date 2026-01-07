@@ -11,9 +11,14 @@ tolerations:
     value: "gpu"
     effect: "NoSchedule"
     
-image:
-  tag: "v0.18.1"
-  
+env:
+  - name: NVIDIA_DRIVER_CAPABILITIES
+    value: "all"
+  # This is the critical flag for 570+ Open drivers on some platforms
+  - name: NVIDIA_DRIVER_OPEN
+    value: "1"
+
+    
 runtimeClassName: nvidia
 gfd:
   enabled: true

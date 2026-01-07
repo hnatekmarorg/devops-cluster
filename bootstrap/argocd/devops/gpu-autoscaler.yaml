@@ -6,7 +6,7 @@ spec:
   configPatches:
     - op: replace
       path: /machine/install/image
-      value: factory.talos.dev/metal-installer/86a5d7c9beb23b4aea2777e44ca06c8c2ceea8a874ccd2b9a6743c4f734329e0:v1.12.1
+      value: factory.talos.dev/metal-installer/26124abcbd408be693df9fe852c80ef1e6cc178e34d7d7d8430a28d1130b4227:v1.12.1
     - op: replace
       path: /machine/kernel
       value:

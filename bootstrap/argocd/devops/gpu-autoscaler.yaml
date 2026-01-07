@@ -6,7 +6,7 @@ spec:
   configPatches:
     - op: replace
       path: /machine/install/image
-      value: factory.talos.dev/metal-installer/26124abcbd408be693df9fe852c80ef1e6cc178e34d7d7d8430a28d1130b4227:v1.12.1
+      value: factory.talos.dev/metal-installer/b7d054023045e51f6d3bd99da3ea547c35673521c8eefa4aa6077257d51d7e39:v1.11.6
     - op: replace
       path: /machine/kernel
       value:
@@ -59,7 +59,7 @@ metadata:
     capacity.cluster-autoscaler.kubernetes.io/cpu: "96"
 spec:
   clusterName: main
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       cluster.x-k8s.io/cluster-name: main

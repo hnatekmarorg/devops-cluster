@@ -78,4 +78,4 @@ spec:
         kind: MetalMachineTemplate
         name: main-workers-gpu
         namespace: default
-      version: v1.33.0
+      version: v1.34.1

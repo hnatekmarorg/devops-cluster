@@ -38,14 +38,18 @@ spec:
           path: /machine/install/image
           value: gitea.hnatekmar.xyz/public/image-factory/amd-cpu:v1.11.2
         - op: add
+          path: /cluster/apiServer/certSANs
+          value:
+            - hnatekmar.xyz
+        - op: add
           path: /cluster/apiServer/extraArgs
           value:
-            oidc-issuer-url: "https://keycloak.hnatekmar.dev/auth/realms/master"
-            oidc-client-id: "kubernetes-dev"
+            oidc-issuer-url: "https://sso.hnatekmar.xyz/auth/realms/master"
+            oidc-client-id: "kubernetes"
             oidc-username-claim: "email"
             oidc-groups-claim: "groups"
-            oidc-username-prefix: ""
-            oidc-groups-prefix: ""
+            oidc-username-prefix: "sso:"
+            oidc-groups-prefix: "sso:"
         - op: add
           path: /machine/network/interfaces
           value:
@@ -58,11 +62,11 @@ spec:
           path: /machine/install/disk
           value: /dev/sda
       generateType: controlplane
-      talosVersion: v1.12.0
+      talosVersion: v1.12.1
   infrastructureTemplate:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
     kind: MetalMachineTemplate
     name: main-cp
     namespace: default
-  replicas: 3
+  replicas: 1
   version: v1.34.1

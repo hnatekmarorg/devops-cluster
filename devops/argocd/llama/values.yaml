@@ -236,6 +236,22 @@ models:
       - "/models/gguf/glm-4.7/GLM-4.7-UD-Q4_K_XL-00001-of-00005.gguf"
       - --alias
       - glm-4-7
+  - name: glm-steam
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - -m 
+      - /models/gguf/glm-steam/TheDrummer_GLM-Steam-106B-A12B-v1-Q6_K-00001-of-00003.gguf 
+      - --fit
+      - on 
+      - -ngl 
+      - "99"
+      - --alias
+      - glm-steam
   # Behemoth model configuration
   - name: behemoth
     cooldownPeriod: 3600

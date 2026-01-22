@@ -39,7 +39,9 @@ spec:
       containers:
         - name: llamacpp
           securityContext:
-            privileged: true
+            privileged: false        
+            capabilities:
+              add: ["IPC_LOCK"]      
           resources:
             {{- if eq (.device | default "gpu") "gpu" }}
             {{toYaml .resources | nindent 12}}

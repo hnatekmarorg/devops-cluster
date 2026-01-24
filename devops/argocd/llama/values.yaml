@@ -19,7 +19,7 @@
 # Llama models configuration
 # Each model defines GPU resources, arguments, and other settings
 models:
-  - name: glm-4-6V-flash
+  - name: glm-4-6v-flash
     image: gitea.hnatekmar.xyz/public/vllm:glm-4-6-flash
     engine: vllm
     resources:

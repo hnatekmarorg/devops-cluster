@@ -19,6 +19,17 @@
 # Llama models configuration
 # Each model defines GPU resources, arguments, and other settings
 models:
+  - name: glm-4-6V-flash
+    image: gitea.hnatekmar.xyz/public/vllm:glm-4-6-flash
+    engine: vllm
+    resources:
+      requests:
+        nvidia.com/gpu: 4
+      limits:
+        nvidia.com/gpu: 4
+    args:
+      - /models/fp16/GLM-4.6V-Flash/ --tensor-parallel-size 4 --tool-call-parser glm45 --reasoning-parser glm45 --enable-auto-tool-choice  --allowed-local-media-path / --mm-encoder-tp-mode data 
+
   - name: deepseek-ocr
     image: vllm/vllm-openai:v0.11.1
     engine: vllm

@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: thingsboard
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    - name: chart
+      repoURL: https://cetic.github.io/helm-charts
+      chart: thingsboard
+      targetRevision: 0.1.2
+      helm:
+        valueFiles:
+          - $repo/devops/argocd/thingsboard/values.yaml
+    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+      targetRevision: main
+      ref: repo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: thingsboard
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

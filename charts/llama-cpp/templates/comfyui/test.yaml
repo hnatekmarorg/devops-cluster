@@ -1,6 +1,58 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: lamacpp-test-cpu
+  labels:
+    scale.off-replicas: "0"
+    scale.on-replicas: "1"
+    llm: vllm-test
+spec:
+  strategy:
+    type: Recreate
+  replicas: 0
+  selector:
+    matchLabels:
+      llm: lamacpp-test
+  template:
+    metadata:
+      name: lamacpp-test
+      labels:
+        llm: lamacpp-test
+    spec:
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      runtimeClassName: nvidia
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+        - name: nas
+          nfs:
+            server: 192.168.88.25
+            path: /mnt/data/k8s/ai
+      containers:
+        - name: test
+          image: ghcr.io/ggml-org/llama.cpp:full
+          imagePullPolicy: Always
+          command: ["bash"]
+          args: ["-c", "sleep infinity"]
+          volumeMounts:
+            - mountPath: /models
+              name: nas
+            - mountPath: /dev/shm
+              name: shm
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: http
+      restartPolicy: Always
+      securityContext: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: lamacpp-test
   labels:
     scale.off-replicas: "0"

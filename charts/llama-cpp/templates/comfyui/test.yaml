@@ -145,7 +145,7 @@ spec:
             path: /mnt/data/k8s/ai
       containers:
         - name: test
-          image: gitea.hnatekmar.xyz/public/vllm:glm-4-7-flash
+          image: gitea.hnatekmar.xyz/public/vllm:glm-4-6-flash
           imagePullPolicy: Always
           securityContext:
             privileged: true

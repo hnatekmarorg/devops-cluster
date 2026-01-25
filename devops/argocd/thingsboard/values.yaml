@@ -1,0 +1,70 @@
+# Default values for thingsboard.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: thingsboard
+  pullPolicy: IfNotPresent
+  tag: tb-postgres
+
+nameOverride: ""
+fullnameOverride: ""
+
+# PostgreSQL configuration
+database:
+  host: postgres
+  port: 5432
+  name: thingsboard
+  user: thingsboard
+  password: postgres
+
+# RabbitMQ configuration
+rabbitmq:
+  enabled: true
+  host: rabbitmq
+  port: 5672
+  username: admin
+  password: admin
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: thingsboard.hnatekmar.dev
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - thingsboard.hnatekmar.dev
+      secretName: thingsboard-tls
+
+service:
+  type: ClusterIP
+  port: 8080
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 40
+  periodSeconds: 7
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+serviceAccount:
+  create: false
+  name: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}

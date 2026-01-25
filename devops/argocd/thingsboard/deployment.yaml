@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: thingsboard
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  project: default
+  sources:
+    - chart: thingsboard
+      repoURL: https://midokura.github.io/thingsboard-ce-k8s
+      targetRevision: 0.1.1
+      helm:
+        releaseName: thingsboard
+        valueFiles:
+          - $repo/devops/argocd/thingsboard/values.yaml
+    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+      targetRevision: main
+      ref: repo
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: thingsboard
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true

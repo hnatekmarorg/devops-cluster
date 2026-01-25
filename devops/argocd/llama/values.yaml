@@ -83,6 +83,30 @@ models:
       - "true"
       - --disable-auth
       - "true"
+  - name: loki
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - -m 
+      - /models/gguf/L3.3-70B-Loki-V2.0-Q8_0.gguf
+      - -c
+      - "131072"
+      - "-ngl"
+      - "99"
+      - --fit
+      - "on"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - distribute
+      - --alias
+      - "loki"
   - name: precog
     cooldownPeriod: 3600
     resources:

@@ -173,7 +173,7 @@ models:
   - name: gpt-oss
     engine: vllm
     cooldownPeriod: 3600
-    image: vllm/vllm-openai:v0.11.1
+    image: vllm/vllm-openai:v0.14.1
     resources:
       requests:
         nvidia.com/gpu: 4
@@ -185,7 +185,7 @@ models:
   - name: gpt-oss-derestricted
     engine: vllm
     cooldownPeriod: 3600
-    image: vllm/vllm-openai:v0.12.0
+    image: vllm/vllm-openai:v0.14.1
     resources:
       requests:
         nvidia.com/gpu: 4
@@ -197,7 +197,7 @@ models:
   # GPT-OSS 20B model configuration
   - name: gpt-oss-20b
     engine: vllm
-    image: vllm/vllm-openai:v0.11.1
+    image: vllm/vllm-openai:v0.14.1
     cooldownPeriod: 3600
     resources:
       requests:

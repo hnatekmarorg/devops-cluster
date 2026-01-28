@@ -180,7 +180,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp8/gpt-oss-120b/ -tp 4  --enable-expert-parallel --tool-call-parser openai --served-model-name gpt-oss --gpu-memory-util 0.86 --trust-remote-code
+      - /models/fp8/gpt-oss-120b/ -tp 4  --enable-expert-parallel --tool-call-parser openai --enable-auto-tool-choice --served-model-name gpt-oss --gpu-memory-util 0.86 --trust-remote-code
       
   - name: gpt-oss-derestricted
     engine: vllm

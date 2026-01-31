@@ -173,7 +173,7 @@ models:
   - name: gpt-oss
     engine: vllm
     cooldownPeriod: 3600
-    image: vllm/vllm-openai:v0.15.0
+    image: gitea.hnatekmar.xyz/public/vllm:v0.15.0-cu130
     resources:
       requests:
         nvidia.com/gpu: 4
@@ -185,7 +185,7 @@ models:
   - name: gpt-oss-derestricted
     engine: vllm
     cooldownPeriod: 3600
-    image: vllm/vllm-openai:v0.15.0
+    image: gitea.hnatekmar.xyz/public/vllm:v0.15.0-cu130
     resources:
       requests:
         nvidia.com/gpu: 4
@@ -197,7 +197,7 @@ models:
   # GPT-OSS 20B model configuration
   - name: gpt-oss-20b
     engine: vllm
-    image: vllm/vllm-openai:v0.15.0
+    image: gitea.hnatekmar.xyz/public/vllm:v0.15.0-cu130
     cooldownPeriod: 3600
     resources:
       requests:
@@ -695,7 +695,7 @@ models:
       - /models/awq/Kimi-Linear-48B-A3B-Instruct-AWQ-8bit/ --served-model-name kimi-linear --tensor-parallel-size 4   --trust-remote-code --enable-expert-parallel --max-model-len 903000
   - name: nemotron-3-nano
     engine: vllm
-    image: vllm/vllm-openai:v0.15.0
+    image: gitea.hnatekmar.xyz/public/vllm:v0.15.0-cu130
     cooldownPeriod: 7200
     resources:
       requests:

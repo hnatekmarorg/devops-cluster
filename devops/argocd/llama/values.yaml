@@ -598,7 +598,7 @@ models:
       limits:
         nvidia.com/gpu: 6
     args:
-      - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/  --pipeline-parallel-size 3 --tensor-parallel-size 2  --trust-remote-code   --served-model-name qwen-next-thinking --enable-auto-tool-choice     --tool-call-parser hermes --reasoning-parser deepseek-r1
+      - /models/fp8/Qwen3-Next-80B-A3B-Thinking-FP8/  --pipeline-parallel-size 3 --tensor-parallel-size 2  --trust-remote-code   --served-model-name qwen-next-thinking --enable-auto-tool-choice     --tool-call-parser hermes --reasoning-parser deepseek_r1
   - name: qwen-next-thinking-tools
     engine: vllm
     cooldownPeriod: 14400

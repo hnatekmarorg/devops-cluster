@@ -107,6 +107,28 @@ models:
       - distribute
       - --alias
       - "loki"
+  - name: fallen-command
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - -m 
+      - /models/gguf/fallen-command/Fallen-Command-A-111B-v1b-Q5_K_M-00001-of-00002.gguf
+      - -c
+      - "262144"
+      - --fit
+      - "on"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - distribute
+      - --alias
+      - "fallen-command"
   - name: precog
     cooldownPeriod: 3600
     resources:

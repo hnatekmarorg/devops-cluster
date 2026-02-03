@@ -1,0 +1,112 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/chroma-core/chroma
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+service:
+  type: ClusterIP
+  nodePort: null
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: chroma.hnatekmar.dev
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: chroma-hnatekmar-dev-tls
+      hosts:
+        - chroma.hnatekmar.dev
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podSpec:
+  terminationGracePeriodSeconds: 5
+  securityContext: {}
+  podAnnotations: {}
+  annotations: {}
+  initContainers: []
+  readinessProbe:
+    failureThreshold: 20
+    timeoutSeconds: 10
+    periodSeconds: 5
+  livenessProbe:
+    failureThreshold: 40
+    timeoutSeconds: 10
+    periodSeconds: 5
+  startupProbe:
+    failureThreshold: 1000
+    periodSeconds: 5
+    initialDelaySeconds: 10
+
+chromadb:
+  apiVersion: "1.0.10"
+  allowReset: false
+  isPersistent: true
+  persistDirectory: /data
+  logConfigFileLocation: /chroma/log_config.yaml
+  logConfigMap: null
+  logging:
+    root: "INFO"
+    chromadb: "DEBUG"
+    uvicorn: "INFO"
+  anonymizedTelemetry: false
+  corsAllowOrigins: []
+  serverHost: "0.0.0.0"
+  serverHttpPort: 8000
+  maxPayloadSizeBytes: 41943040
+
+  data:
+    volumeSize: "10Gi"
+    storageClass: "nfs-client"
+    accessModes:
+      - ReadWriteMany
+    retentionPolicyOnDelete: "Retain"
+
+  telemetry:
+    enabled: false
+    endpoint: ""
+    serviceName: "chromadb"
+
+  maintenance:
+    collection_cache_policy: null
+    collection_cache_limit_bytes: 1000000000
+
+  auth:
+    enabled: true
+    type: "token"
+    existingSecret: ""
+    basic:
+      username: "chroma"
+      password: null
+    token:
+      headerType: "Authorization"
+      value: null

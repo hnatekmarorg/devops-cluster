@@ -269,7 +269,7 @@ models:
         nvidia.com/gpu: 6
     args:
       - --ctx-size
-      - "64000"
+      - "202752"
       - --temp 
       - "1.0"
       - --top-p
@@ -277,8 +277,6 @@ models:
       - --top-k
       - "40"
       - --jinja
-      - "--fit"
-      - "on"
       - -m
       - "/models/gguf/glm-4.6/GLM-4.6-UD-Q4_K_XL-00001-of-00005.gguf"
       - --alias
@@ -292,14 +290,15 @@ models:
         nvidia.com/gpu: 6
     args:
       - --ctx-size
-      - "64000"
+      - "202752"
       - --temp 
       - "1.0"
       - --top-p
       - "0.95"
       - --jinja
-      - "--fit"
-      - "on"
+      - -nkvo
+      - -fa
+      - "1"
       - -m
       - "/models/gguf/glm-4.7/GLM-4.7-UD-Q4_K_XL-00001-of-00005.gguf"
       - --alias

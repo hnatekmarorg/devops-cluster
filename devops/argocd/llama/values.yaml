@@ -341,6 +341,27 @@ models:
       - numactl
       - --alias
       - "behemoth"
+  - name: behemoth-x
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --no-mmap
+      - "-m"
+      - "/models/gguf/behemoth-x/Behemoth-123B-v2.2-Q5_K_M-00001-of-00003.gguf"
+      - "--fit"
+      - "on"
+      - -t
+      - "-1"
+      - --prio
+      - "3"
+      - --numa
+      - numactl
+      - --alias
+      - "behemoth-x"
 
   - name: minimax-m2
     cooldownPeriod: 3600

@@ -65,6 +65,7 @@ models:
   - name: exl
     cooldownPeriod: 3600
     engine: tabby
+    image: gitea.hnatekmar.xyz/public/tabby:glm-4-7
     replicas: 1
     resources:
       requests:

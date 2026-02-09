@@ -281,6 +281,27 @@ models:
       - "/models/gguf/glm-4.6/GLM-4.6-UD-Q4_K_XL-00001-of-00005.gguf"
       - --alias
       - glm-4-6
+  - name: glm-4-7-q2
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - --ctx-size
+      - "202752"
+      - --no-mmap
+      - --temp 
+      - "1.0"
+      - --top-p
+      - "0.95"
+      - -fa
+      - "1"
+      - -m
+      - "/models/gguf/glm-4.7-q2/GLM-4.7-UD-Q2_K_XL-00001-of-00003.gguf"
+      - --alias
+      - glm-4-7-q2
   - name: glm-4-7
     cooldownPeriod: 3600
     resources:
@@ -291,6 +312,7 @@ models:
     args:
       - --ctx-size
       - "202752"
+      - --no-mmap
       - --temp 
       - "1.0"
       - --top-p

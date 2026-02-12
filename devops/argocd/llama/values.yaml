@@ -84,7 +84,7 @@ models:
       - "true"
       - --disable-auth
       - "true"
-  - name: loki
+  - name: animus
     cooldownPeriod: 3600
     resources:
       requests:
@@ -93,21 +93,12 @@ models:
         nvidia.com/gpu: 6
     args:
       - -m 
-      - /models/gguf/L3.3-70B-Loki-V2.0-Q8_0.gguf
-      - -c
-      - "131072"
-      - "-ngl"
-      - "99"
+      - "/models/gguf/animus/M2411-123B-Animus-V13.0-Q6_K.gguf" 
+      - --no-mmap
       - --fit
       - "on"
-      - -t
-      - "-1"
-      - --prio
-      - "3"
-      - --numa
-      - distribute
       - --alias
-      - "loki"
+      - "animus"
   - name: fallen-command
     cooldownPeriod: 3600
     resources:

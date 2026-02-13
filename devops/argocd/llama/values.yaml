@@ -99,6 +99,23 @@ models:
       - "on"
       - --alias
       - "animus"
+      
+  - name: anubis
+    cooldownPeriod: 3600
+    resources:
+      requests:
+        nvidia.com/gpu: 6
+      limits:
+        nvidia.com/gpu: 6
+    args:
+      - -m 
+      - "/models/gguf/anubis/TheDrummer_Anubis-70B-v1.1-Q8_0-00001-of-00002.gguf" 
+      - --no-mmap
+      - --fit
+      - "on"
+      - --alias
+      - "anubis"
+  
   - name: fallen-command
     cooldownPeriod: 3600
     resources:

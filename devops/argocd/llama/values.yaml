@@ -349,7 +349,6 @@ models:
       - --alias
       - glm-steam
   - name: glm-5
-    device: cpu
     cooldownPeriod: 3600
     args:
       - -m 

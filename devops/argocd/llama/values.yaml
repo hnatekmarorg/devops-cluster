@@ -355,7 +355,7 @@ models:
       - "/models/gguf/glm-5/GLM-5-UD-IQ2_XXS-00001-of-00006.gguf"  
       - "--ctx-size"
       - "202752"
-      - "--flash-attn"- 
+      - "--flash-attn"
       - "on"
       - "--temp"
       - "0.7"
@@ -365,6 +365,8 @@ models:
       - "0.01"
       - "--numa"
       - "numactl"
+      - --alias
+      - "glm-5"
   # Behemoth model configuration
   - name: behemoth
     cooldownPeriod: 3600

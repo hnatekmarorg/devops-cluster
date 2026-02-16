@@ -349,6 +349,7 @@ models:
       - --alias
       - glm-steam
   - name: glm-5
+    image: ghcr.io/ggml-org/llama.cpp:server
     cooldownPeriod: 3600
     args:
       - -m 

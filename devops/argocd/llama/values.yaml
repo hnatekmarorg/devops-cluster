@@ -348,6 +348,24 @@ models:
       - "99"
       - --alias
       - glm-steam
+  - name: glm-5
+    device: cpu
+    cooldownPeriod: 3600
+    args:
+      - -m 
+      - "/models/gguf/glm-5/GLM-5-UD-IQ2_XXS-00001-of-00006.gguf"  
+      - "--ctx-size"
+      - "202752"
+      - "--flash-attn"- 
+      - "on"
+      - "--temp"
+      - "0.7"
+      - "--top-p"
+      - "1.0"
+      - "--min-p"
+      - "0.01"
+      - "--numa"
+      - "numactl"
   # Behemoth model configuration
   - name: behemoth
     cooldownPeriod: 3600

@@ -647,6 +647,10 @@ models:
     env:
       - name: CUDA_DEVICE_ORDER
         value: "PCI_BUS_ID"             # Fixes GPU indexing
+      - name: VLLM_ATTENTION_BACKEND
+        value: "FLASHINFER"
+      - name: VLLM_FLASHINFER_FORCE_TENSOR_CORES
+        value: "1"
     resources:
       requests:
         nvidia.com/gpu: 6

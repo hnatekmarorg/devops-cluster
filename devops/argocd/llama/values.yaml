@@ -319,13 +319,14 @@ models:
         nvidia.com/gpu: 6
     args:
       - --ctx-size
-      - "202752"
+      - "32768"
+      - --cache-ram 
+      - "32768"
       - --no-mmap
       - --temp 
       - "1.0"
       - --top-p
       - "0.95"
-      - -nkvo
       - -fa
       - "1"
       - -m

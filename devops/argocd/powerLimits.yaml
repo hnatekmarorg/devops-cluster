@@ -1,0 +1,68 @@
+# Daemonset applies power limits to nodes with 3090 / 4090
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nvidia-power-limit
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: nvidia-power-limit
+  template:
+    metadata:
+      labels:
+        name: nvidia-power-limit
+    spec:
+      runtimeClassName: nvidia
+      # 1. Tolerate the GPU taint so the pod is allowed to schedule here
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Equal"
+          value: "present"
+          effect: "NoSchedule"
+
+      # 2. Target nodes that have GPUs based on the labels your Talos node exposes
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.count
+                    operator: Exists
+
+      hostPID: true
+      initContainers:
+        - name: set-power-limit
+          image: nvidia/cuda:12.2.2-base-ubuntu22.04
+          securityContext:
+            privileged: true
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "Applying NVIDIA GPU Power Limits..."
+              nvidia-smi -pm 1
+
+              nvidia-smi --query-gpu=index,name --format=csv,noheader | while IFS=, read -r index name; do
+                index=$(echo $index | xargs)
+                
+                if [[ "$name" == *"RTX 3090"* ]]; then
+                  echo "Setting power limit for GPU $index ($name) to 280W"
+                  nvidia-smi -i $index -pl 280
+                  
+                elif [[ "$name" == *"RTX 4090"* ]]; then
+                  echo "Setting power limit for GPU $index ($name) to 320W"
+                  nvidia-smi -i $index -pl 320
+                fi
+              done
+              echo "Power limits applied successfully."
+          volumeMounts:
+            - name: dev-dir
+              mountPath: /dev
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+      volumes:
+        - name: dev-dir
+          hostPath:
+            path: /dev

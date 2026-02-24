@@ -145,7 +145,7 @@ spec:
             path: /mnt/data/k8s/ai
       containers:
         - name: test
-          image: gitea.hnatekmar.xyz/public/vllm:v0.15.0-cu130
+          image: vllm/vllm-openai:qwen3_5
           imagePullPolicy: Always
           securityContext:
             privileged: true

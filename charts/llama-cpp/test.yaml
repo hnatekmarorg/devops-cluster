@@ -35,7 +35,7 @@ spec:
             path: /mnt/data/k8s/ai
       containers:
         - name: test
-          image: vllm/vllm-openai:latest
+          image: vllm/vllm-openai:qwen3_5
           imagePullPolicy: Always
           securityContext:
             privileged: true

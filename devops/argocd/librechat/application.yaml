@@ -13,6 +13,11 @@ spec:
     targetRevision: main
     helm:
       valuesObject:
+        global:
+          librechat:
+            existingSecretName: "librechat-oidc-creds"
+            existingSecretApiKey: clientSecret
+          storageClass: nfs-client
         librechat:
           configYamlContent: |
             version: 1.0.8
@@ -41,11 +46,6 @@ spec:
           configEnv:
             ALLOW_REGISTRATION: "true"
             ALLOW_EMAIL_LOGIN: "true"
-        global:
-          librechat:
-            existingSecretName: "librechat-oidc-creds"
-            existingSecretApiKey: clientSecret
-        # Storage configuration
         mongodb:
           persistence:
             storageClass: nfs-client

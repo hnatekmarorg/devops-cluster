@@ -57,7 +57,7 @@ spec:
             annotations:
               nfs.io/storage-path: "librechat-meilisearch"
         imageVolume:
-          storageClass: nfs-client
+          storageClassName: nfs-client
           annotations:
             nfs.io/storage-path: "librechat-uploads"
   destination:

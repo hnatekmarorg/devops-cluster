@@ -57,9 +57,7 @@ spec:
             annotations:
               nfs.io/storage-path: "librechat-meilisearch"
         imageVolume:
-          storageClassName: nfs-client
-          annotations:
-            nfs.io/storage-path: "librechat-uploads"
+          enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: librechat

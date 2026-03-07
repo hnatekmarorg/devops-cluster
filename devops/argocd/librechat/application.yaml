@@ -7,47 +7,47 @@ metadata:
     argocd.argoproj.io/sync-wave: "5"
 spec:
   project: default
-  source:
-    repoURL: https://github.com/danny-avila/LibreChat.git
-    path: helm/librechat
-    targetRevision: main
-    helm:
-      valueFiles:
-        - $repo/devops/argocd/librechat/values.yaml
-      values: |
-        librechat:
-          configYamlContent: |
-            version: 1.0.8
-            cache: true
-            auth:
-              type: oidc
-              oidc:
-                clientId: librechat
-                clientSecret: ${OIDC_CLIENT_SECRET}
-                issuer: https://sso.hnatekmar.xyz/realms/master
-                autoRegister: true
-                nameVar: preferred_username
-            endpoints:
-              openAI:
-                apiKey: "${OPENAI_API_KEY}"
-                modelDisplayLabel: "OpenAI"
-              custom:
-                - name: "Anthropic"
-                  apiKey: "${ANTHROPIC_API_KEY}"
-                  baseURL: "https://api.anthropic.com/v1"
-                  models:
-                    default: ["claude-3-haiku-20240307"]
-                  titleConvo: true
-                  titleModel: "claude-3-haiku-20240307"
-                  modelDisplayLabel: "Anthropic"
-          configEnv:
-            ALLOW_REGISTRATION: "true"
-            ALLOW_EMAIL_LOGIN: "true"
-        # Reference the SopsSecret for OIDC credentials
-        global:
+  sources:
+    - repoURL: https://github.com/danny-avila/LibreChat.git
+      path: helm/librechat
+      targetRevision: main
+      helm:
+        valuesObject:
           librechat:
-            existingSecretName: "librechat-oidc-creds"
-            existingSecretApiKey: clientSecret
+            configYamlContent: |
+              version: 1.0.8
+              cache: true
+              auth:
+                type: oidc
+                oidc:
+                  clientId: librechat
+                  clientSecret: ${OIDC_CLIENT_SECRET}
+                  issuer: https://sso.hnatekmar.xyz/realms/master
+                  autoRegister: true
+                  nameVar: preferred_username
+              endpoints:
+                openAI:
+                  apiKey: "${OPENAI_API_KEY}"
+                  modelDisplayLabel: "OpenAI"
+                custom:
+                  - name: "Anthropic"
+                    apiKey: "${ANTHROPIC_API_KEY}"
+                    baseURL: "https://api.anthropic.com/v1"
+                    models:
+                      default: ["claude-3-haiku-20240307"]
+                    titleConvo: true
+                    titleModel: "claude-3-haiku-20240307"
+                    modelDisplayLabel: "Anthropic"
+            configEnv:
+              ALLOW_REGISTRATION: "true"
+              ALLOW_EMAIL_LOGIN: "true"
+          global:
+            librechat:
+              existingSecretName: "librechat-oidc-creds"
+              existingSecretApiKey: clientSecret
+    - repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      targetRevision: HEAD
+      ref: repo
   destination:
     server: https://kubernetes.default.svc
     namespace: librechat

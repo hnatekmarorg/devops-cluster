@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: oci://ghcr.io/danny-avila/librechat-chart
-    chart: librechat
-    targetRevision: 2.3.0
+    repoURL: https://github.com/danny-avila/LibreChat.git
+    path: helm/librechat
+    targetRevision: main
     helm:
       valueFiles:
         - $repo/devops/argocd/librechat/values.yaml

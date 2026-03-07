@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/danny-avila/LibreChat.git
     path: helm/librechat
-    targetRevision: main
+    targetRevision: 1.9.9
     helm:
       valuesObject:
         image:

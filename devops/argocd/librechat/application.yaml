@@ -45,6 +45,21 @@ spec:
           librechat:
             existingSecretName: "librechat-oidc-creds"
             existingSecretApiKey: clientSecret
+        # Storage configuration
+        mongodb:
+          persistence:
+            storageClass: nfs-client
+            annotations:
+              nfs.io/storage-path: "librechat-mongodb"
+        meilisearch:
+          persistence:
+            storageClass: nfs-client
+            annotations:
+              nfs.io/storage-path: "librechat-meilisearch"
+        imageVolume:
+          storageClass: nfs-client
+          annotations:
+            nfs.io/storage-path: "librechat-uploads"
   destination:
     server: https://kubernetes.default.svc
     namespace: librechat

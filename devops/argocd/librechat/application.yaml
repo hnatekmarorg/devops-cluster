@@ -15,8 +15,8 @@ spec:
       valuesObject:
         global:
           librechat:
-            existingSecretName: "librechat-oidc-creds"
-            existingSecretApiKey: clientSecret
+            existingSecretName: "librechat-credentials-env"
+            existingSecretApiKey: OPENAI_API_KEY
           storageClass: nfs-client
         librechat:
           configYamlContent: |
@@ -46,11 +46,15 @@ spec:
           configEnv:
             ALLOW_REGISTRATION: "true"
             ALLOW_EMAIL_LOGIN: "true"
+            MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
         mongodb:
           persistence:
             storageClass: nfs-client
             annotations:
               nfs.io/storage-path: "librechat-mongodb"
+          image:
+            registry: registry.k8s.io
+            repository: sig-storage/nfs-subdir-external-provisioner
         meilisearch:
           persistence:
             storageClass: nfs-client

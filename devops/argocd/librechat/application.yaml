@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: librechat
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: default
+  source:
+    repoURL: https://ghcr.io/danny-avila/librechat-chart
+    chart: librechat
+    targetRevision: 2.3.0
+    helm:
+      valueFiles:
+        - $repo/devops/argocd/librechat/values.yaml
+      values: |
+        librechat:
+          configYamlContent: |
+            version: 1.0.8
+            cache: true
+            endpoints:
+              openAI:
+                apiKey: "${OPENAI_API_KEY}"
+                modelDisplayLabel: "OpenAI"
+              custom:
+                - name: "Anthropic"
+                  apiKey: "${ANTHROPIC_API_KEY}"
+                  baseURL: "https://api.anthropic.com/v1"
+                  models:
+                    default: ["claude-3-haiku-20240307"]
+                  titleConvo: true
+                  titleModel: "claude-3-haiku-20240307"
+                  modelDisplayLabel: "Anthropic"
+          configEnv:
+            ALLOW_REGISTRATION: "true"
+            ALLOW_EMAIL_LOGIN: "true"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: librechat
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

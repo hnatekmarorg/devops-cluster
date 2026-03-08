@@ -60,7 +60,7 @@ spec:
           persistence:
             storageClass: nfs-client
             annotations:
-              nfs.io/storage-path: "librechat-mongodb"
+              nfs.io/storage-path: "librechat-mongodb-new"
           image:
             tag: latest
         meilisearch:

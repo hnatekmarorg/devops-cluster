@@ -57,12 +57,7 @@ spec:
             ALLOW_EMAIL_LOGIN: "true"
             MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
         mongodb:
-          persistence:
-            storageClass: nfs-client
-            annotations:
-              nfs.io/storage-path: "librechat-mongodb-v2"
-          image:
-            tag: latest
+          enabled: false
         meilisearch:
           persistence:
             storageClass: nfs-client

@@ -1,0 +1,33 @@
+# vLLM Proxy endpoints configuration
+proxyEndpoints:
+  - endpoint: http://172.16.100.136:8000
+    ingress:
+      host: sota.hnatekmar.dev
+
+  - endpoint: http://172.16.100.112:8000
+    ingress:
+      host: fast.hnatekmar.dev
+
+# Proxy configuration
+proxy:
+  image: node:20-alpine
+  port: 8001
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+
+# Ingress configuration
+ingress:
+  className: nginx
+  clusterIssuer: letsencrypt-cloudflare
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"

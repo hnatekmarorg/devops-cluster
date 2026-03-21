@@ -1,0 +1,48 @@
+# Proxy endpoints configuration
+# Each endpoint defines a vLLM server to proxy with its own ingress domain
+proxyEndpoints:
+  - endpoint: http://vllm-model-1:8080
+    ingress:
+      host: model1.hnatekmar.dev
+      # Optional: path prefix for routing (default: /)
+      path: /
+      # Optional: path type (default: Prefix)
+      pathType: Prefix
+
+  # Example with multiple endpoints
+  # - endpoint: http://vllm-model-2:8080
+  #   ingress:
+  #     host: model2.hnatekmar.dev
+
+# Proxy configuration
+proxy:
+  # Container image
+  image: node:20-alpine
+  # Port the proxy listens on
+  port: 8001
+  # Number of replicas
+  replicas: 1
+  # Resource limits and requests
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+
+# Ingress configuration (global settings)
+ingress:
+  # TLS secret name (default: {host}-tls)
+  # tlsSecretName: custom-tls-secret
+  # Annotations for the ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+  # Ingress class name
+  className: nginx
+  # Cluster issuer for certificates
+  clusterIssuer: letsencrypt-cloudflare

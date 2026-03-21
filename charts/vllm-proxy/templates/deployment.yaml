@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vllm-proxy.fullname" . }}
+  labels:
+    {{- include "vllm-proxy.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.proxy.replicas }}
+  selector:
+    matchLabels:
+      {{- include "vllm-proxy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vllm-proxy.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: proxy
+          image: {{ .Values.proxy.image }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.proxy.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.proxy.resources | nindent 12 }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              cat > /app/proxy.js << 'PROXYEOF'
+              const http = require('http');
+
+              // Proxy endpoint configuration
+              const TARGET_ENDPOINTS = {{ .Values.proxyEndpoints | toJson }};
+
+              // Build a map of host -> endpoint for routing
+              const endpointMap = {};
+              {{- range $i, $endpoint := .Values.proxyEndpoints }}
+              endpointMap['{{ $endpoint.ingress.host }}'] = '{{ $endpoint.endpoint }}';
+              {{- end }}
+
+              const server = http.createServer((clientReq, clientRes) => {
+                // Extract hostname from the incoming request
+                const host = clientReq.headers.host;
+                
+                // Parse the target endpoint URL
+                const targetUrl = new URL(host ? `http://${host}` : 'http://localhost');
+                const targetEndpoint = endpointMap[host] || '{{ (index .Values.proxyEndpoints 0).endpoint }}';
+                const target = new URL(targetEndpoint);
+
+                const options = {
+                  hostname: target.hostname,
+                  port: target.port || 8080,
+                  path: clientReq.url,
+                  method: clientReq.method,
+                  headers: {
+                    ...clientReq.headers,
+                    host: target.hostname
+                  }
+                };
+
+                const proxyReq = http.request(options, (proxyRes) => {
+                  clientRes.writeHead(proxyRes.statusCode, proxyRes.headers);
+
+                  let keepAliveInterval;
+                  // If it's a streaming generation, start injecting keep-alives
+                  if (proxyRes.headers['content-type'] && 
+                      proxyRes.headers['content-type'].includes('text/event-stream')) {
+                    keepAliveInterval = setInterval(() => {
+                      // SSE comments start with a colon and reset the SDK watchdog
+                      const phantomChunk = `data: {"id":"keepalive","object":"chat.completion.chunk","created":0,"model":"keepalive","choices":[{"index":0,"delta":{}}]}\n\n`;
+                      clientRes.write(phantomChunk);
+                    }, 5000);
+                  }
+
+                  // Pipe the actual tokens from vLLM to client as they arrive
+                  proxyRes.on('data', (chunk) => {
+                    clientRes.write(chunk);
+                  });
+
+                  proxyRes.on('end', () => {
+                    if (keepAliveInterval) clearInterval(keepAliveInterval);
+                    clientRes.end();
+                  });
+
+                  proxyRes.on('error', (err) => {
+                    if (keepAliveInterval) clearInterval(keepAliveInterval);
+                    clientRes.end();
+                  });
+                });
+
+                proxyReq.on('error', (err) => {
+                  console.error('Proxy Error:', err);
+                  clientRes.writeHead(502);
+                  clientRes.end('Bad Gateway');
+                });
+
+                // Pipe the initial request payload from client to vLLM
+                clientReq.pipe(proxyReq);
+              });
+
+              server.listen({ port: {{ .Values.proxy.port }}, host: '0.0.0.0' }, () => {
+                console.log('vLLM Keep-alive Proxy running on port {{ .Values.proxy.port }}');
+                console.log('Endpoints:');
+                {{- range $endpoint := .Values.proxyEndpoints }}
+                console.log('  {{ $endpoint.ingress.host }} -> {{ $endpoint.endpoint }}');
+                {{- end }}
+              });
+              PROXYEOF
+
+              node /app/proxy.js
+          volumeMounts:
+            - name: config
+              mountPath: /app
+      volumes:
+        - name: config
+          emptyDir: {}

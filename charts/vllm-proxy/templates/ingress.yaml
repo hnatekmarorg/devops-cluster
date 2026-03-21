@@ -1,0 +1,31 @@
+{{- range $endpoint := .Values.proxyEndpoints }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "vllm-proxy.fullname" $ }}-{{ $endpoint.ingress.host | replace "." "-" }}
+  labels:
+    {{- include "vllm-proxy.labels" $ | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.clusterIssuer }}
+    {{- range $key, $value := $.Values.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  tls:
+    - hosts:
+        - {{ $endpoint.ingress.host }}
+      secretName: {{ default (printf "%s-tls" $endpoint.ingress.host) $.Values.ingress.tlsSecretName }}
+  rules:
+    - host: {{ $endpoint.ingress.host }}
+      http:
+        paths:
+          - path: {{ default "/" $endpoint.ingress.path }}
+            pathType: {{ default "Prefix" $endpoint.ingress.pathType }}
+            backend:
+              service:
+                name: {{ include "vllm-proxy.fullname" $ }}
+                port:
+                  number: 80
+{{- end }}

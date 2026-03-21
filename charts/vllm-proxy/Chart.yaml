@@ -1,0 +1,6 @@
+apiVersion: v2
+name: vllm-proxy
+description: A Helm chart for deploying a vLLM proxy with keep-alive support and ingress
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

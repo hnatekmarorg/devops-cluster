@@ -28,7 +28,7 @@ models:
       limits:
         nvidia.com/gpu: 4
     args:
-      - /models/fp16/gemma-4-31B-it --tensor-parallel-size 4 --max-model-len 160000 --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4 --chat-template /models/fp16/gemma-4-31B-it/chat_template.jinja
+      - /models/fp16/gemma-4-31B-it --tensor-parallel-size 4 --max-num-seqs 16 --max-model-len 160000 --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4 --chat-template /models/fp16/gemma-4-31B-it/chat_template.jinja
   - name: qwen3-5-35b
     image: vllm/vllm-openai:qwen3_5
     engine: vllm

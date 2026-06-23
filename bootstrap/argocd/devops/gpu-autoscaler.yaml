@@ -12,7 +12,7 @@ spec:
         - iommu=pt
     - op: replace
       path: /machine/install/image
-      value: factory.talos.dev/metal-installer/aa4564945219f0b369c4ae15711473fc3057985be00b94bffa56786189226870:v1.12.2
+      value: factory.talos.dev/metal-installer/26124abcbd408be693df9fe852c80ef1e6cc178e34d7d7d8430a28d1130b4227:v1.13.5 
     - op: replace
       path: /machine/kernel
       value:

@@ -45,7 +45,8 @@ jobs:
 
       - name: Install helm-unittest
         run: |
-          helm plugin install https://github.com/helm-unittest/helm-unittest.git
+          rm -rf ~/.local/share/helm/plugins/helm-unittest.git ~/.local/share/helm/plugins/helm-unittest
+          helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.0.2
 
       - name: Run helm-unittest
         run: |

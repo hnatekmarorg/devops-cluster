@@ -9,4 +9,3 @@ chart-repos:
   - ingress-nginx=https://kubernetes.github.io/ingress-nginx
   - sops-secrets-operator=https://isindir.github.io/sops-secrets-operator
   - nfs-subdir-external-provisioner=https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
-namespace: default

@@ -10,9 +10,9 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Provider
+          of: Provider
       - isAPIVersion:
-          apiVersion: pkg.crossplane.io/v1
+          of: pkg.crossplane.io/v1
       - equal:
           path: metadata.name
           value: upbound-provider-helm
@@ -26,9 +26,9 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Provider
+          of: Provider
       - isAPIVersion:
-          apiVersion: pkg.crossplane.io/v1
+          of: pkg.crossplane.io/v1
       - equal:
           path: metadata.name
           value: provider-kubernetes
@@ -42,9 +42,9 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Provider
+          of: Provider
       - isAPIVersion:
-          apiVersion: pkg.crossplane.io/v1
+          of: pkg.crossplane.io/v1
       - equal:
           path: metadata.name
           value: upbound-provider-vault

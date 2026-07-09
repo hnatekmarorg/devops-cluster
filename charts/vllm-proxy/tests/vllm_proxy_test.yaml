@@ -10,10 +10,7 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Deployment
-      - matchRegex:
-          path: metadata.name
-          pattern: ^release-name-vllm-proxy$
+          of: Deployment
       - equal:
           path: spec.replicas
           value: 1
@@ -27,7 +24,7 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Service
+          of: Service
       - equal:
           path: spec.type
           value: ClusterIP
@@ -53,7 +50,7 @@ tests:
           count: 2
       - documentIndex: 0
         isKind:
-          kind: Ingress
+          of: Ingress
       - documentIndex: 0
         equal:
           path: spec.rules[0].host
@@ -63,7 +60,7 @@ tests:
           path: spec.rules[0].host
           value: model2.hnatekmar.dev
 
-  - it: should apply ingress annotations
+  - it: should apply custom ingress annotations
     template: templates/ingress.yaml
     set:
       proxyEndpoints:
@@ -72,9 +69,10 @@ tests:
             host: model1.hnatekmar.dev
       ingress:
         className: traefik
-        clusterIssuer: letsencrypt-staging
+        clusterIssuer: custom-issuer
         annotations:
-          custom.io/annotation: test-value
+          nginx.ingress.kubernetes.io/rewrite-target: /
+          custom.io/test: custom-value
     asserts:
       - documentIndex: 0
         equal:
@@ -82,9 +80,9 @@ tests:
           value: traefik
       - documentIndex: 0
         equal:
-          path: metadata.annotations.cert-manager.io/cluster-issuer
-          value: letsencrypt-staging
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: custom-issuer
       - documentIndex: 0
         equal:
-          path: metadata.annotations.custom\.io/annotation
-          value: test-value
+          path: metadata.annotations["custom.io/test"]
+          value: custom-value

@@ -13,9 +13,9 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Application
+          of: Application
       - isAPIVersion:
-          apiVersion: argoproj.io/v1alpha1
+          of: argoproj.io/v1alpha1
       - equal:
           path: metadata.name
           value: crossplane
@@ -40,7 +40,7 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Application
+          of: Application
       - equal:
           path: metadata.name
           value: nginx
@@ -68,7 +68,7 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Application
+          of: Application
       - equal:
           path: metadata.name
           value: sops
@@ -90,7 +90,7 @@ tests:
       - hasDocuments:
           count: 1
       - isKind:
-          kind: Application
+          of: Application
       - equal:
           path: metadata.name
           value: nfs-async

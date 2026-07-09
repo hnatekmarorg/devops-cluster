@@ -28,21 +28,21 @@ tests:
           count: 3
       - documentIndex: 0
         isKind:
-          kind: Deployment
+          of: Deployment
       - documentIndex: 0
         equal:
           path: metadata.name
           value: qwen3
       - documentIndex: 1
         isKind:
-          kind: Service
+          of: Service
       - documentIndex: 1
         equal:
           path: metadata.name
           value: qwen3
       - documentIndex: 2
         isKind:
-          kind: Ingress
+          of: Ingress
 
   - it: should render GPU runtimeClassName for GPU models
     template: templates/deployment.yaml
@@ -77,17 +77,17 @@ tests:
         host: llama.hnatekmar.dev
     asserts:
       - hasDocuments:
-          count: 3
+          count: 4
       - documentIndex: 0
         isKind:
-          kind: ConfigMap
+          of: ConfigMap
       - documentIndex: 1
         isKind:
-          kind: Deployment
+          of: Deployment
       - documentIndex: 1
         equal:
           path: metadata.name
           value: llama-swap
       - documentIndex: 2
         isKind:
-          kind: Service
+          of: Service

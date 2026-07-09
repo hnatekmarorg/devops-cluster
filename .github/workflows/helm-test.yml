@@ -85,6 +85,10 @@ jobs:
         id: ct-lint
         run: ct lint --config ct.yaml --all
 
+      - name: Create kind cluster
+        if: steps.ct-lint.outcome == 'success'
+        uses: helm/kind-action@v1.12.0
+
       - name: Run ct install
         if: steps.ct-lint.outcome == 'success'
         run: ct install --config ct.yaml --all

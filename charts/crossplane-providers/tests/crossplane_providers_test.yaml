@@ -1,0 +1,53 @@
+suite: test crossplane-providers chart
+templates:
+  - templates/helm.yaml
+  - templates/kubernetes.yaml
+  - templates/vault.yaml
+tests:
+  - it: should render Helm provider
+    template: templates/helm.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Provider
+      - isAPIVersion:
+          of: pkg.crossplane.io/v1
+      - equal:
+          path: metadata.name
+          value: upbound-provider-helm
+      - equal:
+          path: spec.package
+          value: xpkg.upbound.io/upbound/provider-helm:v1
+
+  - it: should render Kubernetes provider
+    template: templates/kubernetes.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Provider
+      - isAPIVersion:
+          of: pkg.crossplane.io/v1
+      - equal:
+          path: metadata.name
+          value: provider-kubernetes
+      - equal:
+          path: spec.package
+          value: xpkg.crossplane.io/crossplane-contrib/provider-kubernetes:v1
+
+  - it: should render Vault provider
+    template: templates/vault.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Provider
+      - isAPIVersion:
+          of: pkg.crossplane.io/v1
+      - equal:
+          path: metadata.name
+          value: upbound-provider-vault
+      - equal:
+          path: spec.package
+          value: xpkg.upbound.io/upbound/provider-vault:v3.0.2

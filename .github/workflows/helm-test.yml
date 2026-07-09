@@ -59,8 +59,8 @@ jobs:
             fi
           done
 
-  ct-lint-and-install:
-    name: Chart Testing (ct)
+  ct-lint:
+    name: Chart Testing (ct lint)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -82,13 +82,10 @@ jobs:
         uses: helm/chart-testing-action@v2.7.0
 
       - name: Run ct lint
-        id: ct-lint
         run: ct lint --config ct.yaml --all
-
-      - name: Create kind cluster
-        if: steps.ct-lint.outcome == 'success'
-        uses: helm/kind-action@v1.12.0
-
-      - name: Run ct install
-        if: steps.ct-lint.outcome == 'success'
-        run: ct install --config ct.yaml --all
+        # Note: ct install is intentionally omitted because the charts depend on
+        # external CRDs (ArgoCD Applications, Crossplane Providers) that are not
+        # available in a plain kind cluster. Validation is covered by:
+        #   - helm lint (chart syntax)
+        #   - helm-unittest (template rendering logic)
+        #   - ct lint (chart structure, yamllint, maintainer validation)

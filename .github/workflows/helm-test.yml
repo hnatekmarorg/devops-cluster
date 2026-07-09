@@ -1,0 +1,89 @@
+name: Helm Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "charts/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "charts/**"
+  workflow_dispatch:
+
+jobs:
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.2
+
+      - name: Helm Lint
+        run: |
+          for chart in charts/*/; do
+            echo "=== Linting $chart ==="
+            helm lint "$chart"
+          done
+
+  helm-unittest:
+    name: Helm Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.2
+
+      - name: Install helm-unittest
+        run: |
+          helm plugin install https://github.com/helm-unittest/helm-unittest.git
+
+      - name: Run helm-unittest
+        run: |
+          for chart in charts/*/; do
+            if [ -d "${chart}tests" ]; then
+              echo "=== Running unit tests for $chart ==="
+              helm unittest "$chart"
+            else
+              echo "=== No tests directory in $chart, skipping ==="
+            fi
+          done
+
+  ct-lint-and-install:
+    name: Chart Testing (ct)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.2
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.7.0
+
+      - name: Run ct lint
+        id: ct-lint
+        run: ct lint --config ct.yaml --all
+
+      - name: Run ct install
+        if: steps.ct-lint.outcome == 'success'
+        run: ct install --config ct.yaml --all

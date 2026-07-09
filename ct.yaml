@@ -1,0 +1,12 @@
+# Chart Testing configuration
+# See: https://github.com/helm/chart-testing
+chart-dirs:
+  - charts
+validate-maintainers: false
+target-branch: main
+chart-repos:
+  - crossplane-stable=https://charts.crossplane.io/stable
+  - ingress-nginx=https://kubernetes.github.io/ingress-nginx
+  - sops-secrets-operator=https://isindir.github.io/sops-secrets-operator
+  - nfs-subdir-external-provisioner=https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
+namespace: default

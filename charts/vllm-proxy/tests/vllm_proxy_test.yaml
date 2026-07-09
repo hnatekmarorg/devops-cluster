@@ -1,0 +1,90 @@
+suite: test vllm-proxy chart
+templates:
+  - templates/deployment.yaml
+  - templates/service.yaml
+  - templates/ingress.yaml
+tests:
+  - it: should render deployment with correct defaults
+    template: templates/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          kind: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: ^release-name-vllm-proxy$
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: node:20-alpine
+
+  - it: should render service
+    template: templates/service.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          kind: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+
+  - it: should render ingress for each proxy endpoint
+    template: templates/ingress.yaml
+    set:
+      proxyEndpoints:
+        - endpoint: http://vllm-model-1:8080
+          ingress:
+            host: model1.hnatekmar.dev
+        - endpoint: http://vllm-model-2:8080
+          ingress:
+            host: model2.hnatekmar.dev
+    asserts:
+      - hasDocuments:
+          count: 2
+      - documentIndex: 0
+        isKind:
+          kind: Ingress
+      - documentIndex: 0
+        equal:
+          path: spec.rules[0].host
+          value: model1.hnatekmar.dev
+      - documentIndex: 1
+        equal:
+          path: spec.rules[0].host
+          value: model2.hnatekmar.dev
+
+  - it: should apply ingress annotations
+    template: templates/ingress.yaml
+    set:
+      proxyEndpoints:
+        - endpoint: http://vllm-model-1:8080
+          ingress:
+            host: model1.hnatekmar.dev
+      ingress:
+        className: traefik
+        clusterIssuer: letsencrypt-staging
+        annotations:
+          custom.io/annotation: test-value
+    asserts:
+      - documentIndex: 0
+        equal:
+          path: spec.ingressClassName
+          value: traefik
+      - documentIndex: 0
+        equal:
+          path: metadata.annotations.cert-manager.io/cluster-issuer
+          value: letsencrypt-staging
+      - documentIndex: 0
+        equal:
+          path: metadata.annotations.custom\.io/annotation
+          value: test-value

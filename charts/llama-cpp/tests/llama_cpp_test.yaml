@@ -1,0 +1,93 @@
+suite: test llama-cpp chart
+templates:
+  - templates/deployment.yaml
+  - templates/proxy.yaml
+tests:
+  - it: should render deployments and services for each model
+    template: templates/deployment.yaml
+    set:
+      models:
+        - name: qwen3
+          args:
+            - --jinja
+            - "-m"
+            - /models/gguf/Qwen3-32B-Q5_K_M.gguf
+            - "-ngl"
+            - "99"
+          resources:
+            requests:
+              nvidia.com/gpu: 1
+            limits:
+              nvidia.com/gpu: 1
+      llm:
+        host: llm.hnatekmar.dev
+        llama_cpp:
+          image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    asserts:
+      - hasDocuments:
+          count: 3
+      - documentIndex: 0
+        isKind:
+          kind: Deployment
+      - documentIndex: 0
+        equal:
+          path: metadata.name
+          value: qwen3
+      - documentIndex: 1
+        isKind:
+          kind: Service
+      - documentIndex: 1
+        equal:
+          path: metadata.name
+          value: qwen3
+      - documentIndex: 2
+        isKind:
+          kind: Ingress
+
+  - it: should render GPU runtimeClassName for GPU models
+    template: templates/deployment.yaml
+    set:
+      models:
+        - name: test-gpu
+          device: gpu
+          args: []
+          resources:
+            requests:
+              nvidia.com/gpu: 1
+            limits:
+              nvidia.com/gpu: 1
+      llm:
+        host: llm.hnatekmar.dev
+        llama_cpp:
+          image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    asserts:
+      - documentIndex: 0
+        equal:
+          path: spec.template.spec.runtimeClassName
+          value: nvidia
+
+  - it: should render proxy ConfigMap and Deployment
+    template: templates/proxy.yaml
+    set:
+      models:
+        - name: qwen3
+      llm:
+        host: llm.hnatekmar.dev
+      ingress:
+        host: llama.hnatekmar.dev
+    asserts:
+      - hasDocuments:
+          count: 3
+      - documentIndex: 0
+        isKind:
+          kind: ConfigMap
+      - documentIndex: 1
+        isKind:
+          kind: Deployment
+      - documentIndex: 1
+        equal:
+          path: metadata.name
+          value: llama-swap
+      - documentIndex: 2
+        isKind:
+          kind: Service

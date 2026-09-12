@@ -1,0 +1,22 @@
+thingsboard:
+  host: thingsboard.hnatekmar.dev
+  image: thingsboard/tb-node:4.3.1.4
+  # Heap ceiling inside the deployment memory limit
+  javaOpts: "-Xmx2g"
+  tlsSecretName: thingsboard-mqtt-tls
+  ingressTlsSecretName: thingsboard-tls
+  clusterIssuer: letsencrypt-cloudflare
+
+postgres:
+  image: postgres:18-alpine
+
+db:
+  # Created out-of-band by the sops-secrets-operator from
+  # devops/argocd/secrets/enc.thingsboard-pg.yaml
+  secretName: thingsboard-db-creds
+
+service:
+  mqtt:
+    nodePort: 30883
+
+resources: {}

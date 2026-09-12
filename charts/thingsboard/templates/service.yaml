@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: thingsboard
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  selector:
+    app.kubernetes.io/name: thingsboard
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+# MQTT TLS for devices - exposed via NodePort (any node IP), no TLS proxy hop:
+# ThingsBoard terminates TLS natively with the cert-manager-issued cert.
+# Plaintext MQTT (1883) intentionally NOT exposed outside the cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Release.Name }}-mqtt"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: thingsboard
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: thingsboard
+  ports:
+    - name: mqtt-tls
+      port: 8883
+      targetPort: 8883
+      nodePort: {{ .Values.service.mqtt.nodePort }}

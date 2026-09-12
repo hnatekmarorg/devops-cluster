@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-install"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: thingsboard-install
+    app.kubernetes.io/part-of: thingsboard
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  # One-shot clean install (schema + system data, NO demo data). Runs once;
+  # auto-cleaned a day later.
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thingsboard-install
+    spec:
+      restartPolicy: Never
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: install
+          image: {{ .Values.thingsboard.image }}
+          env:
+            - name: INSTALL_TB
+              value: "true"
+            # Intentionally NO LOAD_DEMO - user requested an empty instance.
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: password

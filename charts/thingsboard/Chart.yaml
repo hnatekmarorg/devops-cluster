@@ -1,0 +1,6 @@
+apiVersion: v2
+name: thingsboard
+description: ThingsBoard CE (IoT platform) — ephemeral test instance, MQTT over TLS on 8883
+type: application
+version: 0.1.0
+appVersion: "4.3.1.4"

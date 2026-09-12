@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: thingsboard
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  ignoreDifferences:
+    - kind: "*"
+      group: "*"
+      namespace: thingsboard
+      jsonPointers:
+        - /spec/replicas
+  sources:
+    - name: chart
+      repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      path: charts/thingsboard
+      targetRevision: main
+      helm:
+        valueFiles:
+          - $repo/devops/argocd/thingsboard/values.yaml
+    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+      targetRevision: main
+      ref: repo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: thingsboard
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - ServerSideApply=true

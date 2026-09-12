@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: thingsboard
+    app.kubernetes.io/component: tb-node
+    app.kubernetes.io/part-of: thingsboard
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: thingsboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thingsboard
+        app.kubernetes.io/component: tb-node
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: tb-node
+          image: {{ .Values.thingsboard.image }}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: rpc
+              containerPort: 7070
+            - name: mqtt
+              containerPort: 1883
+            - name: mqtt-tls
+              containerPort: 8883
+          env:
+            - name: TB_SERVICE_ID
+              value: thingsboard-devops
+            - name: TB_SERVICE_BASE_URL
+              value: "https://{{ .Values.thingsboard.host }}"
+            # 2 GB heap ceiling inside the 3 Gi limit
+            - name: JAVA_OPTS
+              value: "{{ .Values.thingsboard.javaOpts }}"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.secretName }}
+                  key: password
+            # Native MQTT TLS termination (thingsboard.yml transport.mqtt.ssl.*)
+            - name: MQTT_SSL_ENABLED
+              value: "true"
+            - name: MQTT_SSL_CREDENTIALS_TYPE
+              value: "PEM"
+            - name: MQTT_SSL_PEM_CERT
+              value: /certs/tls.crt
+            - name: MQTT_SSL_PEM_KEY
+              value: /certs/tls.key
+            # Surface the MQTTS checker in the UI connectivity widget
+            - name: DEVICE_CONNECTIVITY_MQTTS_ENABLED
+              value: "true"
+            - name: DEVICE_CONNECTIVITY_MQTTS_HOST
+              value: "{{ .Values.thingsboard.host }}"
+            - name: DEVICE_CONNECTIVITY_MQTTS_PORT
+              value: "{{ .Values.service.mqtt.nodePort }}"
+            # TB live-reloads rotated PEMs (default 60s poll) - no restart
+            # needed on renewal. NOTE: mount must NOT use subPath or kubelet
+            # won't sync secret updates.
+          volumeMounts:
+            - name: mqtt-tls
+              mountPath: /certs
+              readOnly: true
+            - name: tb-data
+              mountPath: /data
+            - name: tb-log
+              mountPath: /var/log/thingsboard
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            limits: { cpu: "2", memory: 3Gi }
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: 90
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: 180
+            periodSeconds: 30
+      volumes:
+        - name: mqtt-tls
+          secret:
+            secretName: {{ .Values.thingsboard.tlsSecretName }}
+        - name: tb-data
+          emptyDir: {}
+        - name: tb-log
+          emptyDir: {}

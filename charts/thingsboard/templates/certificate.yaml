@@ -1,0 +1,18 @@
+# Server cert for the MQTT TLS listener (ThingsBoard terminates natively).
+# Separate from the ingress secret on purpose: device traffic survives UI
+# host / ingress changes. letsencrypt-cloudflare is DNS-01 - issuance needs
+# no ingress hop at all.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "{{ .Release.Name }}-mqtt"
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  secretName: {{ .Values.thingsboard.tlsSecretName }}
+  dnsNames:
+    - {{ .Values.thingsboard.host }}
+  issuerRef:
+    name: {{ .Values.thingsboard.clusterIssuer }}
+    kind: ClusterIssuer

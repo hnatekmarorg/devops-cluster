@@ -1,0 +1,27 @@
+---
+# The audit DEVICE, declaratively (chart only provisions the volume).
+#
+# This is the rehearsal of the production finding: the chart defaults
+# server.auditStorage.enabled to false and the production values only set a
+# storageClass, so auditing may never have been switched on. If this MR
+# reconciles cleanly here, the same MR is the production fix.
+#
+# Side effect for the experiment: with auditing on, every request costs an
+# extra write — so a loop becomes visible in the audit volume as well as in
+# the raft WAL.
+apiVersion: vault.vault.upbound.io/v1alpha1
+kind: Audit
+metadata:
+  name: file
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  providerConfigRef:
+    name: bao-staging
+  forProvider:
+    type: file
+    path: file
+    description: "staging file audit device (rehearsal for production)"
+    options:
+      file_path: /openbao/audit/audit.log

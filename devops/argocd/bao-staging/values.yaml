@@ -1,32 +1,57 @@
-# DISPOSABLE staging OpenBao (dev mode, in-memory). NEVER for real secrets.
-#
-# Purpose: rehearse Crossplane (upbound provider-vault) auth/policy resources
-# and measure whether an AuthBackendRoleSecretID reconciler causes a request
-# storm — the failure mode that previously took out the production OpenBao
-# while it was still on the file storage backend.
-#
-# Teardown: delete this directory (or: argocd app delete bao-staging --cascade)
+# Staging OpenBao — DISPOSABLE, but deliberately built to MIRROR PRODUCTION's
+# storage profile so the measurement is representative:
+#   * raft on a PVC (NOT dev/in-memory mode — in-memory hides the disk/WAL/
+#     snapshot cost, which is exactly the dimension that hurt us before)
+#   * audit device storage enabled (rehearses the production "is auditing even
+#     on?" finding)
+# Never for real secrets. Teardown: delete the directory AND the PVCs (see README).
 global:
   tlsDisable: true
 server:
   dev:
-    enabled: true
-    devRootToken: "root"   # dev-mode fixed token; instance is in-memory, no ingress, holds nothing real
+    enabled: false
   standalone:
-    enabled: false
+    enabled: true
+    config: |
+      ui = false
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      # Same shape as production (hetzner-k8s argocd/openbao/values.yaml)
+      storage "raft" {
+        path = "/openbao/data"
+        node_id = "openbao-0"
+        snapshot_threshold = 8192
+        snapshot_interval = 120
+        trailing_logs = 10000
+      }
+
+      default_lease_ttl = "1h"
+      max_lease_ttl = "24h"
   dataStorage:
-    enabled: false
+    enabled: true
+    size: 1Gi
+    # this cluster's default SC. Production uses local-path on k3s — see the
+    # fidelity note in README (longhorn is a pessimistic latency proxy, which
+    # is the safe direction for a safety test).
+    storageClass: longhorn
   auditStorage:
-    enabled: false          # note: this is also the chart default — see README
+    enabled: true
+    size: 512Mi
+    storageClass: longhorn
   ingress:
     enabled: false
   resources:
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 100m
+      memory: 128Mi
     limits:
-      cpu: 250m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
 ui:
   enabled: false
 injector:

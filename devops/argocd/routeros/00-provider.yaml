@@ -1,0 +1,17 @@
+---
+# Crossplane provider that runs OpenTofu workspaces in-cluster.
+#
+# Chosen over the alternatives (2026-09):
+#   * crossplane-contrib/provider-terraform — frozen at Terraform 1.5.7 (BSL
+#     avoidance) and its own README now points here.
+#   * sindrip/provider-routeros — native MikroTik provider, but 5 weeks old and
+#     single-maintainer; not appropriate as the router's management plane yet.
+#     Worth re-evaluating later (it has a nicer resource-identity model).
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-opentofu
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  package: xpkg.upbound.io/upbound/provider-opentofu:v1.1.8

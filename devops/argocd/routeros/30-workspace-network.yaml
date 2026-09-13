@@ -1,0 +1,123 @@
+---
+apiVersion: opentofu.upbound.io/v1beta1
+kind: Workspace
+metadata:
+  name: routeros-network-iac
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  providerConfigRef:
+    name: routeros
+  writeConnectionSecretToRef:
+    name: routeros-network-iac
+    namespace: crossplane-system
+  forProvider:
+    source: Inline
+    env:
+      - name: ROS_HOSTURL
+        value: apis://172.16.100.1:8729
+      - name: ROS_INSECURE
+        value: "true"
+      - name: ROS_USERNAME
+        secretKeyRef:
+          namespace: crossplane-system
+          name: routeros-iac
+          key: username
+      - name: ROS_PASSWORD
+        secretKeyRef:
+          namespace: crossplane-system
+          name: routeros-iac
+          key: password
+    vars:
+      - key: bridge_interface
+        value: bridge
+      - key: ai_compute_hosts
+        value: 172.16.100.189
+    module: |
+      # ---------------------------------------------------------------------
+      # STAGE 1 — additive groundwork only, zero behavioural change:
+      #   * new VLAN interfaces (no ports assigned; inert until stage 2 makes
+      #     the bridge VLAN-aware)
+      #   * gateway addresses on those VLANs
+      #   * firewall address-lists (not referenced by any rule yet)
+      # Nothing that already exists on the router is modified or deleted.
+      # ---------------------------------------------------------------------
+      variable "bridge_interface" {
+        type        = string
+        default     = "bridge"
+        description = "Bridge the VLAN interfaces are defined on (RB5009 default: bridge)"
+      }
+
+      variable "ai_compute_hosts" {
+        type        = string
+        default     = "172.16.100.189"
+        description = "Comma-separated addresses of AI compute (inference box + DGX Sparks once located)"
+      }
+
+      locals {
+        managed_by = "managed-by:crossplane devops-cluster"
+
+        vlans = {
+          mgmt    = { vlan_id = 10, name = "vlan10-mgmt", cidr = "172.16.10.0/24" }
+          trusted = { vlan_id = 20, name = "vlan20-trusted", cidr = "172.16.20.0/24" }
+          lab     = { vlan_id = 30, name = "vlan30-lab", cidr = "172.16.30.0/24" }
+          srv     = { vlan_id = 40, name = "vlan40-srv", cidr = "172.16.40.0/24" }
+          guest   = { vlan_id = 50, name = "vlan50-guest", cidr = "172.16.50.0/24" }
+        }
+        # No VLAN for the VPN zone: WireGuard clients live on the wireguard
+        # interface's own subnet (172.16.60.0/24, stage 3).
+
+        ai_compute = [for ip in split(",", var.ai_compute_hosts) : trimspace(ip)]
+
+        address_lists = {
+          "lan-nets"       = ["172.16.100.0/24"]
+          "mgmt-nets"      = ["172.16.10.0/24", "172.16.60.0/24"]
+          "vpn-clients"    = ["172.16.60.0/24"]
+          "trusted-nets"   = ["172.16.20.0/24"]
+          "lab-nets"       = ["172.16.30.0/24"]
+          "srv-nets"       = ["172.16.40.0/24"]
+          "guest-nets"     = ["172.16.50.0/24"]
+          "ai-compute"     = local.ai_compute
+          "wan-restricted" = local.ai_compute
+        }
+
+        address_list_entries = flatten([
+          for list_name, addresses in local.address_lists : [
+            for address in addresses : {
+              list    = list_name
+              address = address
+            }
+          ]
+        ])
+      }
+
+      resource "routeros_interface_vlan" "vlan" {
+        for_each  = local.vlans
+        interface = var.bridge_interface
+        name      = each.value.name
+        vlan_id   = each.value.vlan_id
+        comment   = local.managed_by
+      }
+
+      resource "routeros_ip_address" "vlan_gateway" {
+        for_each  = local.vlans
+        address   = format("%s/%s", cidrhost(each.value.cidr, 1), split("/", each.value.cidr)[1])
+        interface = routeros_interface_vlan.vlan[each.key].name
+        comment   = local.managed_by
+      }
+
+      resource "routeros_ip_firewall_addr_list" "entries" {
+        for_each = { for entry in local.address_list_entries : "${entry.list}|${entry.address}" => entry }
+        list     = each.value.list
+        address  = each.value.address
+        comment  = local.managed_by
+      }
+
+      output "vlans_created" {
+        value = { for k, v in routeros_interface_vlan.vlan : k => "${v.name} (gateway ${routeros_ip_address.vlan_gateway[k].address})" }
+      }
+
+      output "address_list_names" {
+        value = sort(distinct([for entry in local.address_list_entries : entry.list]))
+      }

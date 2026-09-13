@@ -1,0 +1,34 @@
+---
+apiVersion: opentofu.upbound.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: routeros
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  # This HCL is injected into every Workspace that references this
+  # ProviderConfig. Keep ALL terraform{} blocks here — provider-opentofu does
+  # not persist state itself, so modules MUST use a remote backend.
+  configuration: |
+    terraform {
+      required_providers {
+        routeros = {
+          source  = "terraform-routeros/routeros"
+          version = "~> 1.99.0"
+        }
+      }
+
+      # State lives in a Secret in the cluster (one per ProviderConfig +
+      # workspace secret_suffix). Losing it means tofu re-creates what already
+      # exists on the router, so back it up with the rest of the cluster.
+      backend "kubernetes" {
+        secret_suffix     = "providerconfig-routeros"
+        namespace         = "crossplane-system"
+        in_cluster_config = true
+      }
+    }
+
+    # Credentials come from the environment (ROS_HOSTURL/ROS_USERNAME/
+    # ROS_PASSWORD/ROS_INSECURE) set per Workspace — no secrets in this file.
+    provider "routeros" {}

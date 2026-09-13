@@ -1,0 +1,64 @@
+---
+apiVersion: opentofu.upbound.io/v1beta1
+kind: Workspace
+metadata:
+  name: routeros-smoke
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  providerConfigRef:
+    name: routeros
+  writeConnectionSecretToRef:
+    name: routeros-smoke
+    namespace: crossplane-system
+  forProvider:
+    source: Inline
+    env:
+      # RouterOS API-SSL (ports open on the RB5009). REST would need web-ssl
+      # enabled; apis:// works on the stock API-SSL service.
+      - name: ROS_HOSTURL
+        value: apis://172.16.100.1:8729
+      # RouterOS ships a self-signed certificate; pin it later via
+      # ROS_CA_CERTIFICATE once a real cert is installed.
+      - name: ROS_INSECURE
+        value: "true"
+      - name: ROS_USERNAME
+        secretKeyRef:
+          namespace: crossplane-system
+          name: routeros-iac
+          key: username
+      - name: ROS_PASSWORD
+        secretKeyRef:
+          namespace: crossplane-system
+          name: routeros-iac
+          key: password
+    module: |
+      # Read-only smoke test: proves API connectivity, credentials and schema
+      # compatibility. Creates and changes NOTHING on the router (data sources
+      # only). Its outputs land in the Workspace status and connection secret.
+      data "routeros_system_resource" "this" {}
+
+      data "routeros_interfaces" "all" {}
+
+      data "routeros_ip_addresses" "all" {}
+
+      output "board_name" {
+        value = data.routeros_system_resource.this.board_name
+      }
+
+      output "routeros_version" {
+        value = data.routeros_system_resource.this.version
+      }
+
+      output "architecture" {
+        value = data.routeros_system_resource.this.architecture_name
+      }
+
+      output "interface_count" {
+        value = length(data.routeros_interfaces.all.interfaces)
+      }
+
+      output "existing_addresses" {
+        value = [for a in data.routeros_ip_addresses.all.addresses : "${a.interface} -> ${a.address}"]
+      }

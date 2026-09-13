@@ -1,0 +1,24 @@
+---
+# Intended PRODUCTION policy, rehearsed here first.
+# If this MR behaves (create once, observe, no re-create loop), the same YAML
+# is promoted to hetzner-k8s with providerConfigRef: bao-hnatekmar-xyz.
+apiVersion: vault.vault.upbound.io/v1alpha1
+kind: Policy
+metadata:
+  name: atuin-ro
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  providerConfigRef:
+    name: bao-staging
+  forProvider:
+    name: atuin-ro
+    policy: |
+      # Agent read-only access to its own credential subtree only.
+      path "hermes/data/agents/atuin/*" {
+        capabilities = ["read"]
+      }
+      path "hermes/metadata/agents/atuin/*" {
+        capabilities = ["read", "list"]
+      }

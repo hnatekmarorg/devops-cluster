@@ -1,0 +1,35 @@
+# DISPOSABLE staging OpenBao (dev mode, in-memory). NEVER for real secrets.
+#
+# Purpose: rehearse Crossplane (upbound provider-vault) auth/policy resources
+# and measure whether an AuthBackendRoleSecretID reconciler causes a request
+# storm — the failure mode that previously took out the production OpenBao
+# while it was still on the file storage backend.
+#
+# Teardown: delete this directory (or: argocd app delete bao-staging --cascade)
+global:
+  tlsDisable: true
+server:
+  dev:
+    enabled: true
+    devRootToken: "root"   # dev-mode fixed token; instance is in-memory, no ingress, holds nothing real
+  standalone:
+    enabled: false
+  dataStorage:
+    enabled: false
+  auditStorage:
+    enabled: false          # note: this is also the chart default — see README
+  ingress:
+    enabled: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+ui:
+  enabled: false
+injector:
+  enabled: false
+csi:
+  enabled: false

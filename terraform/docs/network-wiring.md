@@ -39,7 +39,7 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 | Device | State | Live ports with measured occupants |
 |---|---|---|
 | **RB5009** (`172.16.100.1`, 7.12.1) | one bridge, LAN IP `172.16.100.1/24` on **`ether2`** — a bridge slave whose link is **down** (the plan's cut-over risk #1) | `ether4` UP · 1 Gb → CRS326 `ether18` (33 MACs behind it); `ether5` UP → 3 MACs, AP or small switch **TBC**; `sfp-sfpplus1` = the work subnet `172.16.101.1/24` |
-| **CRS326-24G-2S+** (`172.16.100.2`, **7.5** from 2022) | 24 ports + 2 SFP+, one flat bridge; 6 ports live | `ether18` → RB5009; **`balteus`** = an **LACP bond** (`ether1`+`ether2`, 802.3ad) → the PVE host, **18 guest NICs** — **`ether1` of that bond is down**, so it runs degraded at 1 Gb; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; **`bukefalos`** = a second LACP bond (`ether23`+`ether24`), idle, waiting for that server. Two 10 G SFP+ ports sit unused while the server side runs at 1 G |
+| **CRS326-24G-2S+** (`172.16.100.2`, **7.5** from 2022) | 24 ports + 2 SFP+, one flat bridge; 6 ports live | `ether18` → RB5009; **`balteus`** = an **LACP bond** (`ether1`+`ether2`, 802.3ad) → the PVE host, **18 guest NICs** — one member was **repurposed by design** as the 10 Gbps NAS↔fabric link (the cable now lands on CRS804 `ether2`), so the bond runs on a single 1 Gb member; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; **`bukefalos`** = a second LACP bond (`ether23`+`ether24`), idle, waiting for that server. Two 10 G SFP+ ports sit unused while the server side runs at 1 G |
 | **CSS610-8G-2S+** (SwOS 2.21, `.117`) | **no RouterOS API** → outside IaC, hand-config only | *Not a leaf:* the measured MAC table shows it is the middle hop for **charon (work PC, `.227`)**, the **spark1-4 management NICs**, and **CRS804's management uplink** |
 | **CRS804-4DDQ** (`.113`, 7.23.3) | **two bridges, and only one of them carries traffic** | `bridge1`: **`ether1` only — management access, nothing else** (~1 GiB in three weeks; being single-port, CPU bridging is expected here, not a fault). `bridge-compute` (`10.0.0.1/24`) is the **storage + RDMA fabric by design**: 4× QSFP-DD at `200G-baseCR4` → spark1..4 (**hardware-offloaded**, ~300 TiB each way since boot) plus **`ether2` → balteus' 10G NAS link** (~43.6 TiB received since boot, **software-bridged**, no drops or errors, average ~24 Mbit/s) |
 | **Endpoints** | — | `balteus` (Proxmox, 46 guests, 19 running) carries the live devops cluster `main-*` and the VIP `.15` (ARP'd by `main-4`); the Sparks have a management NIC on the flat LAN (`.110/.112/.136/.137`) **and** a RoCE NIC on the fabric |
@@ -52,6 +52,7 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 4. The RoCE fabric lives on a **separate bridge** on the CRS804, so "leave the fabric alone" is a **per-bridge** decision, not a per-port one.
 5. **CSS610 is a middle hop, not a leaf** (this pass): cutting or mis-trunking it takes out the work PC, the Sparks' management *and* the spine's own management.
 6. **`balteus` and `bukefalos` are LACP bonds, not renamed ports** — `ether1`+`ether2` and `ether23`+`ether24` respectively. For the carve this means the *bond* is the bridge port that carries the trunk; slaves are never configured individually.
+7. **The NAS path and the balteus bond are the same port, moved.** The second bond member now terminates on CRS804 `ether2` (bridge-compute) and carries a balteus VM NIC — that is TrueNAS reaching the Sparks at 10 Gbps. One cable, two facts.
 
 ### Resolved on 2026-09-14 (Martin)
 
@@ -111,7 +112,7 @@ staying intact.
 
 | # | Item | Why it matters |
 |---|---|---|
-| 1 | ~~CRS326 `ether2` is UP with nothing learned~~ **resolved:** it is the second member of the `balteus` LACP bond — but **`ether1` of that bond is down**, so the PVE host currently has a single 1 Gb path instead of two. Cable/NIC check | a degraded bond is invisible until something saturates one member |
+| 1 | ~~CRS326 `ether2` / the degraded `balteus` bond~~ **resolved and by design** (Martin, 2026-09-14): one bond member was repurposed to give the NAS a 10 Gbps path onto the Spark fabric — that cable is the CRS804 `ether2` link measured below, carrying the NAS VM's traffic. Flat-LAN side of balteus is 1 Gb; the NAS path is 10 Gb. Nothing to fix | — |
 | 2 | The RB5009 `ether5` segment (3 MACs) — AP or small switch? | decides trusted vs guest/IoT placement |
 | 3 | Is the HPE box on `ether7` the machine the `bukefalos` port is reserved for? | if yes, the port name is stale; if not, `bukefalos` is unplugged |
 | 4 | Which AP can tag VLANs per SSID? | gates guest + IoT on WiFi (constraint 3) |

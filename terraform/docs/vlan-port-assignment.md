@@ -35,7 +35,7 @@ as the parking VLAN** (new, for tag hygiene). `172.16.60.0/24` stays reserved fo
 
 | Port | Now | Proposed | Class | Notes |
 |---|---|---|---|---|
-| `ether1`+`ether2` | **LACP bond `balteus`** (802.3ad, L3+L4 hash) · `ether1` **DOWN** | bond as **trunk**, tagged `10,20,30,40,70`, pvid 1 → later parking | — | carries all 18 guest NICs. **Two findings:** the bond runs degraded on one member, and the flat-LAN side is 1 Gb — worth fixing/upgrading outside the carve |
+| `ether1`+`ether2` | **LACP bond `balteus`** (802.3ad, L3+L4 hash) · runs on **one member** | bond as **trunk**, tagged `10,20,30,40,70`, pvid 1 → later parking | — | carries all 18 guest NICs. The second member was **repurposed by design** into the 10 Gbps NAS↔fabric link (now on CRS804 `ether2`), so 1 Gb on the flat-LAN side is expected, not a fault. Both CRS326 10 G SFP+ ports remain free if that ever needs lifting |
 | `ether3` | down | **access, pvid 10** | mgmt | **escape port** — pre-assign in wave A |
 | `ether4` | **UP → CSS610** | **trunk**, tagged `10,30` (+`10` for the CRS804 mgmt uplink) | — | the CSS610 is the middle hop for charon, the Sparks' management and the spine's management |
 | `ether5`,`ether6`,`ether8`–`ether15`,`ether17`,`ether19`–`ether22` | down | spare (available for the gaming PC, IoT, printers as they are classified) | — | |

@@ -39,7 +39,7 @@ as the parking VLAN** (new, for tag hygiene). `172.16.60.0/24` stays reserved fo
 | `ether3` | down | **access, pvid 10** | mgmt | **escape port** — pre-assign in wave A |
 | `ether4` | **UP → CSS610** | **trunk**, tagged `10,30` (+`10` for the CRS804 mgmt uplink) | — | the CSS610 is the middle hop for charon, the Sparks' management and the spine's management |
 | `ether5`,`ether6`,`ether8`–`ether15`,`ether17`,`ether19`–`ether22` | down | spare (available for the gaming PC, IoT, printers as they are classified) | — | |
-| `ether7` | **UP → HPE box #2** `3c:ec:ef:73:09:9d` | **access, pvid 40** | srv | the second physical server, to be integrated |
+| `ether7` | **UP → balteus' IPMI** `3c:ec:ef:73:09:9d` (router DNS: `ipmi-balteus` → `.46`) | **access, pvid 10** | mgmt | **corrected 2026-09-14** (Martin confirmed the balteus ports): this is balteus' out-of-band port, not a second server. IPMIs live in the mgmt VLAN with the rest of the out-of-band plane |
 | `ether16` | **UP → dumb switch → AP + TV + gaming PC** | **access, pvid 70** | iot | **one cable, one segment** (Martin, 2026-09-14): the dumb switch cannot tag, so the AP, the TV and the gaming PC all land in the IoT VLAN. Everything on it reaches internal networks over the VPN |
 | `ether18` | **UP → RB5009** | **trunk**, tagged `10,20,30,40,50,70`, pvid 1 → later tagged-only + pvid 999 | — | |
 | `ether23`+`ether24` | **LACP bond `bukefalos`** (down) | bond as **trunk** when the server arrives | srv | already cabled for a 2-port LACP bond |

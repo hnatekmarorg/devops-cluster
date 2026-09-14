@@ -40,10 +40,16 @@ t-mobile    bridge      true                true
 
 The PPPoE client is bound to **`bridge`**, not to a physical port or a VLAN. Consequences:
 
-- PPPoE discovery and session frames ride the **same flat L2 domain as every LAN device**, which is
-  why three ISP-side MACs (`18:5b:00:…`, `28:de:e5:…`, `c4:b8:b4:…`) sit in the LAN bridge's host
-  table on `ether5`, alongside a router MAC — the WAN is being flooded into the LAN today;
-- any LAN device can see (and in principle attempt to speak to) the ISP's PPPoE concentrator;
+- the WAN port is inside the **same broadcast domain as every LAN device**. Precisely: the bridge
+  floods the *client's* PPPoE discovery/session frames (broadcast/multicast) to every port, while the
+  ISP's unicast replies are delivered only to the router's session MAC — so LAN devices can *see* the
+  ISP's concentrator (and, with PPPoE client software, attempt their own session), but they are not
+  handed the ISP's traffic. The evidence is the MAC table: three ISP-side MACs
+  (`18:5b:00:…`, `28:de:e5:…`, `c4:b8:b4:…`) learned on `ether5` alongside a router MAC;
+- **which port is which, measured not assumed** (2026-09-14): 20 MB downloaded from a LAN host moved
+  `ether5` **rx +24.76 MiB** (data arriving from the ISP) and `ether4` **tx +24.64 MiB** (data handed
+  to the LAN); every other port stayed at zero. So `ether5` is the WAN uplink and `ether4` is the LAN
+  uplink to the CRS326 — confirmed by counters rather than by reading cables;
 - and it is the single most important thing to get right **before** the VLAN carve: a port that
   carries the WAN while being a bridge member will be handed a VLAN class by any mechanical
   application of the table above, and the WAN will move or break with it.

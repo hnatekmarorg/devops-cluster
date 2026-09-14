@@ -1,0 +1,10 @@
+# actionlint configuration (https://github.com/rhysd/actionlint).
+#
+# The workflows run on the estate's self-hosted, on-prem ARC scale set — a custom
+# label actionlint cannot know. Declaring it here keeps `actionlint` useful as a
+# pre-merge check of the CI configuration itself:
+#
+#   actionlint -color .github/workflows/*.yml
+self-hosted-runner:
+  labels:
+    - gha-runner-scale-set-hnatekmarorg

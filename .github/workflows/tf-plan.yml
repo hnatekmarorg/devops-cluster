@@ -115,13 +115,25 @@ jobs:
             let plan = '';
             try { plan = fs.readFileSync(process.env.PLAN_PATH, 'utf8'); }
             catch (e) { plan = '(plan output not found — see the job log)'; }
+            // The provider reports fields it does not model yet (trusted_ra, trusted_dhcpv6,
+            // managed, vrf, status…) as multi-line warnings. Known-benign, and they bury the diff.
+            const rawLength = plan.length;
+            plan = plan
+              .split('\n')
+              .filter((l) => !/MikrotikResourceDataToTerraform/.test(l)
+                && !/^Warning: Field .* not found in the schema/.test(l)
+                && !/^Schema development: /.test(l)
+                && !/^\(and \d+ more similar warnings elsewhere\)/.test(l))
+              .join('\n')
+              .replace(/\n{3,}/g, '\n\n');
+            const stripped = rawLength - plan.length;
             const limit = 55000;
             if (plan.length > limit) {
               plan = plan.slice(0, limit) + '\n… truncated — full output in the job log';
             }
             const body = [
               marker,
-              '### RouterOS plan (stage 1 — additive)',
+              '### RouterOS plan (read-only)',
               '',
               '<details><summary>tofu plan</summary>',
               '',
@@ -131,8 +143,11 @@ jobs:
               '',
               '</details>',
               '',
-              '_Read-only: this plan was computed with the `agent-ro` (read) credential and applies nothing. Apply happens on merge via `tf-apply`._',
-            ].join('\n');
+              '_Read-only: computed with the `ci-ro` (read) credential; applies nothing. Apply happens on merge via `tf-apply`._',
+              stripped > 0
+                ? `_${stripped} characters of provider schema warnings removed (fields the provider does not model yet: \`trusted_ra\`, \`trusted_dhcpv6\`, \`managed\`, \`vrf\`, \`status\`)._`
+                : '',
+            ].filter(Boolean).join('\n');
 
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
@@ -159,9 +174,9 @@ jobs:
             echo "log above) are the one-time bootstrap steps listed in"
             echo "\`terraform/README.md\`:"
             echo
-            echo "1. RouterOS users \`iac\` (write) and \`agent-ro\` (read) — Martin, on the RB5009"
-            echo "2. The credentials reaching this runner (cluster Secret, or a sops file + age key)"
-            echo "3. The state store (MinIO bucket + keys, or the \`kubernetes\` backend)"
+            echo "1. RouterOS identities: \`ci-ro\` (read, in a dedicated group with api/read/test) and \`iac\` (write)"
+            echo "2. The credentials reaching this runner — role-scoped GitHub secrets (repo: read pair; environment \`routeros-production\`: write pair)"
+            echo "3. The state store: the MinIO bucket on the NAS (\`tofu-state\`, key policy in \`terraform/secrets/\`)"
             echo
             echo "Nothing here needs a code change — the workflow arms itself as soon"
             echo "as those exist."

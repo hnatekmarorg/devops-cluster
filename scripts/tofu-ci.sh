@@ -190,9 +190,19 @@ init)
   log "tofu-ci: init (role ${ROLE}, backend s3)"
   exec tofu init -input=false "${bargs_arr[@]}" "$@"
   ;;
-plan | apply | refresh | show | output | state | import | destroy | force-unlock | taint | untaint)
+plan | apply | refresh | import | destroy | taint | untaint)
+  # Anything that reads or writes the device needs a RouterOS identity.
   resolve_creds || exit 78
   log "tofu-ci: ${cmd} (role ${ROLE}, credentials from ${CRED_SOURCE})"
+  exec tofu "$cmd" "$@"
+  ;;
+show | output | state | force-unlock)
+  # State-only operations: they never talk to the router, so requiring an identity here is
+  # wrong and was actively harmful — the apply job carries *only* the write pair (that
+  # separation is deliberate), and its post-apply summary asked for the default `read` role,
+  # dying with exit 78 *after* a successful apply. A reporting step must never be able to
+  # fail a run that already changed the device.
+  log "tofu-ci: ${cmd} (state only — no RouterOS identity required)"
   exec tofu "$cmd" "$@"
   ;;
 *)

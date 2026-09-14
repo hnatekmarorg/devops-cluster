@@ -65,12 +65,3 @@ resource "routeros_interface_pppoe_client" "t_mobile" {
   }
 }
 
-resource "routeros_interface_bridge_port" "ether5" {
-  bridge    = "bridge"
-  interface = "ether5"
-  pvid      = 1
-
-  # Declared because it exists on the device — a baseline that omits it would
-  # plan a change on adoption (`defconf`, RouterOS' default-config marker).
-  comment = "defconf"
-}

@@ -33,13 +33,13 @@ env:
   ROS_HOSTURL: ${{ vars.ROS_HOSTURL || 'api://172.16.100.1:8728' }}
   TF_STATE_BACKEND: ${{ vars.TF_STATE_BACKEND || 's3' }}
   TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-  # In-cluster service, plain HTTP — same path other clouds-native consumers in
-  # this estate use (the registry cache). It avoids the public ingress, which
-  # matters here: 443 is forwarded to the edge Caddy box, so
-  # console-minio.hnatekmar.xyz is reachable from the internet, and the state of
-  # the router should not be fetched over a publicly-advertised hostname.
-  # Break-glass alternative from a LAN laptop: https://console-minio.hnatekmar.xyz
-  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT || 'http://minio.minio.svc.cluster.local:9000' }}
+  # Measured, not assumed: `http://minio.minio.svc.cluster.local:9000` does NOT
+  # resolve from the runner (`lookup ... on 10.96.0.10:53: no such host`), so the
+  # service name in Hnatekmar/bootstrap-kubernetes belongs to a different
+  # cluster/generation. The TLS endpoint below is the one verified to work from
+  # both the runner and a LAN host — see terraform/README.md for the trade-off
+  # and the open in-cluster question.
+  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT || 'https://console-minio.hnatekmar.xyz' }}
   TF_STATE_KEY: ${{ vars.TF_STATE_KEY || 'routeros/rb5009.tfstate' }}
   # MinIO advertises `europe` (x-amz-bucket-region); signing with anything else
   # risks a bucket-region mismatch error.

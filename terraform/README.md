@@ -141,10 +141,20 @@ and `scripts/tofu-ci.sh`:
   europe`); the backend therefore sets `skip_region_validation=true` next to its other
   skip flags. Signing with a real AWS region name would mean signing with something MinIO
   does not advertise.
-- **Endpoint = the in-cluster service** (`http://minio.minio.svc.cluster.local:9000`), the
-  same plain-HTTP path the registry cache uses, so state never travels over the public
-  ingress. `https://console-minio.hnatekmar.xyz` stays documented as the LAN break-glass
-  path (and is what verified the bucket + policy from the Hermes host).
+- **Endpoint — corrected by measurement.** The first choice was the in-cluster service
+  (`http://minio.minio.svc.cluster.local:9000`, the name used by
+  `Hnatekmar/bootstrap-kubernetes/templates/registry.yaml`), on the reasoning that state
+  should never cross the public ingress. **That name does not resolve from the runner**:
+  `dial tcp: lookup minio.minio.svc.cluster.local on 10.96.0.10:53: no such host` — the
+  reference evidently belongs to a different cluster/generation than the ARC scale set.
+  In use: **`https://console-minio.hnatekmar.xyz`** (the S3 API; `minio.hnatekmar.xyz` is
+  the console — the chart's naming is inverted), TLS, path-style, verified working from both
+  the runner and a LAN host.
+  **Open follow-up:** find the in-cluster name for the cluster the runner runs in — this
+  needs `kubectl get svc -n minio` there (or confirmation of which cluster that is). It is
+  worth resolving before Phase 3: over the public endpoint every state read and write
+  hairpins through the router (`443` → `.30` → kong), so the router's state currently
+  depends on the router. Not a blocker today, a real hazard during the VLAN carve.
 
 Alternative: the **`kubernetes` backend** (`backend-kubernetes.tf.example`) stores
 state in a Secret in the devops cluster. No MinIO dependency, less moving parts —

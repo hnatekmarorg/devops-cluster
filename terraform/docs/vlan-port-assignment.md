@@ -61,7 +61,11 @@ as the parking VLAN** (new, for tag hygiene). `172.16.60.0/24` stays reserved fo
 list from its UI, or a photo of the front panel with labels — the other session's diagram lists
 its occupants but not which physical port is which.
 
-## CRS804 (`172.16.100.113`, 7.23.3 · chip Marvell-98DX7335)
+## CRS804 (`172.16.100.113`, 7.24.2 · chip Marvell-98DX7335)
+
+Note the two island networks this box touches: `bridge-compute` carries **`192.168.0.0/24`** (the
+Spark fabric, with the NAS at `.0.250` over balteus' `vmbr4`) — *not* the `10.0.0.0/24` that the
+switch's own address might suggest.
 
 | Bridge | Port | Now | Proposed |
 |---|---|---|---|

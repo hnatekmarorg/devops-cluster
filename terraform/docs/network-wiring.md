@@ -36,7 +36,7 @@ because the guests below are bridges between the islands and the LAN.
 
 | Island | Fabric | Addressing | Reachable from the LAN? |
 |---|---|---|---|
-| **Compute / RDMA fabric** | CRS804 `bridge-compute` — 4× QSFP-DD at 200 G to the Sparks, `ether2` 10 G to balteus | switch `10.0.0.1/24`; Sparks' fabric NICs `192.168.0.x`; PFC `pfc-roce`, jumbo MTU 9000 | no (one bridge, no LAN member) |
+| **Compute / RDMA fabric** | CRS804 `bridge-compute` — 4× QSFP-DD at 200 G to the Sparks, `ether2` 10 G to balteus | the fabric itself is **`192.168.0.0/24`**; the **NAS is `192.168.0.250`** there; the switch's own address on that bridge is `10.0.0.1/24`; PFC `pfc-roce`, jumbo MTU 9000. balteus' `vmbr4` (over `eno2`) is the NAS↔fabric link | no (one bridge, no LAN member) |
 | **Storage network** | **CRS317-1G-16S+** (16×SFP+ 10 G, management port *empty*) → air-gapped | **`192.168.88.0/24`**; balteus' own address `192.168.88.20` on `vmbr2` over `bond0`; the NAS (TrueNAS) at `.88.25` | no — deliberately |
 
 **Dual-homed guests** (measured 2026-09-14 from the PVE API — a LAN NIC *and* a storage NIC,

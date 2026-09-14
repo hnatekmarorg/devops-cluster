@@ -107,10 +107,19 @@ backend. Default (**Q8**): **S3 with in-bucket locking** (`use_lockfile`, OpenTo
 cluster**, path-style, with the STS/IAM validation calls skipped since MinIO does
 not implement them.
 
-Checked on 2026-09-14: `minio.hnatekmar.xyz` answered **502** and its PV points at
-the stale NFS server `.88.25` (the same staleness the plan already flags for
-`devops-cluster`). Until that is repaired and a bucket + key exist, the plan and
-apply jobs skip instead of failing (see the arming switch below).
+**Status (2026-09-14):** MinIO was returning 502 earlier the same day (PV on the stale
+NFS server `.88.25`) and is **healthy again** — `health/live` and `health/cluster` answer
+200, the S3 API answers, and it advertises `x-amz-bucket-region: europe`. Two consequences
+are baked into the workflows: sign with region **`europe`**, and default the endpoint to the
+**in-cluster service** (`http://minio.minio.svc.cluster.local:9000`, the same plain-HTTP
+path the registry cache uses) rather than the public hostname — `443/tcp` is forwarded to
+the edge Caddy box, so `console-minio.hnatekmar.xyz` (S3 API) and `minio.hnatekmar.xyz`
+(console) are reachable from the internet. Acceptable as a break-glass path from a LAN
+laptop, not as the default for router state.
+
+Still needed before the plan/apply jobs do anything: the **bucket** (`tofu-state`) and a
+**key pair scoped to it**. Until those exist the jobs skip with an explanation instead of
+failing (see the arming switch below).
 
 Alternative: the **`kubernetes` backend** (`backend-kubernetes.tf.example`) stores
 state in a Secret in the devops cluster. No MinIO dependency, less moving parts —

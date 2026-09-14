@@ -56,9 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # tofu_wrapper: false — the action's default wrapper is a Node script and
+      # this runner image has no `node` on PATH (only the runner's bundled copy),
+      # so the wrapper dies with "/usr/bin/env: 'node': No such file or directory".
+      # Nothing here needs the wrapper: the workflows call tofu directly.
       - uses: opentofu/setup-opentofu@v1
         with:
           tofu_version: 1.12.6
+          tofu_wrapper: false
 
       - name: Format check
         working-directory: terraform/routeros

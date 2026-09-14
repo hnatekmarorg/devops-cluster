@@ -6,6 +6,7 @@ Two views of the same network, on purpose:
 |---|---|---|
 | **Architecture & intent** | [`network-wiring.svg`](network-wiring.svg) | the shape of the estate, the fabric, the DNS/DHCP trap, and what the carve is *for* — the narrative a reviewer reads first |
 | **Port-level map** | [`network-port-map.svg`](network-port-map.svg) | every live port with its measured occupant and MAC count, plus the proposed class per segment — the artifact stage 2 is actually written against |
+| **Current state (as-is map)** | [`network-map-current.svg`](network-map-current.svg) | the whole estate as measured — physical/L2 in one panel, every network (LAN, both islands, WAN, vestigial, reserved) in the other |
 | **Tagging reference** | [`vlan-tagging.md`](vlan-tagging.md) | where an 802.1Q tag is inserted and stripped, who adds tags here and who never will, and the three gotchas that lock people out |
 | **Port assignment (stage 2 contract)** | [`vlan-port-assignment.md`](vlan-port-assignment.md) | per device, per port: access vs trunk, PVID, tagged set, class — the table the module gets written from |
 

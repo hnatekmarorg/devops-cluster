@@ -18,20 +18,18 @@
 # gets a class the first time someone applies a port table mechanically, and the internet
 # moves with it. Fixing it is what makes "the WAN is never in a LAN VLAN" a property.
 #
-# Three waves, each its own commit, so the risky step is isolated
-# -------------------------------------------------------------
-#   1  import the two objects as they are      → expect: 2 to import, 0 to change
-#   2a move the PPPoE client onto ether5       → expect: 1 to change  (session re-establishes)
-#   2b take ether5 out of the bridge           → expect: 1 to destroy  (no WAN interruption)
-#
-# 2a first, deliberately: once the session rides the port directly, removing the bridge
-# membership cannot disturb the WAN at all.
+# Two stages, each its own commit:
+#   1  adopt the objects as they are   → imports only, 0 to change
+#   2  the change itself (below)       → one change, then the port leaves the bridge
 
 # ---------------------------------------------------------------------------
-# Wave 1 — adoption only. Nothing here changes behaviour: this file's share of
-# the plan is "1 to import, 0 to change", which is the proof that the baseline
-# is faithful. Delete the import block once the first apply has run (it becomes
-# a no-op, but it is noise afterwards).
+# Wave 2 — the WAN leaves the LAN bridge: the PPPoE client moves onto the ISP's own port
+# (`ether5`), and that port stops being a bridge member. Until this lands, the bridge carries
+# the session's frames to `ether5` — and the ISP's frames into every LAN port with them.
+#
+# Order is forced by the device: RouterOS will not bind a PPPoE client to a bridge slave
+# (`invalid`, "Client is on slave interface"), so the port leaves the bridge first and the
+# client binds to it after. Rollback is the same order reversed.
 # ---------------------------------------------------------------------------
 import {
   to = routeros_interface_pppoe_client.t_mobile
@@ -40,7 +38,7 @@ import {
 
 resource "routeros_interface_pppoe_client" "t_mobile" {
   name              = "t-mobile"
-  interface         = "bridge" # wave 2a moves this to ether5
+  interface         = "ether5" # wave 2a: off the bridge, onto the ISP uplink's own port
   add_default_route = true
   use_peer_dns      = true
   disabled          = false

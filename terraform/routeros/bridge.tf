@@ -12,10 +12,10 @@
 # Measured plan for this PR (read-only, against the live RB5009):
 #     10 to import, 0 to add, 0 to change, 0 to destroy
 #
-# In scope: the bridge and all nine of its ports — the exact set the carve's first steps
-# touch (`ether4` → CRS326, `ether5` the WAN, `ether1` the escape port). DHCP, firewall, NAT
-# and the addresses follow as their own waves; the first carve steps do not need them, and
-# each wave deserves its own review.
+# In scope: the bridge and its ports — the exact set the carve's first steps touch
+# (`ether4` → CRS326, `ether1` the escape port). `ether5`, the ISP uplink, was adopted in this
+# wave and **removed in wave 2b**: once the WAN is not a bridge member, declaring it here would
+# fight the intent. DHCP, firewall, NAT and the addresses follow as their own waves.
 #
 # Attribute values are exactly what the device reports — generated from it, then trimmed of
 # unset/computed noise. They are not preferences, they are the record. `comment = "defconf"`
@@ -53,11 +53,6 @@ import {
 import {
   to = routeros_interface_bridge_port.ether4
   id = "*2"
-}
-
-import {
-  to = routeros_interface_bridge_port.ether5
-  id = "*3"
 }
 
 import {
@@ -218,40 +213,6 @@ resource "routeros_interface_bridge_port" "ether4" {
   hw                      = true
   ingress_filtering       = true
   interface               = "ether4"
-  internal_path_cost      = 10
-  learn                   = "auto"
-  multicast_router        = "temporary-query"
-  mvrp_applicant_state    = "normal-participant"
-  mvrp_registrar_state    = "normal"
-  path_cost               = "10"
-  point_to_point          = "auto"
-  priority                = "0x80"
-  pvid                    = 1
-  restricted_role         = false
-  restricted_tcn          = false
-  tag_stacking            = false
-  trusted                 = false
-  unknown_multicast_flood = true
-  unknown_unicast_flood   = true
-}
-
-# **the ISP uplink** (Huawei in bridge mode). Measured by counters during a download: 24.76 MiB
-# received here while ether4 handed 24.64 MiB to the LAN. The PPPoE client rides it after WAN
-# wave 2; **the carve must never tag this port**.
-resource "routeros_interface_bridge_port" "ether5" {
-  auto_isolate            = false
-  bpdu_guard              = false
-  bridge                  = "bridge"
-  broadcast_flood         = true
-  comment                 = "defconf"
-  disabled                = false
-  edge                    = "auto"
-  fast_leave              = false
-  frame_types             = "admit-all"
-  horizon                 = "none"
-  hw                      = true
-  ingress_filtering       = true
-  interface               = "ether5"
   internal_path_cost      = 10
   learn                   = "auto"
   multicast_router        = "temporary-query"

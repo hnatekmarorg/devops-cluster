@@ -40,9 +40,13 @@ not a GitHub-hosted runner. Two reasons, both structural:
 1. The RouterOS API is address-bound to the LAN subnets and is not
    internet-exposed. A cloud runner simply cannot reach `172.16.100.1:8728`;
    publishing the API to fix that is a much worse idea than the runner choice.
-2. The runner lives in the devops cluster, which the agent has no write access
-   to. The split is therefore real: the agent authors PRs, the pipeline holds the
-   credential and applies.
+2. The runner is **not** in the devops cluster — corrected 2026-09-14 by looking
+   at the cluster directly: there is no `arc-systems` namespace there, and MinIO
+   lives there. The runner belongs to the *other* on-prem cluster, bootstrapped by
+   `Hnatekmar/bootstrap-kubernetes`. The agent has no access to that one, so the
+   split still holds: the agent authors PRs, the pipeline holds the credential and
+   applies. (It does now hold a testing-cluster kubeconfig for *this* cluster,
+   which is how the correction was measured — see `docs/` and the vault note.)
 
 The runner pod also reaches the internet through a proxy (ARC `proxy` values in
 `Hnatekmar/bootstrap-kubernetes`), so every workflow sets `NO_PROXY` for the LAN
@@ -152,11 +156,15 @@ and `scripts/tofu-ci.sh`:
   In use: **`https://console-minio.hnatekmar.xyz`** (the S3 API; `minio.hnatekmar.xyz` is
   the console — the chart's naming is inverted), TLS, path-style, verified working from both
   the runner and a LAN host.
-  **Open follow-up:** find the in-cluster name for the cluster the runner runs in — this
-  needs `kubectl get svc -n minio` there (or confirmation of which cluster that is). It is
-  worth resolving before Phase 3: over the public endpoint every state read and write
-  hairpins through the router (`443` → `.30` → kong), so the router's state currently
-  depends on the router. Not a blocker today, a real hazard during the VLAN carve.
+  **Why that name can never work, now proven:** the runner and MinIO are in **two different
+  clusters** (measured 2026-09-14 — `kubectl -n minio get svc` on the devops cluster shows the
+  service; `arc-systems` does not exist there). No cluster-local DNS name crosses that boundary.
+  **Follow-up that removes the hairpin:** the devops cluster's MetalLB pool is
+  `172.16.100.15–172.16.100.16` and only `.15` is taken (by ingress-nginx), so **`.16` is free**
+  for a `LoadBalancer` service on MinIO. The endpoint then becomes
+  `http://172.16.100.16:9000` — a LAN address with no DNS, no ingress and no hairpin, i.e. the
+  router's state stops depending on the router. Worth doing before the VLAN carve; it is a
+  one-service change in the repo that manages MinIO.
 
 Alternative: the **`kubernetes` backend** (`backend-kubernetes.tf.example`) stores
 state in a Secret in the devops cluster. No MinIO dependency, less moving parts —

@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 1280" width="1680" height="1280" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+<defs>
+<marker id="a-94a3b8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/></marker>
+<marker id="a-22d3ee" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/></marker>
+<marker id="a-34d399" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#34d399"/></marker>
+<marker id="a-a78bfa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#a78bfa"/></marker>
+<marker id="a-fbbf24" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/></marker>
+<marker id="a-fb7185" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#fb7185"/></marker>
+<marker id="a-fb923c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#fb923c"/></marker>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/></pattern>
+</defs>
+<rect width="1680" height="1280" fill="#020617"/>
+<rect width="1680" height="1280" fill="url(#grid)"/>
+<text x="40.0" y="46.0" font-size="22" fill="#e2e8f0" text-anchor="start" font-weight="700">Home network — wiring &amp; VLAN plan</text>
+<text x="40.0" y="68.0" font-size="10" fill="#94a3b8" text-anchor="start" font-weight="normal">rb5009 · crs326 · crs804 · css610 — measured 2026-09-14 from the devices themselves (MNDP + bridge MAC tables + DHCP leases). TBC = identity needs a physical trace. Box colour = proposed VLAN class (Panel 2).</text>
+<circle cx="1628" cy="44" r="5" fill="#34d399"/>
+<text x="1640.0" y="48.0" font-size="9" fill="#34d399" text-anchor="end" font-weight="normal">live</text>
+<rect x="30" y="92" width="1620" height="612" rx="12" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="8,4"/>
+<text x="42.0" y="85.0" font-size="10" fill="#22d3ee" text-anchor="start" font-weight="600">PANEL 1 — PHYSICAL (as measured)</text>
+<rect x="52" y="150" width="140" height="84" rx="7" fill="#0f172a"/>
+<rect x="52" y="150" width="140" height="84" rx="7" fill="rgba(120,53,15,0.40)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="62.0" y="168.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">WAN</text>
+<text x="62.0" y="184.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">PPPoE via t-mobile</text>
+<text x="62.0" y="196.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">78.80.33.35 · no CGNAT</text>
+<text x="62.0" y="208.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">10 dst-nat forwards</text>
+<rect x="232" y="120" width="226" height="150" rx="7" fill="#0f172a"/>
+<rect x="232" y="120" width="226" height="150" rx="7" fill="rgba(8,51,68,0.45)" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="242.0" y="138.0" font-size="11.5" fill="#e2e8f0" text-anchor="start" font-weight="600">RB5009  (only L3 point)</text>
+<text x="242.0" y="154.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">bridge · vlan-filtering OFF</text>
+<text x="242.0" y="166.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">9 ports, all pvid=1 admit-all</text>
+<text x="242.0" y="179.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">LAN IP 172.16.100.1/24 on ether2</text>
+<text x="242.0" y="191.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">  — a bridge slave, link down</text>
+<text x="242.0" y="204.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">ether4 UP → CRS326 · 1 Gb</text>
+<text x="242.0" y="216.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">ether5 UP → 3 MACs [TBC]</text>
+<text x="242.0" y="229.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">sfp+ → 172.16.101.0/24 (work)</text>
+<rect x="500" y="110" width="214" height="186" rx="7" fill="#0f172a"/>
+<rect x="500" y="110" width="214" height="186" rx="7" fill="rgba(6,78,59,0.45)" stroke="#34d399" stroke-width="1.5"/>
+<text x="510.0" y="128.0" font-size="11.5" fill="#e2e8f0" text-anchor="start" font-weight="600">CRS326  (distribution)</text>
+<text x="510.0" y="144.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">24×1G + 2×SFP+ · ROS 7.5</text>
+<text x="510.0" y="156.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">one flat bridge, 0 VLAN entries</text>
+<text x="510.0" y="168.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal"></text>
+<text x="510.0" y="180.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">LIVE PORTS (5 of 26):</text>
+<text x="510.0" y="192.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">ether18 → RB5009</text>
+<text x="510.0" y="204.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">balteus → PVE, 18 guest NICs</text>
+<text x="510.0" y="216.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">ether4  → CSS610</text>
+<text x="510.0" y="228.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">ether7  → HPE box #2</text>
+<text x="510.0" y="240.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">ether16 → deco AP + 4 clients</text>
+<text x="510.0" y="252.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">ether2  → UP but silent [TBC]</text>
+<text x="510.0" y="264.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">bukefalos → reserved, link down</text>
+<rect x="780" y="330" width="220" height="152" rx="7" fill="#0f172a"/>
+<rect x="780" y="330" width="220" height="152" rx="7" fill="rgba(136,19,55,0.40)" stroke="#fb7185" stroke-width="1.5"/>
+<text x="790.0" y="348.0" font-size="11.5" fill="#e2e8f0" text-anchor="start" font-weight="600">CSS610  (SwOS 2.21)</text>
+<text x="790.0" y="364.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">8×1G + 2×SFP+ · NO API</text>
+<text x="790.0" y="376.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">hand-config only — and it is the</text>
+<text x="790.0" y="389.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">actual middle hop:</text>
+<text x="790.0" y="401.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">  ·  CRS804 management uplink</text>
+<text x="790.0" y="414.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">  ·  spark1-4 management NICs</text>
+<text x="790.0" y="426.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">  ·  charon (work PC, .227)</text>
+<rect x="1040" y="320" width="300" height="172" rx="7" fill="#0f172a"/>
+<rect x="1040" y="320" width="300" height="172" rx="7" fill="rgba(76,29,149,0.45)" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="1050.0" y="338.0" font-size="11.5" fill="#e2e8f0" text-anchor="start" font-weight="600">CRS804  (spine · TWO bridges)</text>
+<text x="1050.0" y="354.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">4×QSFP-DD + 2 · ROS 7.23.3</text>
+<text x="1050.0" y="366.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">bridge1: ether1 → LAN mgmt uplink</text>
+<text x="1050.0" y="379.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">  (172.16.100.113/24, 29 MACs)</text>
+<text x="1050.0" y="391.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">bridge-compute (10.0.0.1/24):</text>
+<text x="1050.0" y="404.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">  ether2 → balteus 10G (NAS path)</text>
+<text x="1050.0" y="416.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">  4× qsfp56-dd → spark1-4</text>
+<text x="1050.0" y="429.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">     @ 200G-baseCR4 (RoCE)</text>
+<rect x="420" y="566" width="190" height="108" rx="7" fill="#0f172a"/>
+<rect x="420" y="566" width="190" height="108" rx="7" fill="rgba(76,29,149,0.45)" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="430.0" y="584.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">balteus  (PVE 8.2.4)</text>
+<text x="430.0" y="600.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">46 guests (19 running)</text>
+<text x="430.0" y="612.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">1 uplink = all guest NICs</text>
+<text x="430.0" y="625.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">2nd link 10G → CRS804</text>
+<rect x="630" y="566" width="180" height="108" rx="7" fill="#0f172a"/>
+<rect x="630" y="566" width="180" height="108" rx="7" fill="rgba(30,41,59,0.65)" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="640.0" y="584.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">deco-BE22  (mesh AP)</text>
+<text x="640.0" y="600.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">wired on ether16</text>
+<text x="640.0" y="612.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">+ 4 WiFi clients:</text>
+<text x="640.0" y="625.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">.106 phone, .167, .211, .125</text>
+<rect x="830" y="566" width="170" height="108" rx="7" fill="#0f172a"/>
+<rect x="830" y="566" width="170" height="108" rx="7" fill="rgba(76,29,149,0.45)" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="840.0" y="584.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">HPE box #2</text>
+<text x="840.0" y="600.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">3c:ec:ef:73:09:9d</text>
+<text x="840.0" y="612.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">on ether7</text>
+<text x="840.0" y="625.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">to integrate later</text>
+<rect x="1020" y="566" width="170" height="108" rx="7" fill="#0f172a"/>
+<rect x="1020" y="566" width="170" height="108" rx="7" fill="rgba(8,51,68,0.45)" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="1030.0" y="584.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">charon  (work PC)</text>
+<text x="1030.0" y="600.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">.227 · randomised MAC</text>
+<text x="1030.0" y="612.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">wired via CSS610</text>
+<text x="1030.0" y="625.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">→ vlan10-mgmt</text>
+<rect x="1210" y="566" width="250" height="108" rx="7" fill="#0f172a"/>
+<rect x="1210" y="566" width="250" height="108" rx="7" fill="rgba(251,146,60,0.28)" stroke="#fb923c" stroke-width="1.5"/>
+<text x="1220.0" y="584.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">spark1-4  (AI compute)</text>
+<text x="1220.0" y="600.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">fabric 200G → CRS804</text>
+<text x="1220.0" y="612.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">mgmt → CSS610</text>
+<text x="1220.0" y="625.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">fabric 192.168.0.x · mgmt .110-.137</text>
+<path d="M 192.0 190.0 L 232.0 190.0" fill="none" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#a-fbbf24)"/>
+<text x="212.0" y="184.0" font-size="9" fill="#fbbf24" text-anchor="middle" font-weight="normal">PPPoE</text>
+<path d="M 458.0 190.0 L 500.0 190.0" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a-22d3ee)"/>
+<text x="479.0" y="184.0" font-size="9" fill="#22d3ee" text-anchor="middle" font-weight="normal">ether4 · 1 Gb</text>
+<path d="M 714.0 250.0 L 830.0 250.0 L 830.0 330.0" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#a-34d399)"/>
+<text x="770.0" y="244.0" font-size="9" fill="#34d399" text-anchor="middle" font-weight="normal">ether4</text>
+<path d="M 1000.0 400.0 L 1040.0 400.0" fill="none" stroke="#fb7185" stroke-width="1.5" marker-end="url(#a-fb7185)"/>
+<text x="1020.0" y="394.0" font-size="9" fill="#fb7185" text-anchor="middle" font-weight="normal">mgmt uplink</text>
+<path d="M 520.0 296.0 L 520.0 566.0" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#a-34d399)"/>
+<text x="525.0" y="440.0" font-size="9" fill="#34d399" text-anchor="middle" font-weight="normal">balteus port</text>
+<path d="M 690.0 296.0 L 690.0 566.0" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#a-34d399)"/>
+<text x="695.0" y="470.0" font-size="9" fill="#34d399" text-anchor="middle" font-weight="normal">ether16</text>
+<path d="M 700.0 296.0 L 700.0 548.0 L 905.0 548.0 L 905.0 566.0" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#a-34d399)"/>
+<text x="800.0" y="542.0" font-size="9" fill="#34d399" text-anchor="middle" font-weight="normal">ether7</text>
+<path d="M 920.0 482.0 L 920.0 515.0 L 1090.0 515.0 L 1090.0 566.0" fill="none" stroke="#fb7185" stroke-width="1.5" marker-end="url(#a-fb7185)"/>
+<text x="1000.0" y="509.0" font-size="9" fill="#fb7185" text-anchor="middle" font-weight="normal">mgmt</text>
+<path d="M 960.0 482.0 L 960.0 500.0 L 1260.0 500.0 L 1260.0 566.0" fill="none" stroke="#fb7185" stroke-width="1.5" marker-end="url(#a-fb7185)"/>
+<text x="1120.0" y="494.0" font-size="9" fill="#fb7185" text-anchor="middle" font-weight="normal">mgmt</text>
+<path d="M 1300.0 492.0 L 1300.0 566.0" fill="none" stroke="#fb923c" stroke-width="1.5" marker-end="url(#a-fb923c)"/>
+<text x="1306.0" y="540.0" font-size="9" fill="#fb923c" text-anchor="middle" font-weight="normal">fabric 200G ×4</text>
+<text x="52.0" y="700.0" font-size="9.5" fill="#94a3b8" text-anchor="start" font-weight="normal">Read it as: one flat L2 domain. Every bridge above runs vlan-filtering=off with every port pvid=1 — there is no VLAN anywhere on the wire yet.</text>
+<text x="52.0" y="716.0" font-size="9.5" fill="#94a3b8" text-anchor="start" font-weight="normal">The CRS326's 'dumb switch, servers on random ports' is exactly where an unmapped port stays silently in the compat segment.</text>
+<rect x="30" y="742" width="1620" height="470" rx="12" fill="none" stroke="#34d399" stroke-width="1.2" stroke-dasharray="8,4"/>
+<text x="42.0" y="735.0" font-size="10" fill="#34d399" text-anchor="start" font-weight="600">PANEL 2 — PROPOSED logical plan (review this layer)</text>
+<rect x="48" y="772" width="300" height="140" rx="7" fill="#0f172a"/>
+<rect x="48" y="772" width="300" height="140" rx="7" fill="rgba(136,19,55,0.40)" stroke="#fb7185" stroke-width="1.5"/>
+<text x="58.0" y="790.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">NOT TOUCHED: bridge-compute</text>
+<text x="58.0" y="806.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">CRS804 ether2 + the four QSFP ports.</text>
+<text x="58.0" y="818.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Carries BOTH the RoCE fabric and</text>
+<text x="58.0" y="831.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">balteus' 10G NAS path.</text>
+<text x="58.0" y="843.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">PDUs: RDMA dies at a router, so an</text>
+<text x="58.0" y="856.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">'isolated VLAN' would sever it.</text>
+<text x="58.0" y="868.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Stays one L2 domain on its own L3.</text>
+<rect x="372" y="772" width="300" height="140" rx="7" fill="#0f172a"/>
+<rect x="372" y="772" width="300" height="140" rx="7" fill="rgba(8,51,68,0.45)" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="382.0" y="790.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">vlan10-mgmt   172.16.10.0/24</text>
+<text x="382.0" y="806.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">charon (work PC), network gear mgmt,</text>
+<text x="382.0" y="818.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">IPMIs (.123 atuin, .46), bukefalos later.</text>
+<text x="382.0" y="831.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Reached from the mgmt VLAN + VPN only.</text>
+<rect x="688" y="772" width="300" height="140" rx="7" fill="#0f172a"/>
+<rect x="688" y="772" width="300" height="140" rx="7" fill="rgba(6,78,59,0.45)" stroke="#34d399" stroke-width="1.5"/>
+<text x="698.0" y="790.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">vlan20-trusted   172.16.20.0/24</text>
+<text x="698.0" y="806.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Personal devices, trusted SSID,</text>
+<text x="698.0" y="818.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">AP uplinks (deco, MikroTik AP).</text>
+<text x="698.0" y="831.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">No east-west into srv or lab.</text>
+<rect x="1004" y="772" width="300" height="140" rx="7" fill="#0f172a"/>
+<rect x="1004" y="772" width="300" height="140" rx="7" fill="rgba(251,146,60,0.28)" stroke="#fb923c" stroke-width="1.5"/>
+<text x="1014.0" y="790.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">vlan30-lab   172.16.30.0/24</text>
+<text x="1014.0" y="806.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">devops cluster (main-*), sandbox,</text>
+<text x="1014.0" y="818.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">spark1-4 mgmt + .189 AI compute.</text>
+<text x="1014.0" y="831.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Egress class wan-restricted (log-first).</text>
+<rect x="1320" y="772" width="300" height="140" rx="7" fill="#0f172a"/>
+<rect x="1320" y="772" width="300" height="140" rx="7" fill="rgba(76,29,149,0.45)" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="1330.0" y="790.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">vlan40-srv   172.16.40.0/24</text>
+<text x="1330.0" y="806.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">balteus PVE + the keeper guests</text>
+<text x="1330.0" y="818.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">(truenas, gitea, authentik, matchbox).</text>
+<text x="1330.0" y="831.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">balteus uplink becomes a TRUNK;</text>
+<rect x="372" y="938" width="300" height="140" rx="7" fill="#0f172a"/>
+<rect x="372" y="938" width="300" height="140" rx="7" fill="rgba(30,41,59,0.65)" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="382.0" y="956.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">vlan50-guest   172.16.50.0/24</text>
+<text x="382.0" y="972.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Guest SSID + unknown devices.</text>
+<text x="382.0" y="984.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">BLOCKER: the TP-Link Deco cannot tag</text>
+<text x="382.0" y="997.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">SSIDs → needs a VLAN-capable AP.</text>
+<rect x="688" y="938" width="300" height="140" rx="7" fill="#0f172a"/>
+<rect x="688" y="938" width="300" height="140" rx="7" fill="rgba(120,53,15,0.40)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="698.0" y="956.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">vlan70-iot   172.16.70.0/24</text>
+<text x="698.0" y="972.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">IoT: Tapo P110 ×2, Shelly plug,</text>
+<text x="698.0" y="984.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">printers, TV, .167 embedded device.</text>
+<text x="698.0" y="997.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Own VLAN (your call) — .60 stays free.</text>
+<text x="372.0" y="1094.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">…per-VM VLAN tags on the PVE bridge then place individual guests in lab / srv / mgmt (Wave B).</text>
+<rect x="48" y="930" width="300" height="118" rx="7" fill="#0f172a"/>
+<rect x="48" y="930" width="300" height="118" rx="7" fill="rgba(30,41,59,0.65)" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="58.0" y="948.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">compat: 172.16.100.0/24</text>
+<text x="58.0" y="964.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Legacy flat segment, kept through the</text>
+<text x="58.0" y="976.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">carve. Every port still defaults here,</text>
+<text x="58.0" y="989.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">which is why an unmapped port breaks</text>
+<text x="58.0" y="1001.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">silently rather than loudly.</text>
+<rect x="48" y="1066" width="300" height="142" rx="7" fill="#0f172a"/>
+<rect x="48" y="1066" width="300" height="142" rx="7" fill="rgba(136,19,55,0.40)" stroke="#fb7185" stroke-width="1.5"/>
+<text x="58.0" y="1084.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">DNS today = the weak link</text>
+<text x="58.0" y="1100.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">clients get 8.8.8.8 from DHCP;</text>
+<text x="58.0" y="1112.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">the router refuses remote DNS requests;</text>
+<text x="58.0" y="1125.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">*.dev on Cloudflare points at the</text>
+<text x="58.0" y="1137.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">PRIVATE 172.16.100.15 →</text>
+<text x="58.0" y="1150.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">internal resolution needs the internet</text>
+<text x="58.0" y="1162.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">and a hairpin. Block WAN for one VLAN</text>
+<text x="58.0" y="1175.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">and DNS dies before the VLAN does.</text>
+<text x="372.0" y="1122.0" font-size="11" fill="#fbbf24" text-anchor="start" font-weight="600">Order that avoids the trap:   LAN resolver first (additive)   →   VLAN waves   →   egress classes LAST.</text>
+<text x="372.0" y="1144.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">VIP 172.16.100.15 is ARP'd by main-4 → it moves with the cluster into vlan30, so the Cloudflare records move in the same wave.</text>
+<text x="372.0" y="1162.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Wildcard TLS is DNS-01 via Cloudflare and .dev is HSTS-preloaded: a renewal broken by the carve is a hard browser failure, not a warning.</text>
+<text x="372.0" y="1180.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">DHCP leases are 10 minutes, so a DNS-server change propagates fast — a lever, and a hazard.</text>
+<rect x="30" y="1232" width="1620" height="40" rx="10" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="1,0"/>
+<text x="48.0" y="1256.0" font-size="9.5" fill="#94a3b8" text-anchor="start" font-weight="normal">solid = physical link (labelled with the measured port) · dashed = path via another device · rose = constraint or exclusion · TBC = needs a physical trace</text>
+<text x="1632.0" y="1256.0" font-size="9" fill="#64748b" text-anchor="end" font-weight="normal">source: /ip/neighbor · /interface/bridge/{port,vlan,host} · /ip/dhcp-server/lease</text>
+</svg>

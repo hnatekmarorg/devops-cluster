@@ -1,72 +1,108 @@
 # Network wiring — measured, plus the proposed VLAN carve
 
-![Network wiring: measured physical topology and the proposed VLAN overlay](network-wiring.svg)
+Two views of the same network, on purpose:
+
+| View | File | What it is for |
+|---|---|---|
+| **Architecture & intent** | [`network-wiring.svg`](network-wiring.svg) | the shape of the estate, the fabric, the DNS/DHCP trap, and what the carve is *for* — the narrative a reviewer reads first |
+| **Port-level map** | [`network-port-map.svg`](network-port-map.svg) | every live port with its measured occupant and MAC count, plus the proposed class per segment — the artifact stage 2 is actually written against |
 
 **Sources (read from the devices, 2026-09-14 — not from memory or the plan):** MNDP/LLDP
-neighbour tables, bridge MAC tables (`/interface/bridge/host`), bridge port configuration,
-DHCP leases, `/ip/dns`, `/ip/firewall/nat`. Everything below is either **measured** or
-explicitly marked **TBC**; an invented box would be worse than a gap.
+neighbour tables (`/ip/neighbor`), bridge MAC tables (`/interface/bridge/host` — this is
+what names each port's occupants), bridge port and VLAN configuration
+(`/interface/bridge/{port,vlan}`), DHCP leases, `/ip/dns`, `/ip/firewall/nat`. Everything
+below is **measured** or explicitly marked **TBC**; an invented box would be worse than a gap.
+
+## The model, because it is easy to misread
+
+VLAN membership is decided by **device class** (what the device may reach), never by which
+socket it happens to use. The port is only the *mechanism*: an access port (untagged, PVID =
+the class) for a single device; a trunk (tagged) for switch uplinks, the router, and the
+Proxmox bridge once VM NICs carry tags. Stage 1 of the IaC (`../routeros/`) touches **no
+ports at all** — VLAN interfaces, gateways and address lists only, inert until the bridge
+becomes VLAN-filtering. That is why this map comes first: the port map is the *input* to the
+policy, not the policy.
 
 ## Layer 1 — as it is
 
-| Element | Measured |
-|---|---|
-| **RB5009** (`172.16.100.1`, 7.12.1) | One bridge, `vlan-filtering` **OFF**, all 9 ports `pvid=1, frame-types=admit-all`, **no bridge VLAN entries**. LAN IP `172.16.100.1/24` sits on **`ether2`** (a bridge slave) — the cut-over risk the plan already flags. `ether4` (1 Gb) ↔ CRS326 `ether18`; `ether5` carries 3 MACs (AP or small switch, TBC); `sfp-sfpplus1` = the work subnet `172.16.101.1/24` |
-| **CRS326-24G-2S+** (`172.16.100.2`, **7.5** from 2022, "1gbps") | 24 ports + 2 SFP+, one bridge, same flat posture. `ether18` ↔ router; `ether4` → CRS804 (CSS610 behind it); `ether7` → the second `3c:ec:ef` box; `ether16` → **deco-BE22** mesh AP + its clients. Two ports are already named by hand: **`balteus`** and **`bukefalos`** |
-| **CRS804-4DDQ** (`172.16.100.113`, 7.23.3) | **Two bridges**: `bridge1` (management, flat with the LAN, `ether1`) and **`bridge-compute`** — the RDMA fabric: 4× QSFP-DD at `200G-baseCR4` → spark1..4, MTU 9000 with PFC/ECN. **The carve must not touch `bridge-compute`**: RoCE/PFC does not survive a router |
-| **CSS610-8G-2S+** (`172.16.100.117`, SwOS 2.21) | No RouterOS API → outside IaC. Occupants TBC (LLDP sees the device, not its ports) |
-| **Endpoints** | `balteus` (Proxmox, 46 guests, 19 running) carries the live devops cluster `main-*` and the **VIP `.15`** (ARP'd by `main-4`); the Sparks each have a management NIC on the flat LAN (`172.16.100.110/112/136/137`) **and** a RoCE NIC on the fabric (`192.168.0.x` — note: **not** the `192.168.192.0/24` the plan assumes) |
+**Posture:** one flat L2 domain. Every device runs one bridge with `vlan-filtering` **off**,
+every port `pvid=1, frame-types=admit-all`, and **not one bridge VLAN entry exists** anywhere.
+Every port therefore defaults into the compat segment — which is why an unmapped port breaks
+**silently**.
+
+| Device | State | Live ports with measured occupants |
+|---|---|---|
+| **RB5009** (`172.16.100.1`, 7.12.1) | one bridge, LAN IP `172.16.100.1/24` on **`ether2`** — a bridge slave whose link is **down** (the plan's cut-over risk #1) | `ether4` UP · 1 Gb → CRS326 `ether18` (33 MACs behind it); `ether5` UP → 3 MACs, AP or small switch **TBC**; `sfp-sfpplus1` = the work subnet `172.16.101.1/24` |
+| **CRS326-24G-2S+** (`172.16.100.2`, **7.5** from 2022) | 24 ports + 2 SFP+, one flat bridge; **5 of 26 ports live** | `ether18` → RB5009; **`balteus`** (hand-named) → PVE host, **18 guest NICs**; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; `ether2` UP but silent **TBC**; **`bukefalos`** (hand-named) reserved, link down |
+| **CSS610-8G-2S+** (SwOS 2.21, `.117`) | **no RouterOS API** → outside IaC, hand-config only | *Not a leaf:* the measured MAC table shows it is the middle hop for **charon (work PC, `.227`)**, the **spark1-4 management NICs**, and **CRS804's management uplink** |
+| **CRS804-4DDQ** (`.113`, 7.23.3) | **two bridges** | `bridge1`: `ether1` → LAN mgmt uplink (29 MACs); `bridge-compute` (`10.0.0.1/24`, its own L2): `ether2` → **balteus 10G NAS path**, plus 4× QSFP-DD at `200G-baseCR4` → spark1..4 |
+| **Endpoints** | — | `balteus` (Proxmox, 46 guests, 19 running) carries the live devops cluster `main-*` and the VIP `.15` (ARP'd by `main-4`); the Sparks have a management NIC on the flat LAN (`.110/.112/.136/.137`) **and** a RoCE NIC on the fabric |
 
 ### Corrections this pass produced
 
-1. The Sparks' fabric-side addressing is **`192.168.0.x`**, not `192.168.192.0/24`.
-2. The RB5009's uplink to the main switch is **1 Gb** (`ether4`↔`ether18`); the 10 G SFP+ goes to the *work* subnet instead.
+1. The Sparks' fabric-side addressing is **`192.168.0.x`**, not the `192.168.192.0/24` the plan assumes.
+2. The RB5009's uplink to the main switch is **1 Gb** (`ether4` ↔ `ether18`); the 10 G SFP+ serves the *work* subnet instead.
 3. CRS326 already carries **hand-named ports** (`balteus`, `bukefalos`) — the class intent is partly expressed on the device already.
-4. The RoCE fabric lives on a **separate bridge** on the CRS804 (`bridge-compute`), so "leave the fabric alone" is a per-bridge decision, not per-port.
+4. The RoCE fabric lives on a **separate bridge** on the CRS804, so "leave the fabric alone" is a **per-bridge** decision, not a per-port one.
+5. **CSS610 is a middle hop, not a leaf** (this pass): cutting or mis-trunking it takes out the work PC, the Sparks' management *and* the spine's own management.
+
+### Resolved on 2026-09-14 (Martin)
+
+| Was TBC | Answer |
+|---|---|
+| Whose box is `bukefalos`? | another server, to be integrated later — think *second balteus* |
+| CRS326 `ether2/5/6/8–15/17/19–22` — empty or occupied? | it is a **"dumb" switch with servers on random ports** → trace only the **live** ports; 5 are live, 4 identified above, `ether2` is the one to look at |
+| CRS804 `ether2`? | **direct 10 G link to balteus**, used to give balteus its NAS path |
+| CSS610 occupants? | mainly the **Sparks** and **charon** (the work PC) |
+| IoT/printers — own VLAN or onto `.40`? | **own VLAN** → `vlan70-iot` below (`.60` stays reserved for WireGuard clients) |
 
 ## Layer 2 — proposed, for review
 
-**The model, because it is easy to misread:** VLAN membership is decided by **device class**
-(what the device may reach), never by which socket it happens to use. The port is only the
-*mechanism* — an access port (untagged, PVID = the class) for a single device, a trunk
-(tagged) for switch uplinks, the router, and the Proxmox bridge once VM NICs carry tags.
-Stage 1 of the IaC touches **no ports at all** — VLAN interfaces, gateways and address lists
-only, inert until the bridge becomes VLAN-filtering.
+| Class | Subnet | Candidates from the measurements | Port mechanism |
+|---|---|---|---|
+| mgmt | `172.16.10.0/24` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
+| trusted | `172.16.20.0/24` | workstations, phones, AP uplinks | trunk to the AP — **SSID → VLAN** |
+| lab | `172.16.30.0/24` | devops cluster `main-*` **and the VIP `.15`**, sandbox, spark1-4 management, `.189` | trunk to balteus (per-VM tags) + access on spark ports |
+| srv | `172.16.40.0/24` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box | **balteus' uplink becomes a trunk** — the largest single change |
+| guest | `172.16.50.0/24` | guest SSID, unknown devices | blocked on the AP question below |
+| iot | `172.16.70.0/24` | Tapo P110 ×2, Shelly plug, printers, TV, `.167` embedded | access ports + an IoT SSID |
+| compat | VLAN 1, `172.16.100.0/24` | everything not yet migrated; **fabric excluded entirely** | stays until the last wave |
 
-| Class | Subnet | Candidates from the measurements |
-|---|---|---|
-| mgmt | `172.16.10.0/24` | switch/AP management, IPMI — one spare access port per switch first (wave A) |
-| trusted | `172.16.20.0/24` | workstations, phones, the AP uplink (needs a **trunk**: SSID → VLAN) |
-| lab | `172.16.30.0/24` | the devops cluster `main-*` **and the VIP `.15`** (wave B moves both) |
-| srv | `172.16.40.0/24` | `balteus` + its keepers, the `3c:ec:ef` box, the NAS |
-| guest | `172.16.50.0/24` | guest WiFi via a second SSID — no internal names, no internal resolver |
-| compat | VLAN 1, `172.16.100.0/24` | stays until wave C exits; **fabric excluded entirely** |
+## Constraints that decide the order of work
+
+1. **`bridge-compute` is not touched.** It carries both the RoCE fabric and balteus' 10 G NAS path. PDU/RDMA does not survive a router, so an "isolated VLAN" would sever GPU RDMA.
+2. **CSS610 must be configured by hand** and it sits on the path to the work PC, the Sparks' management and the spine's management. Any trunk design has to name its ports explicitly and be verified physically.
+3. **The Deco mesh AP cannot tag SSIDs**, so guest and IoT VLANs on WiFi need either a VLAN-capable AP (MikroTik) or a Deco whose *whole* uplink belongs to one VLAN. This is the one item that may need hardware, not configuration.
+4. **balteus' uplink becomes a trunk** with per-VM tags on the PVE bridge (46 guests) — the most delicate change of the carve.
+5. **The router's LAN IP sits on a bridge slave whose link is down.** Moving it onto the bridge/VLAN interfaces is the first real cut-over risk.
+6. **DHCP leases are 10 minutes** — fast propagation works in both directions.
 
 ## Why the DNS ordering matters (the risk that outranks the VLANs)
 
 | Measured today | Consequence |
 |---|---|
-| DHCP hands out **`8.8.8.8`** (`/ip/dhcp-server/network`, 10-minute leases) | Every client resolves *internal* names through the public internet |
-| `.dev` records on Cloudflare point at the **private** `172.16.100.15` | It works only because public DNS returns a private IP, plus NAT hairpin |
-| **`allow-remote-requests: false`** | The router cannot serve DNS to clients even if they were pointed at it |
-| Only 9 legacy `*.dev.hnatekmar.xyz` static entries | No authority exists for the current scheme |
-| `.15` is ARP'd by `main-4` | When the cluster moves to the lab VLAN the VIP moves with it → Cloudflare must move in the same wave |
-| Wildcard TLS is **DNS-01 → Cloudflare**, `.dev` is HSTS-preloaded | Cut the cluster's egress and renewals fail; an expired cert on an HSTS TLD is a hard failure, no click-through |
+| DHCP hands out **`8.8.8.8`** (10-minute leases) | every client resolves *internal* names through the public internet |
+| `.dev` records on Cloudflare point at the **private** `172.16.100.15` | it works only because public DNS returns a private IP, plus NAT hairpin |
+| **`allow-remote-requests: false`** | the router cannot serve DNS to clients even if they were pointed at it |
+| only 9 legacy `*.dev.hnatekmar.xyz` static entries | no authority exists for the current scheme |
+| `.15` is ARP'd by `main-4` | when the cluster moves to `vlan30` the VIP moves with it → Cloudflare must move in the same wave |
+| wildcard TLS is **DNS-01 → Cloudflare**, `.dev` is HSTS-preloaded | cut the cluster's egress and renewals fail; an expired cert on an HSTS TLD is a hard failure, no click-through |
 
-Four ways this bites during a carve: (1) `wan-restricted` on the AI boxes kills their DNS —
-the local resolver must exist **before** egress classes; (2) deny-by-default east-west means
-a VLAN that cannot reach `.15` resolves names and then fails to connect, which reads as "DNS
-is broken" but is not; (3) the VIP moves with the cluster mid-wave; (4) cert renewal depends
-on the same path being intact.
+Four ways it bites: (1) `wan-restricted` on the AI boxes kills their DNS — the local resolver
+must exist **before** egress classes; (2) deny-by-default east-west means a VLAN that cannot
+reach `.15` resolves names and then fails to connect, which reads as "DNS is broken" but is
+not; (3) the VIP moves with the cluster mid-wave; (4) cert renewal depends on the same path
+staying intact.
 
-**Therefore the step order is: DNS independence first (additive) → VLAN waves → egress
-classes last.**
+**Therefore: DNS independence first (additive) → VLAN waves → egress classes last, log-only at rollout.**
 
-## TBC — needed before this is drawn as fact
+## Still open
 
-- Whose box is **`bukefalos`**?
-- **CRS326 `ether2/5/6/8–15/17/19–22`** — genuinely empty, or occupied by things that do not speak LLDP?
-- **CRS804 `ether2`** — up, no neighbours.
-- **CSS610** ports and occupants (SwOS: needs the UI or a neighbour-side LLDP dump).
-- The three MACs on the router's **`ether5`**; and `.101`, `.104`, `.211`, `wlan0` (`.167`).
-- **IoT/printers**: own VLAN, or the plan's "onto `.40`"? It changes how many access ports the carve needs.
+| # | Item | Why it matters |
+|---|---|---|
+| 1 | CRS326 `ether2` is UP with nothing learned — what is plugged in? | a live-but-silent port is exactly what a carve forgets |
+| 2 | The RB5009 `ether5` segment (3 MACs) — AP or small switch? | decides trusted vs guest/IoT placement |
+| 3 | Is the HPE box on `ether7` the machine the `bukefalos` port is reserved for? | if yes, the port name is stale; if not, `bukefalos` is unplugged |
+| 4 | Which AP can tag VLANs per SSID? | gates guest + IoT on WiFi (constraint 3) |
+| 5 | Does all network-gear management belong in `vlan10-mgmt`? | decides the tagged-VLAN set on every trunk |
+| 6 | Spark *management* in `vlan30-lab` (with `wan-restricted`) or in `vlan10-mgmt`? | they are AI compute, but also infrastructure |

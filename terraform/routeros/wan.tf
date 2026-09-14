@@ -28,10 +28,10 @@
 # membership cannot disturb the WAN at all.
 
 # ---------------------------------------------------------------------------
-# Wave 1 — adoption only. Nothing here changes behaviour: this file's share of
-# the plan is "1 to import, 0 to change", which is the proof that the baseline
-# is faithful. Delete the import block once the first apply has run (it becomes
-# a no-op, but it is noise afterwards).
+# Wave 2a — the PPPoE client leaves the bridge for the port the ISP actually answers on.
+# This is the step that ends the WAN/LAN L2 overlap: with the client bound to `bridge`, the
+# bridge had to carry its frames to `ether5` — and therefore carried the ISP's frames into
+# every LAN port too. Bound to `ether5` directly, the session never touches the bridge.
 # ---------------------------------------------------------------------------
 import {
   to = routeros_interface_pppoe_client.t_mobile
@@ -40,7 +40,7 @@ import {
 
 resource "routeros_interface_pppoe_client" "t_mobile" {
   name              = "t-mobile"
-  interface         = "bridge" # wave 2a moves this to ether5
+  interface         = "ether5" # wave 2a: off the bridge, onto the ISP uplink's own port
   add_default_route = true
   use_peer_dns      = true
   disabled          = false

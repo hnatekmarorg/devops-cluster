@@ -7,6 +7,7 @@ Two views of the same network, on purpose:
 | **Architecture & intent** | [`network-wiring.svg`](network-wiring.svg) | the shape of the estate, the fabric, the DNS/DHCP trap, and what the carve is *for* — the narrative a reviewer reads first |
 | **Port-level map** | [`network-port-map.svg`](network-port-map.svg) | every live port with its measured occupant and MAC count, plus the proposed class per segment — the artifact stage 2 is actually written against |
 | **Tagging reference** | [`vlan-tagging.md`](vlan-tagging.md) | where an 802.1Q tag is inserted and stripped, who adds tags here and who never will, and the three gotchas that lock people out |
+| **Port assignment (stage 2 contract)** | [`vlan-port-assignment.md`](vlan-port-assignment.md) | per device, per port: access vs trunk, PVID, tagged set, class — the table the module gets written from |
 
 **A note on state vs target:** the diagrams say `one flat bridge, 0 VLAN entries` because that is
 **today** — nothing on this estate is tagged yet, on any link. Everything about classes and trunks
@@ -38,7 +39,7 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 | Device | State | Live ports with measured occupants |
 |---|---|---|
 | **RB5009** (`172.16.100.1`, 7.12.1) | one bridge, LAN IP `172.16.100.1/24` on **`ether2`** — a bridge slave whose link is **down** (the plan's cut-over risk #1) | `ether4` UP · 1 Gb → CRS326 `ether18` (33 MACs behind it); `ether5` UP → 3 MACs, AP or small switch **TBC**; `sfp-sfpplus1` = the work subnet `172.16.101.1/24` |
-| **CRS326-24G-2S+** (`172.16.100.2`, **7.5** from 2022) | 24 ports + 2 SFP+, one flat bridge; **5 of 26 ports live** | `ether18` → RB5009; **`balteus`** (hand-named) → PVE host, **18 guest NICs**; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; `ether2` UP but silent **TBC**; **`bukefalos`** (hand-named) reserved, link down |
+| **CRS326-24G-2S+** (`172.16.100.2`, **7.5** from 2022) | 24 ports + 2 SFP+, one flat bridge; 6 ports live | `ether18` → RB5009; **`balteus`** = an **LACP bond** (`ether1`+`ether2`, 802.3ad) → the PVE host, **18 guest NICs** — **`ether1` of that bond is down**, so it runs degraded at 1 Gb; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; **`bukefalos`** = a second LACP bond (`ether23`+`ether24`), idle, waiting for that server. Two 10 G SFP+ ports sit unused while the server side runs at 1 G |
 | **CSS610-8G-2S+** (SwOS 2.21, `.117`) | **no RouterOS API** → outside IaC, hand-config only | *Not a leaf:* the measured MAC table shows it is the middle hop for **charon (work PC, `.227`)**, the **spark1-4 management NICs**, and **CRS804's management uplink** |
 | **CRS804-4DDQ** (`.113`, 7.23.3) | **two bridges, and only one of them carries traffic** | `bridge1`: **`ether1` only — management access, nothing else** (~1 GiB in three weeks; being single-port, CPU bridging is expected here, not a fault). `bridge-compute` (`10.0.0.1/24`) is the **storage + RDMA fabric by design**: 4× QSFP-DD at `200G-baseCR4` → spark1..4 (**hardware-offloaded**, ~300 TiB each way since boot) plus **`ether2` → balteus' 10G NAS link** (~43.6 TiB received since boot, **software-bridged**, no drops or errors, average ~24 Mbit/s) |
 | **Endpoints** | — | `balteus` (Proxmox, 46 guests, 19 running) carries the live devops cluster `main-*` and the VIP `.15` (ARP'd by `main-4`); the Sparks have a management NIC on the flat LAN (`.110/.112/.136/.137`) **and** a RoCE NIC on the fabric |
@@ -50,6 +51,7 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 3. CRS326 already carries **hand-named ports** (`balteus`, `bukefalos`) — the class intent is partly expressed on the device already.
 4. The RoCE fabric lives on a **separate bridge** on the CRS804, so "leave the fabric alone" is a **per-bridge** decision, not a per-port one.
 5. **CSS610 is a middle hop, not a leaf** (this pass): cutting or mis-trunking it takes out the work PC, the Sparks' management *and* the spine's own management.
+6. **`balteus` and `bukefalos` are LACP bonds, not renamed ports** — `ether1`+`ether2` and `ether23`+`ether24` respectively. For the carve this means the *bond* is the bridge port that carries the trunk; slaves are never configured individually.
 
 ### Resolved on 2026-09-14 (Martin)
 
@@ -109,7 +111,7 @@ staying intact.
 
 | # | Item | Why it matters |
 |---|---|---|
-| 1 | CRS326 `ether2` is UP with nothing learned — what is plugged in? | a live-but-silent port is exactly what a carve forgets |
+| 1 | ~~CRS326 `ether2` is UP with nothing learned~~ **resolved:** it is the second member of the `balteus` LACP bond — but **`ether1` of that bond is down**, so the PVE host currently has a single 1 Gb path instead of two. Cable/NIC check | a degraded bond is invisible until something saturates one member |
 | 2 | The RB5009 `ether5` segment (3 MACs) — AP or small switch? | decides trusted vs guest/IoT placement |
 | 3 | Is the HPE box on `ether7` the machine the `bukefalos` port is reserved for? | if yes, the port name is stale; if not, `bukefalos` is unplugged |
 | 4 | Which AP can tag VLANs per SSID? | gates guest + IoT on WiFi (constraint 3) |

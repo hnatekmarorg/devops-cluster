@@ -1,0 +1,64 @@
+# Rehearsal values for the disposable Kind cluster (bao-staging).
+# Mirrors production shape (raft on node-local storage) — with the CORRECTION
+# the rehearsal produced: OpenBao refuses API-based audit enablement
+# ("cannot enable audit device via API"), so the audit device must be declared
+# in the server config. That is why production's auditing is off.
+global:
+  tlsDisable: true
+server:
+  dev:
+    enabled: false
+  standalone:
+    enabled: true
+    config: |
+      ui = false
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "raft" {
+        path = "/openbao/data"
+        node_id = "openbao-0"
+        snapshot_threshold = 8192
+        snapshot_interval = 120
+        trailing_logs = 10000
+      }
+
+      # Declarative audit device (config-based; API enablement is blocked).
+      # NOTE: audit failure blocks request handling, so production should run
+      # at least two devices (docs: "highly recommended") + rotation + alerts.
+      audit "file" "rehearsal" {
+        description = "rehearsal file audit device"
+        options {
+          file_path        = "/openbao/audit/audit.log"
+          mode             = "0600"
+          rotate_duration  = "24h"
+          rotate_bytes     = 104857600
+          rotate_max_files = 7
+        }
+      }
+
+      default_lease_ttl = "1h"
+      max_lease_ttl = "24h"
+  dataStorage:
+    enabled: true
+    size: 1Gi
+    storageClass: standard
+  auditStorage:
+    enabled: true
+    size: 512Mi
+    storageClass: standard
+  ingress:
+    enabled: false
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+ui:
+  enabled: false
+injector:
+  enabled: false
+csi:
+  enabled: false

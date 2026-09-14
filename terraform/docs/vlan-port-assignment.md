@@ -46,6 +46,33 @@ outside the LAN carve, but know it before the hardware arrives.
 7. **Retire compat** from the trunks (tagged-only + parking).
 8. **Egress classes** (`wan-restricted`, log-only at rollout).
 
+## "Will it be hardware-offloaded?" — the open question, and where it gets answered
+
+Martin's doubt (2026-09-14), and it is the right one: a VLAN setup that silently falls back to the
+CPU is a throughput regression dressed as a policy win. What is *measured* today, per device:
+
+| Device | Chip | Bridge ports offloaded now | What filtering would mean |
+|---|---|---|---|
+| RB5009 | Marvell 88E6393X | **9/9** `hw=yes` | the highest-risk chip for filtering support and the **least consequential**: it switches almost nothing (only `ether4` → CRS326; `ether5` leaves the bridge in wave 2; the rest spare). Its real work — routing between VLANs — is CPU by definition, filtering or not |
+| CRS326 | Marvell 98DX3236 | **24/24** `hw=yes` | **this is where it matters**: it does the estate's switching. The classic offload-killer is the **LACP bond** (`balteus`) under filtering — which is exactly why "bonds included" is in the acceptance test |
+| CSS610 | SwOS Lite (own chip) | n/a | VLANs are the box's native hardware function. No question here |
+| CRS804 | Marvell 98DX7335 | 4/6 (`ether1`, `ether2` software-bridged) | **not touched at all.** Its two software ports are on the sacred `bridge-compute`, and they pre-date the carve |
+
+**The gate is already the first step of the carve.** Enabling `vlan-filtering` with every port
+still on compat moves no traffic to a different VLAN, so it is a zero-behaviour change — and it is
+also precisely the experiment:
+
+1. before: record `hw=yes/no` per bridge port, `/system/resource/cpu-load`, and a throughput
+   reading across the switch;
+2. enable filtering (everything `pvid=1`);
+3. after: the same three readings, plus a connectivity smoke test.
+
+If a port drops to `hw=no`, the fix path is to express the VLAN config as **bridge VLAN entries**
+rather than per-VLAN interfaces, or drop whichever feature the chip cannot express. If a device
+genuinely cannot offload filtering, the outcome is a *documented* software-switching ceiling — the
+network still works, and we would know the cost before a single device moved, rather than
+discovering it as "the network got slow" halfway through the migration.
+
 ## Two notes the diagram has no room for
 
 - **The WAN port is `ether5` on the RB5009** — measured, and it is the one port the carve must

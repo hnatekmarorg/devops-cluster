@@ -29,6 +29,40 @@ ports at all** — VLAN interfaces, gateways and address lists only, inert until
 becomes VLAN-filtering. That is why this map comes first: the port map is the *input* to the
 policy, not the policy.
 
+## The two islands, and who has a foot in both
+
+Neither island is on the LAN, and neither is touched by the carve — but both matter to it,
+because the guests below are bridges between the islands and the LAN.
+
+| Island | Fabric | Addressing | Reachable from the LAN? |
+|---|---|---|---|
+| **Compute / RDMA fabric** | CRS804 `bridge-compute` — 4× QSFP-DD at 200 G to the Sparks, `ether2` 10 G to balteus | switch `10.0.0.1/24`; Sparks' fabric NICs `192.168.0.x`; PFC `pfc-roce`, jumbo MTU 9000 | no (one bridge, no LAN member) |
+| **Storage network** | **CRS317-1G-16S+** (16×SFP+ 10 G, management port *empty*) → air-gapped | **`192.168.88.0/24`**; balteus' own address `192.168.88.20` on `vmbr2` over `bond0`; the NAS (TrueNAS) at `.88.25` | no — deliberately |
+
+**Dual-homed guests** (measured 2026-09-14 from the PVE API — a LAN NIC *and* a storage NIC,
+i.e. exactly the boxes that can bridge the two domains): `truenas` (**four** NICs: vmbr0, vmbr2,
+vmbr3, vmbr4), `main-1`…`main-4` (the devops cluster), `kubernetes-master`, `cpu-worker0`,
+`gpu-worker0`, `inference`, `coder`, `portainer`, `proxy` (VM 107 and CT 131), `authentik-and-proxy`,
+`gitea` (CT 110), `github-dind`, `box`, `sisters`… ~18 in total. `headscale` and `sister-hermes`
+are LAN-only.
+
+Consequences worth stating plainly:
+
+- The storage island is an **isolation/availability design, not a trust boundary** — any of those
+  ~18 guests could forward between the islands if it routed. That is acceptable here; it is
+  written down so nobody mistakes it for a security wall later.
+- Storage traffic **stays off the LAN**, which is why the carve does not disturb it (and why the
+  10 G NAS path on CRS804 and this 10 G island are two different things).
+- Each dual-homed guest must be handled as multi-homed during the carve: its LAN NIC gets a class,
+  its storage NIC stays exactly where it is.
+- **Correction to an earlier reading:** the devops-cluster config referencing NFS at
+  `192.168.88.25` was recorded as "stale". It is not — `.88.25` is the NAS on the storage network,
+  and the cluster nodes reach it because they are dual-homed.
+
+Open questions this raised: balteus' **`vmbr3` carries `192.168.1.2/24`** (an unexplained third
+network) and **`vmbr4` bridges `eno2`** with no host address (used by TrueNAS). Both need an
+answer before the map is complete.
+
 ## Layer 1 — as it is
 
 **Posture:** one flat L2 domain. Every device runs one bridge with `vlan-filtering` **off**,

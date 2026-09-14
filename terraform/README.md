@@ -127,6 +127,11 @@ explicit decision rather than a drift.
 | `tf-apply.yml` | push to `main` touching `terraform/**`, manual | `write` | `plan -out` then `apply` of that exact plan; run summary + 30-day artifact |
 | `tf-drift.yml` | nightly 03:30 UTC, manual | `read` | `plan -detailed-exitcode`; opens/updates/closes the `routeros-drift` issue |
 
+Drift means *the device disagrees with state*, so the nightly job first checks that
+state exists at all: an unapplied repository (empty state) is reported as "nothing to
+drift from" instead of as drift. Otherwise the 20 stage-1 objects would look like drift
+every night until the first apply, and a noisy alert is a dead alert.
+
 **Arming switch.** `tf-apply` and `tf-drift` do nothing until the repository
 variable **`ROUTEROS_CI_ENABLED`** is `true`; they log that they skipped and stay
 green. That is deliberate: this pipeline can be merged and reviewed before the

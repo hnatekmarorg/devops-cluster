@@ -67,12 +67,31 @@ jobs:
           ../../scripts/tofu-ci.sh --role=read check
           echo "armed=true" >> "$GITHUB_OUTPUT"
 
-      - name: plan -detailed-exitcode
-        id: drift
+      - name: init + is there a baseline to watch yet?
+        id: baseline
         if: steps.preflight.outputs.armed == 'true'
         working-directory: terraform/routeros
         run: |
           ../../scripts/tofu-ci.sh --role=read init -input=false
+          # Until stage 1 has been applied once, `tofu plan` is non-empty by
+          # definition (20 objects to create). Reporting that as "drift" every
+          # night would be noise, and worse, it would train us to ignore the
+          # issue. Drift means *the device disagrees with state*, so state has to
+          # exist first.
+          object_count=$(../../scripts/tofu-ci.sh state list 2>/dev/null | grep -c . || true)
+          echo "objects in state: ${object_count}"
+          if [ "$object_count" -eq 0 ]; then
+            echo "::notice::No state yet — the repository has not been applied, so there is nothing to drift from. Skipping the drift comparison (this is the pre-baseline case, not drift)."
+            echo "baseline=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "baseline=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: plan -detailed-exitcode
+        id: drift
+        if: steps.preflight.outputs.armed == 'true' && steps.baseline.outputs.baseline == 'true'
+        working-directory: terraform/routeros
+        run: |
           set +e
           ../../scripts/tofu-ci.sh --role=read plan \
             -input=false -no-color -lock-timeout=5m -detailed-exitcode -out=drift.tfplan \
@@ -90,7 +109,7 @@ jobs:
           exit 0   # the reporting step decides what the outcome means
 
       - name: Report drift
-        if: steps.preflight.outputs.armed == 'true'
+        if: steps.preflight.outputs.armed == 'true' && steps.baseline.outputs.baseline == 'true'
         uses: actions/github-script@v7
         env:
           DRIFT_EXIT: ${{ steps.drift.outputs.exitcode }}

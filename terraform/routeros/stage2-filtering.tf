@@ -25,8 +25,18 @@
 # the router at 172.16.10.1.
 
 # ---------------------------------------------------------------------------
-# The LAN address: adopted, and moved from the slave port it is configured on to the bridge it is
-# already actually using. Same address, same prefix, same in-interface as today.
+# The LAN address — adopted exactly as it is, and deliberately NOT moved.
+#
+# The device reports it as `interface=ether2, actual-interface=bridge, slave=True`: RouterOS
+# parents a slave-port address to the bridge in practice. Declaring the *configured* value makes
+# this a pure adoption — 1 to import, 0 to change, nothing written — and it records a fact that
+# looks wrong and is not, which deserves a comment rather than an edit.
+#
+# `vrf` is deliberately absent. The provider's schema has it and the device *reports* it (`main`),
+# but RouterOS rejects it on write: the first apply of this file died with
+# "from RouterOS device: unknown parameter vrf". A read-only field the schema offers as settable
+# is a trap, not an invitation.
+#
 # id `*1` is its RouterOS internal id — `/ip/address print` shows it beside 172.16.100.1/24.
 # ---------------------------------------------------------------------------
 import {
@@ -36,11 +46,10 @@ import {
 
 resource "routeros_ip_address" "lan" {
   address   = "172.16.100.1/24"
-  interface = routeros_interface_bridge.bridge.name
+  interface = "ether2" # what the device reports; the bridge is where it actually lives
   comment   = "defconf"
   network   = "172.16.100.0"
   disabled  = false
-  vrf       = "main"
 }
 
 # ---------------------------------------------------------------------------

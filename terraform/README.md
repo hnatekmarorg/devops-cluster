@@ -103,6 +103,11 @@ set -a; . /path/to/agent-ro.env; set +a
 tofu init -input=false && tofu plan -input=false -lock=false -no-color
 ```
 
+**Fetch before you branch.** A checkout that predates the last merge proposes *destroying* what a
+later PR added — a stale `main` plus one commit plans `8 to destroy` for objects that are live and
+healthy. If a plan offers to delete bridge VLAN entries or a bridge port, suspect your tree before
+you suspect the device.
+
 **Always expect `0 to change, 0 to destroy`.** Adds are legitimate; a change or a destroy is a bug
 in the module, not router state to accept. Today's plan: `11 to import` (the adoption waves) plus
 `20 to add` (stage 1).

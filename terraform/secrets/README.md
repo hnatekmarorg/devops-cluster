@@ -40,3 +40,33 @@ state, so this is already narrow, and it keeps a second module (`crs326/`,
 instead, narrow the second resource to
 `arn:aws:s3:::tofu-state/routeros/*` — the lock file sits in the same prefix.
 
+### Verified against the live key (2026-09-14)
+
+Not the policy text — the behaviour of the key as MinIO actually enforces it:
+
+| Operation | Result | Reading |
+|---|---|---|
+| `HeadBucket tofu-state` (`tofu init` does this) | allowed | init succeeds |
+| `ListObjectsV2 tofu-state` | allowed | state listing/workspace handling |
+| `PutObject` + `DeleteObject` in `tofu-state` | allowed | the `*.tflock` lock write and its release |
+| `ListObjectsV2` on `docker-cache` | **denied** (`AccessDenied`) | no cross-bucket reads |
+| `PutObject` on `docker-cache` | **denied** (`AccessDenied`) | no cross-bucket writes |
+| `ListBuckets` | allowed, returns **`['tofu-state']` only** | MinIO filters this call to the buckets the credential may use, so it is not a widening — it is a second confirmation of the scoping |
+
+`tofu init` + `tofu plan` were then run through `scripts/tofu-ci.sh` against this
+bucket over the public break-glass endpoint: both succeeded, and `plan` acquired
+and released the lock object, which is what exercises the put/delete pair above.
+
+### Trap: the region name needs validation skipped
+
+MinIO advertises `x-amz-bucket-region: europe`, and the AWS SDK rejects `europe`
+**client-side** before any request is sent (`invalid AWS Region: europe`). The
+backend therefore passes `skip_region_validation=true` alongside the other skips —
+without it, signing with the region MinIO actually advertises is impossible, and
+signing with a made-up AWS region means the one value that cannot be wrong is the
+one you are not using. (Measured: the estate's registry cache signs `us-east-1`
+against the same MinIO and works, because SigV4 verifies with whatever region the
+client put in the credential scope — but the backend's *own* region validation
+still has to pass first.)
+
+

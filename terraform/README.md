@@ -121,6 +121,19 @@ Still needed before the plan/apply jobs do anything: the **bucket** (`tofu-state
 **key pair scoped to it**. Until those exist the jobs skip with an explanation instead of
 failing (see the arming switch below).
 
+Two values are now measured rather than assumed, and both are baked into the workflows
+and `scripts/tofu-ci.sh`:
+
+- **Region `europe`** — MinIO's advertised bucket region. Because `europe` is not a valid
+  AWS region name, the SDK rejects it before any request is made (`invalid AWS Region:
+  europe`); the backend therefore sets `skip_region_validation=true` next to its other
+  skip flags. Signing with a real AWS region name would mean signing with something MinIO
+  does not advertise.
+- **Endpoint = the in-cluster service** (`http://minio.minio.svc.cluster.local:9000`), the
+  same plain-HTTP path the registry cache uses, so state never travels over the public
+  ingress. `https://console-minio.hnatekmar.xyz` stays documented as the LAN break-glass
+  path (and is what verified the bucket + policy from the Hermes host).
+
 Alternative: the **`kubernetes` backend** (`backend-kubernetes.tf.example`) stores
 state in a Secret in the devops cluster. No MinIO dependency, less moving parts —
 but state becomes unreadable while the cluster is down, which is exactly the

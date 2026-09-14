@@ -110,6 +110,12 @@ backend_args() {
       printf -- '-backend-config=use_path_style=true\n'
       printf -- '-backend-config=skip_credentials_validation=true\n'
       printf -- '-backend-config=skip_requesting_account_id=true\n'
+      # MinIO advertises a region name that is not an AWS region (`europe`), and
+      # the AWS SDK rejects unknown region names client-side before any request
+      # is made: "invalid AWS Region: europe". Skipping validation lets the
+      # backend sign with the region MinIO actually advertises, which is the one
+      # value that cannot be wrong. Measured, not guessed.
+      printf -- '-backend-config=skip_region_validation=true\n'
       # Locking lives in the bucket itself (OpenTofu >= 1.10, Q8) — no
       # DynamoDB, no extra service to be down.
       printf -- '-backend-config=use_lockfile=true\n'

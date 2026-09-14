@@ -1,0 +1,156 @@
+---
+# RouterOS IaC — nightly drift detection (the safety net that makes "IaC-managed"
+# honest: anything changed on the device by hand shows up here as a plan that
+# wants to undo it).
+#
+# Read-only (`agent-ro`) and independent of the apply path. Gated by the same
+# ROUTEROS_CI_ENABLED arming switch, so a not-yet-bootstrapped pipeline does not
+# produce a nightly red X.
+#
+# Exit codes of `tofu plan -detailed-exitcode`:
+#   0 = the device matches the repo    → close the tracking issue if open
+#   2 = drift                          → open/update the tracking issue with the diff
+#   1 = the plan itself failed         → open/update the issue with the failure
+name: tf-drift (routeros)
+
+on:
+  schedule:
+    - cron: '30 3 * * *'   # 03:30 UTC nightly — the estate is idle
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: tf-drift-routeros
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
+  ROS_HOSTURL: ${{ vars.ROS_HOSTURL || 'api://172.16.100.1:8728' }}
+  TF_STATE_BACKEND: ${{ vars.TF_STATE_BACKEND || 's3' }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT }}
+  TF_STATE_KEY: ${{ vars.TF_STATE_KEY || 'routeros/rb5009.tfstate' }}
+
+jobs:
+  drift:
+    name: nightly plan
+    runs-on: gha-runner-scale-set-hnatekmarorg
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.12.6
+
+      - name: Arming switch + preflight (read credential)
+        id: preflight
+        working-directory: terraform/routeros
+        env:
+          ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
+        run: |
+          if [ "$ROUTEROS_CI_ENABLED" != "true" ]; then
+            echo "::notice::ROUTEROS_CI_ENABLED != true — drift check skipped by design."
+            echo "armed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ../../scripts/tofu-ci.sh --role=read check
+          echo "armed=true" >> "$GITHUB_OUTPUT"
+
+      - name: plan -detailed-exitcode
+        id: drift
+        if: steps.preflight.outputs.armed == 'true'
+        working-directory: terraform/routeros
+        run: |
+          ../../scripts/tofu-ci.sh --role=read init -input=false
+          set +e
+          ../../scripts/tofu-ci.sh --role=read plan \
+            -input=false -no-color -lock-timeout=5m -detailed-exitcode -out=drift.tfplan \
+            > drift.txt 2>&1
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "No drift: the device matches the repository." ;;
+            2) echo "Drift detected: something on the device differs from the repository." ;;
+            *) echo "The drift plan failed (exit $code)."; tail -40 drift.txt ;;
+          esac
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          echo "--- drift report ---"
+          tail -40 drift.txt
+          exit 0   # the reporting step decides what the outcome means
+
+      - name: Report drift
+        if: steps.preflight.outputs.armed == 'true'
+        uses: actions/github-script@v7
+        env:
+          DRIFT_EXIT: ${{ steps.drift.outputs.exitcode }}
+          DRIFT_PATH: terraform/routeros/drift.txt
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- routeros-drift -->';
+            const title = 'RouterOS drift detected (rb5009)';
+            const code = process.env.DRIFT_EXIT;
+            let out = '';
+            try { out = fs.readFileSync(process.env.DRIFT_PATH, 'utf8'); } catch (e) { out = '(no plan output captured)'; }
+            if (out.length > 50000) out = out.slice(0, 50000) + '\n… truncated';
+
+            const { owner, repo } = context.repo;
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100,
+            });
+            const existing = open.find((i) => i.body && i.body.includes(marker));
+
+            if (code === '0') {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: existing.number,
+                  body: `${marker}\nBack in sync as of ${new Date().toISOString()} — \`tofu plan\` is empty. Closing.`,
+                });
+                await github.rest.issues.update({ owner, repo, issue_number: existing.number, state: 'closed' });
+              } else {
+                console.log('No drift, no issue to close.');
+              }
+              return;
+            }
+
+            const heading = code === '2'
+              ? 'The RB5009 differs from what `terraform/routeros` declares.'
+              : `The drift plan could not be computed (exit ${code}) — this is a pipeline failure, not a router change.`;
+            const body = [
+              marker,
+              `### ${heading}`,
+              '',
+              `Detected: ${new Date().toISOString()} · workflow run [${context.runId}](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`,
+              '',
+              'Per the change-control rules this gets **codified the same day**: either the',
+              'change was legitimate (then it comes back as a reviewed PR) or it is reverted.',
+              '',
+              '<details><summary>tofu plan</summary>',
+              '',
+              '```',
+              out.trimEnd(),
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body });
+              console.log(`Updated issue #${existing.number}`);
+            } else {
+              console.log('Opening the drift issue.');
+              const issue = { owner, repo, title, body, labels: ['routeros-drift'] };
+              try {
+                await github.rest.issues.create(issue);
+              } catch (e) {
+                // The label may not exist yet in this repository.
+                delete issue.labels;
+                await github.rest.issues.create(issue);
+              }
+            }

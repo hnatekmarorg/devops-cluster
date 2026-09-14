@@ -1,2 +1,13 @@
 /secrets/*
 .aider*
+
+# OpenTofu state and plans (local artifacts; never committed)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# CI credential material: the plaintext sops source of truth stays on the box
+# that encrypts it. Its encrypted sibling (enc.*.env) IS committed.
+terraform/secrets/routeros-ci.env

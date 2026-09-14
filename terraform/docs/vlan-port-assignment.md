@@ -76,8 +76,14 @@ switch's own address might suggest.
 
 | Device | Evidence | Reservation |
 |---|---|---|
-| **atuin** (the new cluster node, `172.16.100.171`) | Martin, 2026-09-14: joins **after** the network upgrade; its NotReady Node object in the cluster is expected, not stale | **lab-class** access port on the main switch, **plus its IPMI (`172.16.100.123`, DHCP name "ipmi - atuin") in the mgmt VLAN** |
+| **atuin** (the new cluster node, `172.16.100.171`) | Martin, 2026-09-14: joins **after** the network upgrade; its NotReady Node object in the cluster is expected, not stale | **lab-class** access port on the main switch, **plus its IPMI (`172.16.100.123`, DHCP name "ipmi - atuin") in the mgmt VLAN**, and — per the rule below — a 10 G link into the storage island |
 | **bukefalos** (second server) | already cabled as an idle LACP bond (`ether23`+`ether24` on the CRS326) | bond reserved as a **srv** trunk when it comes online |
+
+**Rule (Martin, 2026-09-14): every Kubernetes node gets a 10 Gbps link into the storage network
+(`192.168.88.0/24`).** For the five VM nodes that is already true — they sit on balteus' `vmbr2`
+over `bond0`. A physical node like atuin therefore needs a 10 G port on the storage island's own
+switch (CRS317), which is outside the LAN carve but must be reserved so the node arrives into a
+finished network.
 
 Reserving these now is the cheap direction: the ports sit in their future VLAN, unoccupied, and the
 carve does not have to be revisited when the hardware arrives. The other direction (assigning them

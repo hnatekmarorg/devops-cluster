@@ -1,0 +1,43 @@
+---
+# LAN-reachable S3 endpoint for the RouterOS IaC state (decision register Q8).
+#
+# Why this exists: the CI runner and MinIO are in **different clusters** — measured
+# 2026-09-14 — so no cluster-local DNS name (`minio.minio.svc.cluster.local`) can ever
+# resolve from the runner. Both clusters sit on the same LAN, so a MetalLB address is the
+# one path that needs no DNS, no ingress and no hairpin through the router. That last
+# point is why it goes in before the VLAN carve: over the public ingress hostname every
+# state read/write leaves the LAN and comes back through the router, which makes the
+# router's state depend on the router.
+#
+# Why a second Service instead of switching the chart's Service to LoadBalancer: the
+# ClusterIP service (`minio.minio.svc:9000`) is what in-cluster consumers use — the
+# registry cache and Argo Workflows among them. This adds a LAN-facing address beside it
+# rather than changing what they talk to.
+#
+# Address pinning: the devops cluster's MetalLB pool is 172.16.100.15–172.16.100.16 and
+# `.15` belongs to ingress-nginx. Pinning `.16` keeps the endpoint from drifting to a
+# different address on the next re-adoption, which would silently break CI state.
+# (Written against MetalLB v0.14.9 — plural `loadBalancerIPs`.)
+#
+# Transport: plain HTTP on the LAN — the state is a lock file plus router addresses and
+# comments, and the credentials are bucket-scoped. The public endpoint stays available
+# (TLS, ingress) as the break-glass path from a laptop.
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-lan
+  namespace: minio
+  labels:
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/component: s3-lan
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 172.16.100.16
+spec:
+  type: LoadBalancer
+  selector:
+    app: minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+      protocol: TCP

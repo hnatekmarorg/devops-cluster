@@ -147,24 +147,29 @@ and `scripts/tofu-ci.sh`:
   europe`); the backend therefore sets `skip_region_validation=true` next to its other
   skip flags. Signing with a real AWS region name would mean signing with something MinIO
   does not advertise.
-- **Endpoint — corrected by measurement.** The first choice was the in-cluster service
-  (`http://minio.minio.svc.cluster.local:9000`, the name used by
-  `Hnatekmar/bootstrap-kubernetes/templates/registry.yaml`), on the reasoning that state
-  should never cross the public ingress. **That name does not resolve from the runner**:
-  `dial tcp: lookup minio.minio.svc.cluster.local on 10.96.0.10:53: no such host` — the
-  reference evidently belongs to a different cluster/generation than the ARC scale set.
-  In use: **`https://console-minio.hnatekmar.xyz`** (the S3 API; `minio.hnatekmar.xyz` is
-  the console — the chart's naming is inverted), TLS, path-style, verified working from both
-  the runner and a LAN host.
-  **Why that name can never work, now proven:** the runner and MinIO are in **two different
-  clusters** (measured 2026-09-14 — `kubectl -n minio get svc` on the devops cluster shows the
-  service; `arc-systems` does not exist there). No cluster-local DNS name crosses that boundary.
-  **Follow-up that removes the hairpin:** the devops cluster's MetalLB pool is
-  `172.16.100.15–172.16.100.16` and only `.15` is taken (by ingress-nginx), so **`.16` is free**
-  for a `LoadBalancer` service on MinIO. The endpoint then becomes
-  `http://172.16.100.16:9000` — a LAN address with no DNS, no ingress and no hairpin, i.e. the
-  router's state stops depending on the router. Worth doing before the VLAN carve; it is a
-  one-service change in the repo that manages MinIO.
+- **Endpoint — settled by measurement, and it is not in this cluster.** The store is **MinIO
+  running as a TrueNAS application on the NAS (VM 101)**, reached at **`http://172.16.100.148:9000`**.
+  Verified: `minio/health/live` 200, `x-amz-bucket-region: europe`, the `tofu-state` bucket lists with
+  the scoped CI key, and an object written to that address is readable through the public hostname —
+  i.e. `console-minio.hnatekmar.xyz` terminates on the *same* instance (proven by the absence of any
+  request in the in-cluster MinIO pod's logs after an authenticated call through it).
+  Consequences, all good ones:
+  * CI reaches it over the plain LAN — **no DNS, no ingress, no hairpin through the router**, so the
+    router's state no longer depends on the router during the carve;
+  * it depends on **no cluster at all** — the state stays readable when the devops cluster is down,
+    which is the break-glass property Q8 chose S3 for. The `kubernetes` backend's weakness, avoided
+    without extra work;
+  * the public TLS hostname stays documented as the break-glass path from a laptop.
+
+  **Stale sibling found while verifying:** the devops cluster runs its own `minio` namespace
+  (50 Gi NFS PVC, pod up 13 days) that **receives no traffic** — no ingress in that namespace, and its
+  PVC is now failing writes (`Storage resources are insufficient … .minio.sys/buckets/.bloomcycle.bin`).
+  Treat it as a leftover from an August install: verify who consumes `minio.minio.svc.cluster.local`
+  before removing it, but do not mistake it for the live store.
+
+  Earlier attempts, kept for the trail: the in-cluster name `minio.minio.svc.cluster.local` can never
+  resolve from the runner (different cluster), and a MetalLB `LoadBalancer` on `.16` was drafted and
+  then **dropped as unnecessary** once the NAS address turned out to work directly.
 
 Alternative: the **`kubernetes` backend** (`backend-kubernetes.tf.example`) stores
 state in a Secret in the devops cluster. No MinIO dependency, less moving parts —

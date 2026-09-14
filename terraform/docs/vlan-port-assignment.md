@@ -49,17 +49,28 @@ as the parking VLAN** (new, for tag hygiene). `172.16.60.0/24` stays reserved fo
 
 ## CSS610 (`172.16.100.117`, SwOS Lite 2.21 · **hand config, no API**)
 
-| Port | Now | Proposed | Class |
-|---|---|---|---|
-| uplink → CRS326 `ether4` | — | **trunk**, tagged `10,30` (+`10` for CRS804 mgmt) | — |
-| charon (work PC) | — | access, pvid 10 | mgmt |
-| CRS804 management (`ether1` of CRS804) | — | access, pvid 10 | mgmt |
-| spark1–spark4 management NICs | — | access, pvid 30 | lab |
-| 2× SFP+ | — | spare | — |
+Port map supplied from the switch's own UI (2026-09-14) — it labels its ports by hand:
 
-**I cannot read this switch's port mapping** (no API). To fill this table in I need the port
-list from its UI, or a photo of the front panel with labels — the other session's diagram lists
-its occupants but not which physical port is which.
+| Port | Name on the switch | Link | Proposed | Class |
+|---|---|---|---|---|
+| Port1 | — | no link | spare | — |
+| **Port2** | `Charon` | 1 G | **access, pvid 10** | mgmt |
+| **Port3** | `Spark 4` | 1 G | **access, pvid 30** | lab |
+| **Port4** | `CRS04-4DDQ ETH1` | 1 G | **access, pvid 10** | mgmt |
+| **Port5** | `Spark 3` | **100 M** ⚠ | **access, pvid 30** | lab |
+| **Port6** | `Spark 2` | 1 G | **access, pvid 30** | lab |
+| **Port7** | `CRS326 Port 4` | 1 G | **trunk**, tagged `10,30` | — |
+| **Port8** | `Spark 1` | 1 G | **access, pvid 30** | lab |
+| SFP+1, SFP+2 | — | no link | spare (10 G) | — |
+
+**Finding on Port5: `Spark 3` negotiates 100 M while its three siblings do 1 G.** Management
+traffic only, so nothing is broken — but 100 M on a gigabit port is the classic signature of a
+damaged pair or a bad crimp, and it is worth a cable swap the next time someone is at the rack.
+
+**Opportunity, not a task:** Port1 and both SFP+ ports here are free, and so are **both SFP+ ports
+on the CRS326** — so the CSS610's uplink (today 1 G on `Port7`, carrying charon, the spine's
+management and all four Sparks' management) could become a 10 G link whenever it is convenient.
+Separate change; nothing in the carve depends on it.
 
 ## CRS804 (`172.16.100.113`, 7.24.2 · chip Marvell-98DX7335)
 

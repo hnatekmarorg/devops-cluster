@@ -29,6 +29,38 @@ ports at all** — VLAN interfaces, gateways and address lists only, inert until
 becomes VLAN-filtering. That is why this map comes first: the port map is the *input* to the
 policy, not the policy.
 
+## The WAN is currently *inside* the LAN bridge
+
+Measured on the RB5009 (`/interface/pppoe-client`):
+
+```
+name        interface   add-default-route   use-peer-dns
+t-mobile    bridge      true                true
+```
+
+The PPPoE client is bound to **`bridge`**, not to a physical port or a VLAN. Consequences:
+
+- PPPoE discovery and session frames ride the **same flat L2 domain as every LAN device**, which is
+  why three ISP-side MACs (`18:5b:00:…`, `28:de:e5:…`, `c4:b8:b4:…`) sit in the LAN bridge's host
+  table on `ether5`, alongside a router MAC — the WAN is being flooded into the LAN today;
+- any LAN device can see (and in principle attempt to speak to) the ISP's PPPoE concentrator;
+- and it is the single most important thing to get right **before** the VLAN carve: a port that
+  carries the WAN while being a bridge member will be handed a VLAN class by any mechanical
+  application of the table above, and the WAN will move or break with it.
+
+**Proposed pre-carve step** (needs a change window — the PPPoE session re-establishes, so internet
+blips for a few seconds):
+
+1. take `ether5` out of the bridge (it is the ISP uplink — the Huawei in bridge mode, Martin
+   2026-09-14; it is the only live port with non-LAN MACs behind it);
+2. move the PPPoE client onto that port (or onto a dedicated WAN VLAN with no LAN members);
+3. verify: PPPoE up, default route present, the public address unchanged, and the ISP MACs gone from
+   the LAN bridge's host table.
+
+After that the LAN bridge has no WAN members at all, which is what makes "the WAN is never in a LAN
+VLAN" a property rather than a promise — and the carve's port table stops containing a port it must
+not touch.
+
 ## The two islands, and who has a foot in both
 
 Neither island is on the LAN, and neither is touched by the carve — but both matter to it,

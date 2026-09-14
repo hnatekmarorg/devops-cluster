@@ -18,36 +18,18 @@
 # gets a class the first time someone applies a port table mechanically, and the internet
 # moves with it. Fixing it is what makes "the WAN is never in a LAN VLAN" a property.
 #
-# Three waves, each its own commit, so the risky step is isolated
-# -------------------------------------------------------------
-#   1  import the two objects as they are      → expect: 2 to import, 0 to change
-#   2a move the PPPoE client onto ether5       → expect: 1 to change  (session re-establishes)
-#   2b take ether5 out of the bridge           → expect: 1 to destroy  (no WAN interruption)
-#
-# 2a first, deliberately: once the session rides the port directly, removing the bridge
-# membership cannot disturb the WAN at all.
+# Two stages, each its own commit:
+#   1  adopt the objects as they are   → imports only, 0 to change
+#   2  the change itself (below)       → one change, then the port leaves the bridge
 
 # ---------------------------------------------------------------------------
-# Wave 2 — the PPPoE client leaves the bridge for the port the ISP actually answers on.
-# This ends the WAN/LAN L2 overlap: with the client bound to `bridge`, the bridge had to carry
-# its frames to `ether5` — and therefore carried the ISP's frames into every LAN port too.
+# Wave 2 — the WAN leaves the LAN bridge: the PPPoE client moves onto the ISP's own port
+# (`ether5`), and that port stops being a bridge member. Until this lands, the bridge carries
+# the session's frames to `ether5` — and the ISP's frames into every LAN port with them.
 #
-# ORDER MATTERS, and the device taught us why (Martin, 2026-09-14):
-#   RouterOS refuses a PPPoE client on a bridge **slave** — it flags the client `invalid` with
-#   the comment "Client is on slave interface". So `ether5` must leave the bridge *first*; only
-#   then can the client bind to it. Doing it in the other order (client first) simply does not
-#   come up. The consequence is that a few seconds of WAN outage are inherent to this change, not
-#   avoidable: removing the port kills the session, and the next command restores it on the port.
-#   Paste the two commands together so that window is as short as the CLI can make it:
-#
-#     /interface bridge port remove [find interface=ether5]
-#     /interface pppoe-client set [find name=t-mobile] interface=ether5
-#
-#   Rollback is the reverse order, for the same reason — client back to `bridge` first, then the
-#   port back into the bridge:
-#
-#     /interface pppoe-client set [find name=t-mobile] interface=bridge
-#     /interface bridge port add bridge=bridge interface=ether5
+# Order is forced by the device: RouterOS will not bind a PPPoE client to a bridge slave
+# (`invalid`, "Client is on slave interface"), so the port leaves the bridge first and the
+# client binds to it after. Rollback is the same order reversed.
 # ---------------------------------------------------------------------------
 import {
   to = routeros_interface_pppoe_client.t_mobile

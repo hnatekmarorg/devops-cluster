@@ -98,11 +98,12 @@ resource "routeros_interface_bridge" "bridge" {
   priority            = "0x8000"
   protocol_mode       = "rstp"
   transmit_hold_count = 6
-  vlan_filtering      = false
+  vlan_filtering      = true
 }
 
-# no link today. **The management escape port**: if a bridge change ever locks the admin path out,
-# a laptop here reaches the router. Pre-assigned to mgmt and never tagged.
+# no link today. **The management escape port**: VLAN 10, untagged-only, so a laptop here lands in
+# the mgmt segment and reaches 172.16.10.1 even if the compat segment is misconfigured. It exists
+# precisely so a mistake in VLAN 1 cannot take the way back in with it.
 resource "routeros_interface_bridge_port" "ether1" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -111,7 +112,7 @@ resource "routeros_interface_bridge_port" "ether1" {
   disabled                = false
   edge                    = "auto"
   fast_leave              = false
-  frame_types             = "admit-all"
+  frame_types             = "admit-only-untagged-and-priority-tagged"
   horizon                 = "none"
   hw                      = true
   ingress_filtering       = true

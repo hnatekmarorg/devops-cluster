@@ -125,7 +125,7 @@ resource "routeros_interface_bridge_port" "ether1" {
   path_cost               = "10"
   point_to_point          = "auto"
   priority                = "0x80"
-  pvid                    = 1
+  pvid                    = 10
   restricted_role         = false
   restricted_tcn          = false
   tag_stacking            = false

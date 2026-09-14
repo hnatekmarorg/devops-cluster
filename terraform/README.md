@@ -1,254 +1,115 @@
-# RouterOS / network-gear IaC — CI-run OpenTofu
+# RouterOS IaC — CI-run OpenTofu
 
-Layer 1 of the overhaul's IaC layering (`.tf` here → VMs via `bpg/proxmox` later →
-apps via ArgoCD, which stays the only GitOps controller). The RB5009's
-configuration is declared in this directory and applied by GitHub Actions on
-merge.
+The RB5009's configuration is declared here and applied by GitHub Actions on merge. Delivery
+model: **CI-run OpenTofu** (decision Q13), not Crossplane — a reviewed plan plus a CI apply gives
+the same guarantee with a trail you can read.
 
-This is the delivery vehicle [decision Q13](../README.md) chose: **CI-run
-OpenTofu**, not Crossplane. Wrapping `tofu` in a Crossplane `Workspace` buys
-opaque state, a fringe code path, and a controller that retries forever when
-something is wrong; a reviewed plan + a CI apply is the same guarantee with a
-readable trail. The earlier Crossplane attempt (PR #31) is superseded — the HCL
-survives here, as a real module.
-
-Companion documentation lives in the notes vault
-(`home-production-overhaul/`): the plan, the device tracker, the decision
-register, and `access-and-change-control` — which is the authority for
-everything below. If this file and that note disagree, the note wins.
+**Depth lives elsewhere.** Measured wiring and the VLAN design:
+[`docs/network-wiring.md`](docs/network-wiring.md) (with
+[`network-wiring.svg`](docs/network-wiring.svg) and
+[`network-map-current.svg`](docs/network-map-current.svg), as-is vs proposed). Port-by-port
+assignment: [`docs/vlan-port-assignment.md`](docs/vlan-port-assignment.md). The steps only a human
+can do: [`docs/router-bootstrap-runbook.md`](docs/router-bootstrap-runbook.md). The plan, decision
+register and traps: the notes vault, `home-production-overhaul/`.
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `routeros/` | The RB5009 module. Stage 1 = additive groundwork only (see its README) |
-| `docs/network-wiring.md` | **The measured wiring, port by port, plus the proposed VLAN carve** (diagram + tables) — read this before designing any cut-over |
-| `docs/network-wiring.svg` | The same, as one picture: layer 1 as-is, layer 2 proposed |
-| `routeros/backend.tf` | Partial S3 backend config — values come from `TF_STATE_*` at init time |
-| `routeros/backend-kubernetes.tf.example` | The alternative state backend, ready to swap in |
-| `secrets/enc.routeros-ci.env` | sops-encrypted CI credentials (dotenv), only if path **(b)** below is used |
+| `routeros/` | the RB5009 module — stage 1 is additive groundwork only (see its README) |
+| `docs/` | wiring, VLAN carve, port table, bootstrap runbook, maps |
+| `secrets/` | the state-key policy; the sops delivery path (unused today) |
+| `../scripts/tofu-ci.sh` | the wrapper: role → credentials, backend config, nothing else |
 
-Planned siblings, not built yet: `crs326/`, `crs804/`, `cloudflare/`, `compute/`
-(Phase 1–2 of the plan). They land when their phase opens, each as its own
-reviewed PR.
+Not built yet, on purpose: `crs326/`, `crs804/`, `cloudflare/`, `compute/` — each lands as its own
+reviewed PR when its phase opens.
 
-## The runner contract
+## Runner
 
-`runs-on: gha-runner-scale-set-hnatekmarorg`, **the on-prem ARC scale set** —
-not a GitHub-hosted runner. Two reasons, both structural:
+`runs-on: gha-runner-scale-set-hnatekmarorg` — the on-prem ARC scale set, because the RouterOS API
+is LAN-bound and a cloud runner cannot reach it. One measured fact worth keeping: that runner lives
+in **the other on-prem cluster** (`Hnatekmar/bootstrap-kubernetes`), *not* the devops cluster where
+MinIO runs — they are separate estates. The runner egresses through a proxy, so workflows set
+`NO_PROXY` for the LAN ranges.
 
-1. The RouterOS API is address-bound to the LAN subnets and is not
-   internet-exposed. A cloud runner simply cannot reach `172.16.100.1:8728`;
-   publishing the API to fix that is a much worse idea than the runner choice.
-2. The runner is **not** in the devops cluster — corrected 2026-09-14 by looking
-   at the cluster directly: there is no `arc-systems` namespace there, and MinIO
-   lives there. The runner belongs to the *other* on-prem cluster, bootstrapped by
-   `Hnatekmar/bootstrap-kubernetes`. The agent has no access to that one, so the
-   split still holds: the agent authors PRs, the pipeline holds the credential and
-   applies. (It does now hold a testing-cluster kubeconfig for *this* cluster,
-   which is how the correction was measured — see `docs/` and the vault note.)
-
-The runner pod also reaches the internet through a proxy (ARC `proxy` values in
-`Hnatekmar/bootstrap-kubernetes`), so every workflow sets `NO_PROXY` for the LAN
-ranges. If the proxy value gains a `noProxy` entry pointing at the same ranges,
-the workflow-level `NO_PROXY` can go away.
-
-## The credential contract
-
-Exactly two RouterOS identities are involved, and which one a job gets depends on
-whether that job can change the device:
+## Credentials
 
 | Role | RouterOS user | Policy | Used by |
 |---|---|---|---|
-| `read` | `agent-ro` | `api,read,test` (**no** `sensitive` — keys/PSKs must not be readable) | plan-on-PR, nightly drift |
-| `write` | `iac` | `api,read,write,test` | apply-on-merge only |
+| read | `agent-ro` | `api,read,test` — **no** `sensitive` | plan-on-PR, nightly drift |
+| write | `iac` | `api,read,write,test` | apply-on-merge only |
 
-`scripts/tofu-ci.sh` is the only place that resolves credentials; it maps the role
-pair onto `ROS_USERNAME`/`ROS_PASSWORD` (what the provider reads) and never prints
-a value — only key names and their presence.
+`ROS_READ_*` are repository secrets; `ROS_WRITE_*` live on the **`routeros-production` environment**,
+so the write identity exists only in the apply job a human approved. That is the whole point: a
+PR-triggered plan job can never read the write password, which is exactly why "mount one secret in
+the runner pod" was rejected. The sops path in `secrets/` stays supported but is unused.
 
-| Variable | Purpose | Where it lives |
-|---|---|---|
-| `ROS_READ_USERNAME`, `ROS_READ_PASSWORD` | role `read` | **repository secret** |
-| `ROS_WRITE_USERNAME`, `ROS_WRITE_PASSWORD` | role `write` | **environment secret** (`routeros-production`) |
-| `ROS_HOSTURL` | `api://172.16.100.1:8728` (plaintext API: TLS on 8729 has no usable certificate) | repository variable |
-| `TF_STATE_BUCKET`, `TF_STATE_ENDPOINT`, `TF_STATE_KEY`, `TF_STATE_REGION` | s3 backend | repository variable |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | s3 backend credentials (MinIO key) | **repository secret** |
-| `TF_STATE_BACKEND` | `s3` (default) or `kubernetes` | repository variable |
-| `SOPS_AGE_KEY` / `SOPS_AGE_KEY_FILE` | only for path (b) below — unused today | — |
+## State
 
-The delivery path **in use** is (c): role-scoped GitHub secrets, mapped explicitly
-into the job environment by each workflow. Why not the alternatives:
+| Setting | Value |
+|---|---|
+| Backend | S3 with in-bucket locking (`use_lockfile`) — no lock service that can be down |
+| Endpoint | `http://172.16.100.148:9000` — **MinIO on the NAS**, on the LAN |
+| Bucket | `tofu-state`, key pair scoped to it (policy in `secrets/`) |
+| Region | `europe` (what MinIO advertises; needs `skip_region_validation=true`) |
 
-**(a) Cluster Secret mounted into the runner pod** (what Q14's default implies) —
-rejected: in ARC, injecting it means restating the runner container definition in
-`Hnatekmar/bootstrap-kubernetes` (image pin included), and, decisively, **one mounted
-secret hands *both* identities to *every* job**, including PR-triggered plan jobs. A pull
-request could then read the write password. That breaks the property this whole module is
-built around, so the mount can only ever carry the read pair — at which point it is doing
-the same job as a repository secret with more moving parts.
+Two properties, both measured rather than assumed: CI reaches the store over the plain LAN — **no
+DNS, no ingress, no hairpin through the router** — and it depends on **no cluster at all**, so the
+state stays readable when the devops cluster is down. That break-glass property is why Q8 chose S3.
 
-**(b) sops file in this repo + an age key in the runner** — kept documented and the wrapper
-still supports it, for when the estate standardizes on key-based delivery:
+Trap: the devops cluster runs its own `minio` namespace that receives no traffic and whose PVC is
+failing writes. It is a leftover from an August install, not the live store — check who consumes
+`minio.minio.svc.cluster.local` before removing it.
 
-```bash
-# the plaintext source of truth is gitignored, mode 600, never committed
-install -m 600 /dev/null terraform/secrets/routeros-ci.env
-"$EDITOR" terraform/secrets/routeros-ci.env     # ROS_READ_*, ROS_WRITE_*, TF_STATE_*, AWS_*
-
-sops --encrypt --age age1t9wspfgy0nxrc9d3frmp85g4d5ug6ksf66pv68ycptv0fwsxq9fqxuhma9 \
-     --input-type dotenv --output-type dotenv \
-     terraform/secrets/routeros-ci.env > terraform/secrets/enc.routeros-ci.env
-```
-
-(the recipient is the estate one already used by `devops/argocd/secrets/enc.*.yaml`).
-The workflow decrypts it in-process, so decrypted values never reach disk, an
-artifact, or a log line.
-
-**(c) Role-scoped GitHub secrets (in use).** Repository-level: the read identity and the
-state key — everything plan and drift need. Environment-level (`routeros-production`):
-the write identity, so it exists only in the apply job you approve. The wrapper models
-this as roles, so the workflow files decide what a job can see and the script never has
-to guess.
-
-Residual risk worth stating: the state key is repository-level, and `use_lockfile` means
-even a plan writes to the bucket, so a same-repo PR job could in principle delete the
-state object. It cannot change the router (no write credential) and state is rebuildable
-by re-import, but it is why `main` stays review-gated and forks are excluded from the
-plan job outright.
-
-## The state contract
-
-State is the one thing that must outlive the runner pod, so it needs a remote
-backend. Default (**Q8**): **S3 with in-bucket locking** (`use_lockfile`, OpenTofu
-≥ 1.10 — no DynamoDB-style lock service to be down) against **MinIO on the devops
-cluster**, path-style, with the STS/IAM validation calls skipped since MinIO does
-not implement them.
-
-**Status (2026-09-14):** MinIO was returning 502 earlier the same day (PV on the stale
-NFS server `.88.25`) and is **healthy again** — `health/live` and `health/cluster` answer
-200, the S3 API answers, and it advertises `x-amz-bucket-region: europe`. Two consequences
-are baked into the workflows: sign with region **`europe`**, and default the endpoint to the
-**in-cluster service** (`http://minio.minio.svc.cluster.local:9000`, the same plain-HTTP
-path the registry cache uses) rather than the public hostname — `443/tcp` is forwarded to
-the edge Caddy box, so `console-minio.hnatekmar.xyz` (S3 API) and `minio.hnatekmar.xyz`
-(console) are reachable from the internet. Acceptable as a break-glass path from a LAN
-laptop, not as the default for router state.
-
-Still needed before the plan/apply jobs do anything: the **bucket** (`tofu-state`) and a
-**key pair scoped to it**. Until those exist the jobs skip with an explanation instead of
-failing (see the arming switch below).
-
-Two values are now measured rather than assumed, and both are baked into the workflows
-and `scripts/tofu-ci.sh`:
-
-- **Region `europe`** — MinIO's advertised bucket region. Because `europe` is not a valid
-  AWS region name, the SDK rejects it before any request is made (`invalid AWS Region:
-  europe`); the backend therefore sets `skip_region_validation=true` next to its other
-  skip flags. Signing with a real AWS region name would mean signing with something MinIO
-  does not advertise.
-- **Endpoint — settled by measurement, and it is not in this cluster.** The store is **MinIO
-  running as a TrueNAS application on the NAS (VM 101)**, reached at **`http://172.16.100.148:9000`**.
-  Verified: `minio/health/live` 200, `x-amz-bucket-region: europe`, the `tofu-state` bucket lists with
-  the scoped CI key, and an object written to that address is readable through the public hostname —
-  i.e. `console-minio.hnatekmar.xyz` terminates on the *same* instance (proven by the absence of any
-  request in the in-cluster MinIO pod's logs after an authenticated call through it).
-  Consequences, all good ones:
-  * CI reaches it over the plain LAN — **no DNS, no ingress, no hairpin through the router**, so the
-    router's state no longer depends on the router during the carve;
-  * it depends on **no cluster at all** — the state stays readable when the devops cluster is down,
-    which is the break-glass property Q8 chose S3 for. The `kubernetes` backend's weakness, avoided
-    without extra work;
-  * the public TLS hostname stays documented as the break-glass path from a laptop.
-
-  **Stale sibling found while verifying:** the devops cluster runs its own `minio` namespace
-  (50 Gi NFS PVC, pod up 13 days) that **receives no traffic** — no ingress in that namespace, and its
-  PVC is now failing writes (`Storage resources are insufficient … .minio.sys/buckets/.bloomcycle.bin`).
-  Treat it as a leftover from an August install: verify who consumes `minio.minio.svc.cluster.local`
-  before removing it, but do not mistake it for the live store.
-
-  Earlier attempts, kept for the trail: the in-cluster name `minio.minio.svc.cluster.local` can never
-  resolve from the runner (different cluster), and a MetalLB `LoadBalancer` on `.16` was drafted and
-  then **dropped as unnecessary** once the NAS address turned out to work directly.
-
-Alternative: the **`kubernetes` backend** (`backend-kubernetes.tf.example`) stores
-state in a Secret in the devops cluster. No MinIO dependency, less moving parts —
-but state becomes unreadable while the cluster is down, which is exactly the
-break-glass property Q8 chose S3 for. It is also the cheaper prerequisite (a Role
-for the runner's ServiceAccount instead of fixing MinIO), so the trade is worth an
-explicit decision rather than a drift.
-
-## The workflows
+## Workflows
 
 | Workflow | Trigger | Role | Does |
 |---|---|---|---|
-| `tf-plan.yml` | PR touching `terraform/**`, manual | `read` | `fmt -check`, `validate`, `plan`; posts the plan as a PR comment |
-| `tf-apply.yml` | push to `main` touching `terraform/**`, manual | `write` | `plan -out` then `apply` of that exact plan; run summary + 30-day artifact |
-| `tf-drift.yml` | nightly 03:30 UTC, manual | `read` | `plan -detailed-exitcode`; opens/updates/closes the `routeros-drift` issue |
+| `tf-plan.yml` | PR touching `terraform/**`, manual | read | fmt, validate, plan; posts the plan as a PR comment |
+| `tf-apply.yml` | push to `main` touching `terraform/**`, manual | write | `plan -out`, then apply of that exact plan |
+| `tf-drift.yml` | nightly 03:30 UTC, manual | read | `plan -detailed-exitcode`; opens/updates/closes the drift issue |
 
-Drift means *the device disagrees with state*, so the nightly job first checks that
-state exists at all: an unapplied repository (empty state) is reported as "nothing to
-drift from" instead of as drift. Otherwise the 20 stage-1 objects would look like drift
-every night until the first apply, and a noisy alert is a dead alert.
+Drift means *the device disagrees with state*, so the nightly job checks first that state exists at
+all: an unapplied repository is reported as "nothing to drift from", not as drift. A noisy alert is
+a dead alert.
 
-**Arming switch.** `tf-apply` and `tf-drift` do nothing until the repository
-variable **`ROUTEROS_CI_ENABLED`** is `true`; they log that they skipped and stay
-green. That is deliberate: this pipeline can be merged and reviewed before the
-bootstrap exists, and merging a `terraform/**` change cannot produce a surprise
-apply. Once armed, a missing credential is a hard failure instead of a silent
-skip.
+**Arming switch.** `tf-apply` and `tf-drift` do nothing until the repository variable
+**`ROUTEROS_CI_ENABLED=true`**. So this pipeline can be reviewed and merged before the bootstrap
+exists, and merging a `terraform/**` change cannot produce a surprise apply. Once armed, a missing
+credential becomes a hard failure instead of a silent skip.
 
-**Review gates, in order:** branch protection requires a review on `main`;
-`tf-plan` shows the diff on the PR; the `routeros-production` environment (create
-it with Martin as required reviewer) holds the apply for a second, explicit
-approval; `tf-apply` re-plans before applying so it can only ever apply the plan
-it printed.
+Review gates, in order: branch protection on `main`, the plan comment on the PR, the
+`routeros-production` environment holding apply for a second explicit approval, and `tf-apply`
+re-planning so it can only apply what it printed.
 
-## One-time bootstrap (Martin — the honest edge of "everything is IaC")
+## Bootstrap still outstanding (Martin)
 
-| # | Step | Status / notes |
-|---|---|---|
-| 1 | RouterOS read user `agent-ro` | **exists and is in use.** Two fixes owed: **drop `sensitive`** from the `read` group (it currently returns keys/PSKs on read) and narrow the policy to the agreed `api,read,test` — one command per device |
-| 2 | RouterOS write user `iac` (`api,read,write,test`) | **after the merge** (agreed): the write identity only gates apply, which is inert until armed |
-| 3 | Repository **secrets**: `ROS_READ_USERNAME`, `ROS_READ_PASSWORD`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | the read identity + the state key. Nothing else is needed for plan-on-PR. Sources: `/root/network-migration/credentials/routeros.env` and `minio.env` on the Hermes host (root-only) |
-| 4 | State store: `tofu-state` bucket + scoped key | ✅ **done and verified** — `init`+`plan` green, lock object written/released, cross-bucket access denied; policy in `terraform/secrets/` |
-| 5 | Repository **variables**: `TF_STATE_BUCKET`, `TF_STATE_ENDPOINT`, `TF_STATE_REGION`, `ROS_HOSTURL` | ✅ **done** (`tofu-state`, in-cluster endpoint, `europe`, `api://172.16.100.1:8728`) |
-| 6 | Environment `routeros-production` (required reviewer: Martin) + environment **secrets** `ROS_WRITE_USERNAME`, `ROS_WRITE_PASSWORD` | after step 2; the second gate on apply |
-| 7 | Repository variable `ROUTEROS_CI_ENABLED=true` | **the arming switch** — last, once 2, 3 and 6 hold. Before that, apply and drift log that they skipped and stay green |
+| # | Step |
+|---|---|
+| 1 | `read` group → `api,read,test` on all three devices (drops `sensitive`: reads currently return keys/PSKs) |
+| 2 | NTP on both switches — both are `enabled=no`, which is what let the CRS326 drift nine days |
+| 3 | `iac` write user on the RB5009, then the `routeros-production` environment + `ROS_WRITE_*` secrets |
+| 4 | Pull the three devices' backups **off** the devices |
+| 5 | `ROUTEROS_CI_ENABLED=true` — last, once 3 holds |
 
-Steps 1–2 and 6 are bootstrap exceptions recorded in the notes; when one becomes
-automatable it moves into IaC and the manual line is deleted.
-
-## Verifying a plan yourself (reviewer recipe)
-
-Reproduces exactly what CI computes, read-only, from any LAN host:
+## Reviewing a plan yourself
 
 ```bash
 git clone git@github.com:hnatekmarorg/devops-cluster.git && cd devops-cluster
 cp -r terraform/routeros /tmp/routeros-check && cd /tmp/routeros-check
-rm backend.tf                     # local state; this is a plan, nothing is applied
+rm backend.tf                                   # local state; this is a plan, nothing is applied
 export ROS_HOSTURL=api://172.16.100.1:8728
-set -a; . /path/to/agent-ro.env; set +a        # or the same values by hand
-tofu init -input=false
-tofu plan -input=false -lock=false -no-color
+set -a; . /path/to/agent-ro.env; set +a
+tofu init -input=false && tofu plan -input=false -lock=false -no-color
 ```
 
-Stage 1 must always report **`Plan: 20 to add, 0 to change, 0 to destroy`** — 5
-VLAN interfaces, their 5 gateway addresses, and 10 firewall address-list entries.
-Anything else (a change, a destroy) is a bug in the module, not a router state to
-accept.
-
-Evidence, 2026-09-14 with `agent-ro`: `board_name = RB5009UG+S+`,
-`routeros_version = 7.12.1 (stable)`, `interface_count = 14`,
-`existing_addresses = [ether2 -> 172.16.100.1/24, sfp-sfpplus1 -> 172.16.101.1/24,
-t-mobile -> 78.80.33.35/32]`, plan `20 to add, 0 to change, 0 to destroy`.
+**Always expect `0 to change, 0 to destroy`.** Adds are legitimate; a change or a destroy is a bug
+in the module, not router state to accept. Today's plan: `11 to import` (the adoption waves) plus
+`20 to add` (stage 1).
 
 ## Not here yet, on purpose
 
-- **Stage 2+**: bridge VLAN filtering, tagged ports, DHCP servers, firewall rules.
-  Each is its own reviewed stage, because each one can cut connectivity.
-- **Adopting existing objects** (`import {}` blocks for the current bridge,
-  addresses, DHCP, NAT) — Phase 2 of the plan, once the baseline is written down.
-- **Switch config** (CRS326/CRS804/CSS610) and **Cloudflare DNS** — same pattern,
-  separate modules, separate PRs.
-- **`netmap` collector** — consumes these APIs, does not live here.
+Switch configuration (CRS326/CRS804/CSS610), Cloudflare DNS, VM lifecycle via `bpg/proxmox`, and the
+netmap collector — separate modules, separate PRs. Stage 2+ (bridge VLAN filtering, tagged ports,
+DHCP, firewall) is absent because each of those can cut connectivity and each needs its own plan,
+review and window.

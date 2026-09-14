@@ -52,7 +52,7 @@ CRED_SOURCE=""
 
 resolve_creds() {
   if [[ -n "${!user_key:-}" && -n "${!pass_key:-}" ]]; then
-    CRED_SOURCE="runner environment"
+    CRED_SOURCE="job environment (repo/environment secret, or mounted into the runner)"
   elif [[ -f "$ENC_FILE" ]]; then
     if [[ -z "${SOPS_AGE_KEY:-}" && -z "${SOPS_AGE_KEY_FILE:-}" ]]; then
       log "tofu-ci: ${ENC_FILE} exists but neither SOPS_AGE_KEY nor SOPS_AGE_KEY_FILE is set"

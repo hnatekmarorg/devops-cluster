@@ -54,6 +54,14 @@ env:
   # MinIO advertises `europe` (x-amz-bucket-region); signing with anything else
   # risks a bucket-region mismatch error.
   TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'europe' }}
+  # Credentials. The write identity comes from the `routeros-production`
+  # environment's secrets, so it exists only in the job you approve — never in a
+  # PR-triggered job. The state key is repository-level because plan and drift
+  # need it too.
+  ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
+  ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
   apply:

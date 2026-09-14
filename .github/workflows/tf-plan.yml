@@ -51,6 +51,15 @@ env:
   # MinIO advertises `europe` (x-amz-bucket-region); signing with anything else
   # risks a bucket-region mismatch error.
   TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'europe' }}
+  # Credentials, mapped explicitly from repository secrets. This job (and the
+  # drift job) gets the read identity plus the state key and nothing else: a
+  # pull request can run code from a same-repo branch, so it must never be able
+  # to see the write credential — that one is an environment secret on the apply
+  # job only. Actions masks these values in the logs.
+  ROS_READ_USERNAME: ${{ secrets.ROS_READ_USERNAME }}
+  ROS_READ_PASSWORD: ${{ secrets.ROS_READ_PASSWORD }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
   plan:

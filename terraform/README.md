@@ -61,29 +61,29 @@ whether that job can change the device:
 pair onto `ROS_USERNAME`/`ROS_PASSWORD` (what the provider reads) and never prints
 a value — only key names and their presence.
 
-| Variable | Purpose |
-|---|---|
-| `ROS_READ_USERNAME`, `ROS_READ_PASSWORD` | role `read` |
-| `ROS_WRITE_USERNAME`, `ROS_WRITE_PASSWORD` | role `write` |
-| `ROS_HOSTURL` | `api://172.16.100.1:8728` (plaintext API: TLS on 8729 has no usable certificate) |
-| `TF_STATE_BUCKET`, `TF_STATE_ENDPOINT`, `TF_STATE_KEY`, `TF_STATE_REGION` | s3 backend |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | s3 backend credentials (MinIO keys) |
-| `TF_STATE_BACKEND` | `s3` (default) or `kubernetes` |
-| `SOPS_AGE_KEY` / `SOPS_AGE_KEY_FILE` | only for path (b) |
+| Variable | Purpose | Where it lives |
+|---|---|---|
+| `ROS_READ_USERNAME`, `ROS_READ_PASSWORD` | role `read` | **repository secret** |
+| `ROS_WRITE_USERNAME`, `ROS_WRITE_PASSWORD` | role `write` | **environment secret** (`routeros-production`) |
+| `ROS_HOSTURL` | `api://172.16.100.1:8728` (plaintext API: TLS on 8729 has no usable certificate) | repository variable |
+| `TF_STATE_BUCKET`, `TF_STATE_ENDPOINT`, `TF_STATE_KEY`, `TF_STATE_REGION` | s3 backend | repository variable |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | s3 backend credentials (MinIO key) | **repository secret** |
+| `TF_STATE_BACKEND` | `s3` (default) or `kubernetes` | repository variable |
+| `SOPS_AGE_KEY` / `SOPS_AGE_KEY_FILE` | only for path (b) below — unused today | — |
 
-The values get to the runner in one of two ways — **(a)** is preferred, because it
-keeps exactly one copy of the credentials and puts no key material in a pod:
+The delivery path **in use** is (c): role-scoped GitHub secrets, mapped explicitly
+into the job environment by each workflow. Why not the alternatives:
 
-**(a) Cluster Secret mounted into the runner pod.** A `SopsSecret` (the repo's
-existing sops flow, `scripts/encrypt.sh`) in the `arc-systems` namespace holding
-the four `ROS_*` pairs plus the state keys, mounted via
-`template.spec.containers[0].envFrom` in the scale-set values
-(`Hnatekmar/bootstrap-kubernetes`). Nothing in this repo changes; the workflows
-already read the environment. This is also the shape the estate is moving to
-anyway (`Bao → ExternalSecrets → the runner pod`).
+**(a) Cluster Secret mounted into the runner pod** (what Q14's default implies) —
+rejected: in ARC, injecting it means restating the runner container definition in
+`Hnatekmar/bootstrap-kubernetes` (image pin included), and, decisively, **one mounted
+secret hands *both* identities to *every* job**, including PR-triggered plan jobs. A pull
+request could then read the write password. That breaks the property this whole module is
+built around, so the mount can only ever carry the read pair — at which point it is doing
+the same job as a repository secret with more moving parts.
 
-**(b) sops file in this repo + an age key in the runner.** Used when the runner
-values cannot be touched yet:
+**(b) sops file in this repo + an age key in the runner** — kept documented and the wrapper
+still supports it, for when the estate standardizes on key-based delivery:
 
 ```bash
 # the plaintext source of truth is gitignored, mode 600, never committed
@@ -98,6 +98,18 @@ sops --encrypt --age age1t9wspfgy0nxrc9d3frmp85g4d5ug6ksf66pv68ycptv0fwsxq9fqxuh
 (the recipient is the estate one already used by `devops/argocd/secrets/enc.*.yaml`).
 The workflow decrypts it in-process, so decrypted values never reach disk, an
 artifact, or a log line.
+
+**(c) Role-scoped GitHub secrets (in use).** Repository-level: the read identity and the
+state key — everything plan and drift need. Environment-level (`routeros-production`):
+the write identity, so it exists only in the apply job you approve. The wrapper models
+this as roles, so the workflow files decide what a job can see and the script never has
+to guess.
+
+Residual risk worth stating: the state key is repository-level, and `use_lockfile` means
+even a plan writes to the bucket, so a same-repo PR job could in principle delete the
+state object. It cannot change the router (no write credential) and state is rebuildable
+by re-import, but it is why `main` stays review-gated and forks are excluded from the
+plan job outright.
 
 ## The state contract
 
@@ -169,16 +181,17 @@ it printed.
 
 ## One-time bootstrap (Martin — the honest edge of "everything is IaC")
 
-| # | Step | Notes |
+| # | Step | Status / notes |
 |---|---|---|
-| 1 | RouterOS users on the RB5009: `iac` (`api,read,write,test`) and `agent-ro` (`api,read,test`) | Q1; commands in `access-and-change-control.md`. Read user must **not** carry `sensitive` |
-| 2 | Credentials reach the runner: path (a) cluster Secret, or path (b) sops file + age key | see above |
-| 3 | State store: MinIO bucket (`tofu-state`) + a dedicated access key | Q8. MinIO must be healthy first — it answers 502 today. Or choose the `kubernetes` backend |
-| 4 | Repository variables: `TF_STATE_BUCKET`, `TF_STATE_ENDPOINT`, optional `TF_STATE_KEY`/`ROS_HOSTURL` | Settings → Variables |
-| 5 | Repository variable `ROUTEROS_CI_ENABLED=true` once 1–3 hold | the arming switch |
-| 6 | Environment `routeros-production` with Martin as required reviewer | the second gate on apply |
+| 1 | RouterOS read user `agent-ro` | **exists and is in use.** Two fixes owed: **drop `sensitive`** from the `read` group (it currently returns keys/PSKs on read) and narrow the policy to the agreed `api,read,test` — one command per device |
+| 2 | RouterOS write user `iac` (`api,read,write,test`) | **after the merge** (agreed): the write identity only gates apply, which is inert until armed |
+| 3 | Repository **secrets**: `ROS_READ_USERNAME`, `ROS_READ_PASSWORD`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | the read identity + the state key. Nothing else is needed for plan-on-PR. Sources: `/root/network-migration/credentials/routeros.env` and `minio.env` on the Hermes host (root-only) |
+| 4 | State store: `tofu-state` bucket + scoped key | ✅ **done and verified** — `init`+`plan` green, lock object written/released, cross-bucket access denied; policy in `terraform/secrets/` |
+| 5 | Repository **variables**: `TF_STATE_BUCKET`, `TF_STATE_ENDPOINT`, `TF_STATE_REGION`, `ROS_HOSTURL` | ✅ **done** (`tofu-state`, in-cluster endpoint, `europe`, `api://172.16.100.1:8728`) |
+| 6 | Environment `routeros-production` (required reviewer: Martin) + environment **secrets** `ROS_WRITE_USERNAME`, `ROS_WRITE_PASSWORD` | after step 2; the second gate on apply |
+| 7 | Repository variable `ROUTEROS_CI_ENABLED=true` | **the arming switch** — last, once 2, 3 and 6 hold. Before that, apply and drift log that they skipped and stay green |
 
-Steps 1–3 are bootstrap exceptions recorded in the notes; when one becomes
+Steps 1–2 and 6 are bootstrap exceptions recorded in the notes; when one becomes
 automatable it moves into IaC and the manual line is deleted.
 
 ## Verifying a plan yourself (reviewer recipe)

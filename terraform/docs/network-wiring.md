@@ -49,7 +49,10 @@ The PPPoE client is bound to **`bridge`**, not to a physical port or a VLAN. Con
 - **which port is which, measured not assumed** (2026-09-14): 20 MB downloaded from a LAN host moved
   `ether5` **rx +24.76 MiB** (data arriving from the ISP) and `ether4` **tx +24.64 MiB** (data handed
   to the LAN); every other port stayed at zero. So `ether5` is the WAN uplink and `ether4` is the LAN
-  uplink to the CRS326 — confirmed by counters rather than by reading cables;
+  uplink to the CRS326 — confirmed by counters rather than by reading cables. `sfp-sfpplus1` (the
+  `172.16.101.0/24` subnet) carries **no link**: Martin confirms it is a leftover from earlier
+  experiments and unused, so it is vestigial config rather than a live segment — a cleanup candidate,
+  and excluded from the map and the carve;
 - and it is the single most important thing to get right **before** the VLAN carve: a port that
   carries the WAN while being a bridge member will be handed a VLAN class by any mechanical
   application of the table above, and the WAN will move or break with it.

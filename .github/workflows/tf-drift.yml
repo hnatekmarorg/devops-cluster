@@ -1,4 +1,3 @@
----
 # RouterOS IaC — nightly drift detection (the safety net that makes "IaC-managed"
 # honest: anything changed on the device by hand shows up here as a plan that
 # wants to undo it).

@@ -29,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ENC_FILE="${TF_CI_SECRET_FILE:-${REPO_ROOT}/terraform/secrets/enc.routeros-ci.env}"
 
-log() { printf '%s\n' "$*" >&2; }   # diagnostics on stderr; stdout stays machine-readable
+log() { printf '%s\n' "$*" >&2; } # diagnostics on stderr; stdout stays machine-readable
 
 ROLE="read"
 if [[ "${1:-}" == --role=* ]]; then
@@ -40,9 +40,18 @@ fi
 user_key=""
 pass_key=""
 case "$ROLE" in
-  read)  user_key=ROS_READ_USERNAME;  pass_key=ROS_READ_PASSWORD ;;
-  write) user_key=ROS_WRITE_USERNAME; pass_key=ROS_WRITE_PASSWORD ;;
-  *) log "tofu-ci: unknown role '${ROLE}' (expected read|write)"; exit 64 ;;
+read)
+  user_key=ROS_READ_USERNAME
+  pass_key=ROS_READ_PASSWORD
+  ;;
+write)
+  user_key=ROS_WRITE_USERNAME
+  pass_key=ROS_WRITE_PASSWORD
+  ;;
+*)
+  log "tofu-ci: unknown role '${ROLE}' (expected read|write)"
+  exit 64
+  ;;
 esac
 
 # ---------------------------------------------------------------------------
@@ -67,12 +76,13 @@ resolve_creds() {
       [[ -z "$line" || "$line" == '#'* ]] && continue
       name="${line%%=*}"
       value="${line#*=}"
-      value="${value%\"}"; value="${value#\"}"     # tolerate KEY="value"
+      value="${value%\"}"
+      value="${value#\"}" # tolerate KEY="value"
       case "$name" in
-        ROS_READ_USERNAME|ROS_READ_PASSWORD|ROS_WRITE_USERNAME|ROS_WRITE_PASSWORD|\
-        TF_STATE_*|AWS_*) export "${name}=${value}" ;;
+      ROS_READ_USERNAME | ROS_READ_PASSWORD | ROS_WRITE_USERNAME | ROS_WRITE_PASSWORD | \
+        TF_STATE_* | AWS_*) export "${name}=${value}" ;;
       esac
-    done <<< "$decrypted"
+    done <<<"$decrypted"
     unset decrypted
     CRED_SOURCE="sops (${ENC_FILE#"$REPO_ROOT"/})"
     if [[ -z "${!user_key:-}" || -z "${!pass_key:-}" ]]; then
@@ -96,37 +106,37 @@ resolve_creds() {
 # ---------------------------------------------------------------------------
 backend_args() {
   case "${TF_STATE_BACKEND:-s3}" in
-    s3)
-      if [[ -z "${TF_STATE_BUCKET:-}" || -z "${TF_STATE_ENDPOINT:-}" ]]; then
-        log "tofu-ci: s3 backend needs TF_STATE_BUCKET and TF_STATE_ENDPOINT (MinIO)"
-        return 1
-      fi
-      printf -- '-backend-config=bucket=%s\n'   "$TF_STATE_BUCKET"
-      printf -- '-backend-config=key=%s\n'      "${TF_STATE_KEY:-routeros/rb5009.tfstate}"
-      printf -- '-backend-config=region=%s\n'   "${TF_STATE_REGION:-us-east-1}"
-      printf -- '-backend-config=endpoint=%s\n' "$TF_STATE_ENDPOINT"
-      # MinIO is not AWS: the STS/IAM validation calls do not exist there, and
-      # it wants path-style addressing.
-      printf -- '-backend-config=use_path_style=true\n'
-      printf -- '-backend-config=skip_credentials_validation=true\n'
-      printf -- '-backend-config=skip_requesting_account_id=true\n'
-      # MinIO advertises a region name that is not an AWS region (`europe`), and
-      # the AWS SDK rejects unknown region names client-side before any request
-      # is made: "invalid AWS Region: europe". Skipping validation lets the
-      # backend sign with the region MinIO actually advertises, which is the one
-      # value that cannot be wrong. Measured, not guessed.
-      printf -- '-backend-config=skip_region_validation=true\n'
-      # Locking lives in the bucket itself (OpenTofu >= 1.10, Q8) — no
-      # DynamoDB, no extra service to be down.
-      printf -- '-backend-config=use_lockfile=true\n'
-      ;;
-    kubernetes)
-      # Values live in backend.tf (see backend-kubernetes.tf.example).
-      ;;
-    *)
-      log "tofu-ci: unknown TF_STATE_BACKEND '${TF_STATE_BACKEND}' (expected s3|kubernetes)"
+  s3)
+    if [[ -z "${TF_STATE_BUCKET:-}" || -z "${TF_STATE_ENDPOINT:-}" ]]; then
+      log "tofu-ci: s3 backend needs TF_STATE_BUCKET and TF_STATE_ENDPOINT (MinIO)"
       return 1
-      ;;
+    fi
+    printf -- '-backend-config=bucket=%s\n' "$TF_STATE_BUCKET"
+    printf -- '-backend-config=key=%s\n' "${TF_STATE_KEY:-routeros/rb5009.tfstate}"
+    printf -- '-backend-config=region=%s\n' "${TF_STATE_REGION:-us-east-1}"
+    printf -- '-backend-config=endpoint=%s\n' "$TF_STATE_ENDPOINT"
+    # MinIO is not AWS: the STS/IAM validation calls do not exist there, and
+    # it wants path-style addressing.
+    printf -- '-backend-config=use_path_style=true\n'
+    printf -- '-backend-config=skip_credentials_validation=true\n'
+    printf -- '-backend-config=skip_requesting_account_id=true\n'
+    # MinIO advertises a region name that is not an AWS region (`europe`), and
+    # the AWS SDK rejects unknown region names client-side before any request
+    # is made: "invalid AWS Region: europe". Skipping validation lets the
+    # backend sign with the region MinIO actually advertises, which is the one
+    # value that cannot be wrong. Measured, not guessed.
+    printf -- '-backend-config=skip_region_validation=true\n'
+    # Locking lives in the bucket itself (OpenTofu >= 1.10, Q8) — no
+    # DynamoDB, no extra service to be down.
+    printf -- '-backend-config=use_lockfile=true\n'
+    ;;
+  kubernetes)
+    # Values live in backend.tf (see backend-kubernetes.tf.example).
+    ;;
+  *)
+    log "tofu-ci: unknown TF_STATE_BACKEND '${TF_STATE_BACKEND}' (expected s3|kubernetes)"
+    return 1
+    ;;
   esac
 }
 
@@ -172,7 +182,10 @@ preflight() {
 # main
 # ---------------------------------------------------------------------------
 cmd="${1:-}"
-[[ -n "$cmd" ]] || { log "usage: tofu-ci.sh [--role=read|write] check|<tofu args...>"; exit 64; }
+[[ -n "$cmd" ]] || {
+  log "usage: tofu-ci.sh [--role=read|write] check|<tofu args...>"
+  exit 64
+}
 
 if [[ "$cmd" == "check" ]]; then
   preflight
@@ -181,22 +194,22 @@ fi
 shift
 
 case "$cmd" in
-  init)
-    resolve_creds || exit 78
-    if ! bargs="$(backend_args)"; then exit 78; fi
-    bargs_arr=()
-    if [[ -n "$bargs" ]]; then mapfile -t bargs_arr <<< "$bargs"; fi
-    unset bargs
-    log "tofu-ci: init (role ${ROLE}, backend ${TF_STATE_BACKEND:-s3})"
-    exec tofu init -input=false "${bargs_arr[@]}" "$@"
-    ;;
-  plan|apply|refresh|show|output|state|import|destroy|force-unlock|taint|untaint)
-    resolve_creds || exit 78
-    log "tofu-ci: ${cmd} (role ${ROLE}, credentials from ${CRED_SOURCE})"
-    exec tofu "$cmd" "$@"
-    ;;
-  *)
-    # fmt / validate / version / providers — no credentials, no state.
-    exec tofu "$cmd" "$@"
-    ;;
+init)
+  resolve_creds || exit 78
+  if ! bargs="$(backend_args)"; then exit 78; fi
+  bargs_arr=()
+  if [[ -n "$bargs" ]]; then mapfile -t bargs_arr <<<"$bargs"; fi
+  unset bargs
+  log "tofu-ci: init (role ${ROLE}, backend ${TF_STATE_BACKEND:-s3})"
+  exec tofu init -input=false "${bargs_arr[@]}" "$@"
+  ;;
+plan | apply | refresh | show | output | state | import | destroy | force-unlock | taint | untaint)
+  resolve_creds || exit 78
+  log "tofu-ci: ${cmd} (role ${ROLE}, credentials from ${CRED_SOURCE})"
+  exec tofu "$cmd" "$@"
+  ;;
+*)
+  # fmt / validate / version / providers — no credentials, no state.
+  exec tofu "$cmd" "$@"
+  ;;
 esac

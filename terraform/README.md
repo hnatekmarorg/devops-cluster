@@ -22,6 +22,8 @@ everything below. If this file and that note disagree, the note wins.
 | Path | What |
 |---|---|
 | `routeros/` | The RB5009 module. Stage 1 = additive groundwork only (see its README) |
+| `docs/network-wiring.md` | **The measured wiring, port by port, plus the proposed VLAN carve** (diagram + tables) — read this before designing any cut-over |
+| `docs/network-wiring.svg` | The same, as one picture: layer 1 as-is, layer 2 proposed |
 | `routeros/backend.tf` | Partial S3 backend config — values come from `TF_STATE_*` at init time |
 | `routeros/backend-kubernetes.tf.example` | The alternative state backend, ready to swap in |
 | `secrets/enc.routeros-ci.env` | sops-encrypted CI credentials (dotenv), only if path **(b)** below is used |

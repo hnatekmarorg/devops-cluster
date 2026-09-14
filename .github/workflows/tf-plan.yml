@@ -1,4 +1,3 @@
----
 # RouterOS IaC — plan on pull request (read-only gate).
 #
 # Runs on the on-prem, in-cluster self-hosted runner because the RouterOS API is

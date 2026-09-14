@@ -7,7 +7,7 @@
 # read the state while the cluster is down).
 #
 # Alternative (no MinIO dependency): the `kubernetes` backend, see
-# backend-kubernetes.tf.example — swap this block for the one in that file.
+# Every value below is injected at init time by scripts/tofu-ci.sh (roles, not env guesses).
 # That trades away break-glass readability, which is why it is not the default.
 terraform {
   backend "s3" {}

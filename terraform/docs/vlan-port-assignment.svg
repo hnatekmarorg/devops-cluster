@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1720" height="1560" viewBox="0 0 1720 1560">
+<rect width="100%" height="100%" fill="#0f1115"/>
+<text x="40" y="44" font-size="22" font-weight="700" fill="#f5f7fa">Port assignment — the stage-2 contract</text>
+<text x="40" y="66" font-size="12" fill="#8b93a4">Every port, what it goes to, which class it carries. Measured 2026-09-14; reasoning and the as-is wiring live in network-wiring.md.</text>
+<text x="40" y="86" font-size="12" fill="#8b93a4">Trunks keep native VLAN 1 (compat) until the last device has moved — that is the migration mechanism. After that: tagged-only, pvid 999 (parking, unrouted).</text>
+<rect x="40" y="110" width="808" height="678" rx="10" fill="#15171c" stroke="#333844"/>
+<text x="54" y="136" font-size="15" font-weight="600" fill="#f0f2f6">RB5009 — 172.16.100.1</text>
+<text x="54" y="156" font-size="11" fill="#8b93a4">router · Marvell 88E6393X · 9/9 ports hardware-offloaded</text>
+<rect x="54" y="163" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="177" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether1</text>
+<text x="150" y="177" font-size="11.5" fill="#cdd3de">escape port — mgmt, never tagged, pre-assign first</text>
+<rect x="795.6" y="163" width="38.4" height="19" rx="9" fill="#cfe0ff"/>
+<text x="814.8" y="177" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f3b73">mgmt</text>
+<rect x="54" y="187" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="201" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether2</text>
+<text x="150" y="201" font-size="11.5" fill="#cdd3de">holds 172.16.100.1/24 as a bridge slave, link down — move first</text>
+<rect x="795.6" y="187" width="38.4" height="19" rx="9" fill="#cfe0ff"/>
+<text x="814.8" y="201" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f3b73">mgmt</text>
+<rect x="54" y="211" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="225" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether4</text>
+<text x="150" y="225" font-size="11.5" fill="#cdd3de">→ CRS326 ether18 — LAN uplink, 1 Gb (measured by counters)</text>
+<rect x="789.5" y="211" width="44.5" height="19" rx="9" fill="#e0e0e0"/>
+<text x="811.75" y="225" font-size="10.5" font-weight="600" text-anchor="middle" fill="#4a4a4a">trunk</text>
+<rect x="54" y="235" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="249" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether5</text>
+<text x="150" y="249" font-size="11.5" fill="#cdd3de">→ ISP (Huawei in bridge mode) — the WAN. Never tag this port</text>
+<rect x="801.7" y="235" width="32.3" height="19" rx="9" fill="#ffc9c9"/>
+<text x="817.85" y="249" font-size="10.5" font-weight="600" text-anchor="middle" fill="#7a1f1f">wan</text>
+<rect x="54" y="259" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="273" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether3</text>
+<text x="150" y="273" font-size="11.5" fill="#cdd3de">spare</text>
+<rect x="789.5" y="259" width="44.5" height="19" rx="9" fill="#8a8a8a"/>
+<text x="811.75" y="273" font-size="10.5" font-weight="600" text-anchor="middle" fill="#2b2b2b">spare</text>
+<rect x="54" y="283" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="297" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether6-8</text>
+<text x="150" y="297" font-size="11.5" fill="#cdd3de">spare</text>
+<rect x="789.5" y="283" width="44.5" height="19" rx="9" fill="#8a8a8a"/>
+<text x="811.75" y="297" font-size="10.5" font-weight="600" text-anchor="middle" fill="#2b2b2b">spare</text>
+<rect x="54" y="307" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="321" font-size="11.5" font-family="monospace" fill="#e6e9ef">sfp+1</text>
+<text x="150" y="321" font-size="11.5" fill="#cdd3de">172.16.101.1/24, no link — vestigial work experiment, cleanup</text>
+<rect x="789.5" y="307" width="44.5" height="19" rx="9" fill="#8a8a8a"/>
+<text x="811.75" y="321" font-size="10.5" font-weight="600" text-anchor="middle" fill="#2b2b2b">spare</text>
+<text x="54" y="348" font-size="10.5" fill="#6d7688">bridge: defconf, every port pvid 1, vlan-filtering off, no VLAN entries</text>
+<text x="54" y="774" font-size="11" fill="#8b93a4">ISP → ether5 is measured, not assumed: 24.76 MiB in while ether4 pushed 24.64 MiB out.</text>
+<rect x="872" y="110" width="808" height="678" rx="10" fill="#15171c" stroke="#333844"/>
+<text x="886" y="136" font-size="15" font-weight="600" fill="#f0f2f6">CRS326 — 172.16.100.2</text>
+<text x="886" y="156" font-size="11" fill="#8b93a4">main switch · Marvell 98DX3236 · 24/24 offloaded</text>
+<rect x="886" y="163" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="177" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether1+2</text>
+<text x="982" y="177" font-size="11.5" fill="#cdd3de">LACP bond balteus → PVE (all guest NICs); runs on ether2 alone</text>
+<rect x="1621.5" y="163" width="44.5" height="19" rx="9" fill="#e0e0e0"/>
+<text x="1643.75" y="177" font-size="10.5" font-weight="600" text-anchor="middle" fill="#4a4a4a">trunk</text>
+<rect x="886" y="187" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="201" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether3</text>
+<text x="982" y="201" font-size="11.5" fill="#cdd3de">escape port — laptop here reaches the gear</text>
+<rect x="1627.6" y="187" width="38.4" height="19" rx="9" fill="#cfe0ff"/>
+<text x="1646.8" y="201" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f3b73">mgmt</text>
+<rect x="886" y="211" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="225" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether4</text>
+<text x="982" y="225" font-size="11.5" fill="#cdd3de">→ CSS610 Port7 (charon + 4× Spark mgmt + spine mgmt)</text>
+<rect x="1621.5" y="211" width="44.5" height="19" rx="9" fill="#e0e0e0"/>
+<text x="1643.75" y="225" font-size="10.5" font-weight="600" text-anchor="middle" fill="#4a4a4a">trunk</text>
+<rect x="886" y="235" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="249" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether7</text>
+<text x="982" y="249" font-size="11.5" fill="#cdd3de">balteus IPMI (.46) — out-of-band plane</text>
+<rect x="1627.6" y="235" width="38.4" height="19" rx="9" fill="#cfe0ff"/>
+<text x="1646.8" y="249" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f3b73">mgmt</text>
+<rect x="886" y="259" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="273" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether16</text>
+<text x="982" y="273" font-size="11.5" fill="#cdd3de">→ dumb switch → AP + TV + gaming PC (one cable, one segment)</text>
+<rect x="1633.7" y="259" width="32.3" height="19" rx="9" fill="#ffd9b3"/>
+<text x="1649.85" y="273" font-size="10.5" font-weight="600" text-anchor="middle" fill="#6b3a12">iot</text>
+<rect x="886" y="283" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="297" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether18</text>
+<text x="982" y="297" font-size="11.5" fill="#cdd3de">→ RB5009 ether4 — the estate's single router link, 1 Gb</text>
+<rect x="1621.5" y="283" width="44.5" height="19" rx="9" fill="#e0e0e0"/>
+<text x="1643.75" y="297" font-size="10.5" font-weight="600" text-anchor="middle" fill="#4a4a4a">trunk</text>
+<rect x="886" y="307" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="321" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether23+24</text>
+<text x="982" y="321" font-size="11.5" fill="#cdd3de">bond bukefalos, idle — second server when it arrives</text>
+<rect x="1633.7" y="307" width="32.3" height="19" rx="9" fill="#e2d3f7"/>
+<text x="1649.85" y="321" font-size="10.5" font-weight="600" text-anchor="middle" fill="#4a2a6b">srv</text>
+<text x="886" y="348" font-size="10.5" fill="#6d7688">ether5,6,8–15,17,19–22: spare (spare ports cost nothing while empty)</text>
+<text x="886" y="370" font-size="10.5" fill="#6d7688">spare</text>
+<rect x="886" y="375" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="389" font-size="11.5" font-family="monospace" fill="#e6e9ef">sfp+1,2</text>
+<text x="982" y="389" font-size="11.5" fill="#cdd3de">free 10 G — opportunity: 10 G uplink or the CSS610 hop</text>
+<rect x="1621.5" y="375" width="44.5" height="19" rx="9" fill="#8a8a8a"/>
+<text x="1643.75" y="389" font-size="10.5" font-weight="600" text-anchor="middle" fill="#2b2b2b">spare</text>
+<text x="886" y="774" font-size="11" fill="#8b93a4">Escape ports (ether3 here, ether1 on the router) are pre-assigned before anything else changes.</text>
+<rect x="40" y="812" width="808" height="678" rx="10" fill="#15171c" stroke="#333844"/>
+<text x="54" y="838" font-size="15" font-weight="600" fill="#f0f2f6">CSS610 — 172.16.100.117</text>
+<text x="54" y="858" font-size="11" fill="#8b93a4">SwOS Lite 2.21 · hand config, no API · 8×1G + 2×SFP+</text>
+<rect x="54" y="865" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="879" font-size="11.5" font-family="monospace" fill="#e6e9ef">Port2</text>
+<text x="150" y="879" font-size="11.5" fill="#cdd3de">Charon — the work PC</text>
+<rect x="795.6" y="865" width="38.4" height="19" rx="9" fill="#cfe0ff"/>
+<text x="814.8" y="879" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f3b73">mgmt</text>
+<rect x="54" y="889" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="903" font-size="11.5" font-family="monospace" fill="#e6e9ef">Port3</text>
+<text x="150" y="903" font-size="11.5" fill="#cdd3de">Spark 4 management</text>
+<rect x="801.7" y="889" width="32.3" height="19" rx="9" fill="#c9f0d5"/>
+<text x="817.85" y="903" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1e4d2b">lab</text>
+<rect x="54" y="913" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="927" font-size="11.5" font-family="monospace" fill="#e6e9ef">Port4</text>
+<text x="150" y="927" font-size="11.5" fill="#cdd3de">CRS804 ether1 — the spine's management</text>
+<rect x="795.6" y="913" width="38.4" height="19" rx="9" fill="#cfe0ff"/>
+<text x="814.8" y="927" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f3b73">mgmt</text>
+<rect x="54" y="937" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="951" font-size="11.5" font-family="monospace" fill="#e6e9ef">Port5</text>
+<text x="150" y="951" font-size="11.5" fill="#cdd3de">Spark 3 management (cable swapped: 100 M → 1 G)</text>
+<rect x="801.7" y="937" width="32.3" height="19" rx="9" fill="#c9f0d5"/>
+<text x="817.85" y="951" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1e4d2b">lab</text>
+<rect x="54" y="961" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="975" font-size="11.5" font-family="monospace" fill="#e6e9ef">Port6</text>
+<text x="150" y="975" font-size="11.5" fill="#cdd3de">Spark 2 management</text>
+<rect x="801.7" y="961" width="32.3" height="19" rx="9" fill="#c9f0d5"/>
+<text x="817.85" y="975" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1e4d2b">lab</text>
+<rect x="54" y="985" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="999" font-size="11.5" font-family="monospace" fill="#e6e9ef">Port7</text>
+<text x="150" y="999" font-size="11.5" fill="#cdd3de">→ CRS326 ether4 — the uplink, 1 Gb</text>
+<rect x="789.5" y="985" width="44.5" height="19" rx="9" fill="#e0e0e0"/>
+<text x="811.75" y="999" font-size="10.5" font-weight="600" text-anchor="middle" fill="#4a4a4a">trunk</text>
+<rect x="54" y="1009" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="1023" font-size="11.5" font-family="monospace" fill="#e6e9ef">Port8</text>
+<text x="150" y="1023" font-size="11.5" fill="#cdd3de">Spark 1 management</text>
+<rect x="801.7" y="1009" width="32.3" height="19" rx="9" fill="#c9f0d5"/>
+<text x="817.85" y="1023" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1e4d2b">lab</text>
+<rect x="54" y="1033" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="1047" font-size="11.5" font-family="monospace" fill="#e6e9ef">Port1</text>
+<text x="150" y="1047" font-size="11.5" fill="#cdd3de">spare</text>
+<rect x="789.5" y="1033" width="44.5" height="19" rx="9" fill="#8a8a8a"/>
+<text x="811.75" y="1047" font-size="10.5" font-weight="600" text-anchor="middle" fill="#2b2b2b">spare</text>
+<rect x="54" y="1057" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="60" y="1071" font-size="11.5" font-family="monospace" fill="#e6e9ef">SFP+1,2</text>
+<text x="150" y="1071" font-size="11.5" fill="#cdd3de">spare, 10 G</text>
+<rect x="789.5" y="1057" width="44.5" height="19" rx="9" fill="#8a8a8a"/>
+<text x="811.75" y="1071" font-size="10.5" font-weight="600" text-anchor="middle" fill="#2b2b2b">spare</text>
+<text x="54" y="1476" font-size="11" fill="#8b93a4">Port names are the switch's own labels — it named them by hand.</text>
+<rect x="872" y="812" width="808" height="678" rx="10" fill="#15171c" stroke="#333844"/>
+<text x="886" y="838" font-size="15" font-weight="600" fill="#f0f2f6">CRS804 — 172.16.100.113</text>
+<text x="886" y="858" font-size="11" fill="#8b93a4">spine · Marvell 98DX7335 · two bridges, one of them sacred</text>
+<rect x="886" y="865" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="879" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether1</text>
+<text x="982" y="879" font-size="11.5" fill="#cdd3de">mgmt only (~1 GiB in 3 weeks) — move LAST, gated on charon being in mgmt</text>
+<rect x="1627.6" y="865" width="38.4" height="19" rx="9" fill="#cfe0ff"/>
+<text x="1646.8" y="879" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f3b73">mgmt</text>
+<text x="886" y="906" font-size="10.5" fill="#6d7688">bridge1: this one port. Nothing else on it, which is why its whole VLAN footprint is one address.</text>
+<rect x="886" y="911" width="86" height="19" rx="4" fill="#22252d" stroke="#3a3f4c"/>
+<text x="892" y="925" font-size="11.5" font-family="monospace" fill="#e6e9ef">ether2</text>
+<text x="982" y="925" font-size="11.5" fill="#cdd3de">+ 4× QSFP-DD → the storage/RDMA fabric (192.168.0.0/24, NAS at .0.250)</text>
+<rect x="1615.4" y="911" width="50.599999999999994" height="19" rx="9" fill="#c6e6f5"/>
+<text x="1640.7" y="925" font-size="10.5" font-weight="600" text-anchor="middle" fill="#123a4d">fabric</text>
+<text x="886" y="952" font-size="10.5" fill="#6d7688">bridge-compute: never touched — no VLAN filtering, ever. PFC/RoCE shaping lives here.</text>
+<text x="886" y="974" font-size="10.5" fill="#6d7688">Its own 10.0.0.1/24 is the switch's address ON that bridge, not the fabric subnet.</text>
+<text x="886" y="1476" font-size="11" fill="#8b93a4">Order: this box's management moves after charon is already in mgmt.</text>
+<text x="40" y="1506" font-size="11.5" fill="#8b93a4">class chips:</text>
+<rect x="130" y="1493" width="40.4" height="19" rx="9" fill="#cfe0ff"/>
+<text x="150.2" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1f3b73">mgmt</text>
+<rect x="180.4" y="1493" width="34.3" height="19" rx="9" fill="#c9f0d5"/>
+<text x="197.55" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1e4d2b">lab</text>
+<rect x="224.7" y="1493" width="34.3" height="19" rx="9" fill="#e2d3f7"/>
+<text x="241.85" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#4a2a6b">srv</text>
+<rect x="269.0" y="1493" width="34.3" height="19" rx="9" fill="#ffd9b3"/>
+<text x="286.15" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#6b3a12">iot</text>
+<rect x="313.3" y="1493" width="34.3" height="19" rx="9" fill="#c2ecec"/>
+<text x="330.45" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#0f4c4c">vpn</text>
+<rect x="357.6" y="1493" width="46.5" height="19" rx="9" fill="#e0e0e0"/>
+<text x="380.85" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#4a4a4a">trunk</text>
+<rect x="414.1" y="1493" width="34.3" height="19" rx="9" fill="#ffc9c9"/>
+<text x="431.25" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#7a1f1f">wan</text>
+<rect x="458.40000000000003" y="1493" width="52.599999999999994" height="19" rx="9" fill="#c6e6f5"/>
+<text x="484.70000000000005" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#123a4d">fabric</text>
+<rect x="521.0" y="1493" width="46.5" height="19" rx="9" fill="#8a8a8a"/>
+<text x="544.25" y="1507" font-size="10.5" font-weight="600" text-anchor="middle" fill="#2b2b2b">spare</text>
+</svg>

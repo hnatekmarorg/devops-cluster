@@ -40,7 +40,6 @@ env:
   # checks NO_PROXY first, and both spellings are one key to GitHub's env.
   NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
   ROS_HOSTURL: ${{ vars.ROS_HOSTURL || 'api://172.16.100.1:8728' }}
-  TF_STATE_BACKEND: ${{ vars.TF_STATE_BACKEND || 's3' }}
   TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
   # Measured, not assumed: `http://minio.minio.svc.cluster.local:9000` does NOT
   # resolve from the runner (`lookup ... on 10.96.0.10:53: no such host`), so the

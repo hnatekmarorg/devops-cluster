@@ -105,9 +105,7 @@ resolve_creds() {
 # state backend
 # ---------------------------------------------------------------------------
 backend_args() {
-  case "${TF_STATE_BACKEND:-s3}" in
-  s3)
-    if [[ -z "${TF_STATE_BUCKET:-}" || -z "${TF_STATE_ENDPOINT:-}" ]]; then
+  if [[ -z "${TF_STATE_BUCKET:-}" || -z "${TF_STATE_ENDPOINT:-}" ]]; then
       log "tofu-ci: s3 backend needs TF_STATE_BUCKET and TF_STATE_ENDPOINT (MinIO)"
       return 1
     fi
@@ -128,16 +126,7 @@ backend_args() {
     printf -- '-backend-config=skip_region_validation=true\n'
     # Locking lives in the bucket itself (OpenTofu >= 1.10, Q8) — no
     # DynamoDB, no extra service to be down.
-    printf -- '-backend-config=use_lockfile=true\n'
-    ;;
-  kubernetes)
-    # Values live in backend.tf (see backend-kubernetes.tf.example).
-    ;;
-  *)
-    log "tofu-ci: unknown TF_STATE_BACKEND '${TF_STATE_BACKEND}' (expected s3|kubernetes)"
-    return 1
-    ;;
-  esac
+  printf -- '-backend-config=use_lockfile=true\n'
 }
 
 # ---------------------------------------------------------------------------
@@ -152,9 +141,7 @@ preflight() {
     ok=false
   fi
 
-  if [[ "${TF_STATE_BACKEND:-s3}" == "kubernetes" ]]; then
-    log "tofu-ci: state backend kubernetes (configured in backend.tf)"
-  elif [[ -n "${TF_STATE_BUCKET:-}" && -n "${TF_STATE_ENDPOINT:-}" ]]; then
+  if [[ -n "${TF_STATE_BUCKET:-}" && -n "${TF_STATE_ENDPOINT:-}" ]]; then
     log "tofu-ci: state backend s3 — bucket and endpoint present (key: ${TF_STATE_KEY:-routeros/rb5009.tfstate})"
   else
     log "tofu-ci: state backend s3 — TF_STATE_BUCKET/TF_STATE_ENDPOINT missing"
@@ -200,7 +187,7 @@ init)
   bargs_arr=()
   if [[ -n "$bargs" ]]; then mapfile -t bargs_arr <<<"$bargs"; fi
   unset bargs
-  log "tofu-ci: init (role ${ROLE}, backend ${TF_STATE_BACKEND:-s3})"
+  log "tofu-ci: init (role ${ROLE}, backend s3)"
   exec tofu init -input=false "${bargs_arr[@]}" "$@"
   ;;
 plan | apply | refresh | show | output | state | import | destroy | force-unlock | taint | untaint)

@@ -80,6 +80,9 @@ import {
   id = "*11"
 }
 
+# The defconf bridge: every port pvid=1, `vlan-filtering` off, no VLAN entries — i.e. one flat
+# broadcast domain. Adopted as-is so the carve's first step (enabling filtering with everything
+# still on compat) is a one-attribute diff against a known baseline.
 resource "routeros_interface_bridge" "bridge" {
   admin_mac           = "DC:2C:6E:43:D4:A7"
   ageing_time         = "5m"
@@ -103,6 +106,8 @@ resource "routeros_interface_bridge" "bridge" {
   vlan_filtering      = false
 }
 
+# no link today. **The management escape port**: if a bridge change ever locks the admin path out,
+# a laptop here reaches the router. Pre-assigned to mgmt and never tagged.
 resource "routeros_interface_bridge_port" "ether1" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -133,6 +138,8 @@ resource "routeros_interface_bridge_port" "ether1" {
   unknown_unicast_flood   = true
 }
 
+# carries `172.16.100.1/24` as a bridge slave, and its link is down — the LAN address sits on a dead
+# port. Moving it onto the bridge/VLAN interfaces is cut-over risk #1.
 resource "routeros_interface_bridge_port" "ether2" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -163,6 +170,7 @@ resource "routeros_interface_bridge_port" "ether2" {
   unknown_unicast_flood   = true
 }
 
+# no link — spare.
 resource "routeros_interface_bridge_port" "ether3" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -194,6 +202,8 @@ resource "routeros_interface_bridge_port" "ether3" {
   unknown_unicast_flood   = true
 }
 
+# **the LAN uplink to the CRS326** (`ether18`), 1 Gb, measured by counters. The estate's single
+# path between router and switches, and the first port that becomes a trunk.
 resource "routeros_interface_bridge_port" "ether4" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -225,6 +235,9 @@ resource "routeros_interface_bridge_port" "ether4" {
   unknown_unicast_flood   = true
 }
 
+# **the ISP uplink** (Huawei in bridge mode). Measured by counters during a download: 24.76 MiB
+# received here while ether4 handed 24.64 MiB to the LAN. The PPPoE client rides it after WAN
+# wave 2; **the carve must never tag this port**.
 resource "routeros_interface_bridge_port" "ether5" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -256,6 +269,7 @@ resource "routeros_interface_bridge_port" "ether5" {
   unknown_unicast_flood   = true
 }
 
+# no link — spare.
 resource "routeros_interface_bridge_port" "ether6" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -287,6 +301,7 @@ resource "routeros_interface_bridge_port" "ether6" {
   unknown_unicast_flood   = true
 }
 
+# no link — spare.
 resource "routeros_interface_bridge_port" "ether7" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -318,6 +333,7 @@ resource "routeros_interface_bridge_port" "ether7" {
   unknown_unicast_flood   = true
 }
 
+# no link — spare.
 resource "routeros_interface_bridge_port" "ether8" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -349,6 +365,8 @@ resource "routeros_interface_bridge_port" "ether8" {
   unknown_unicast_flood   = true
 }
 
+# `172.16.101.1/24`, no link — the vestigial work experiment (Martin: unused). Not part of the
+# carve; a cleanup candidate.
 resource "routeros_interface_bridge_port" "sfp_sfpplus1" {
   auto_isolate            = false
   bpdu_guard              = false

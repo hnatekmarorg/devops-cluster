@@ -34,11 +34,20 @@ locals {
   #   172.16.20.0/24 / 172.16.50.0/24          retired classes (trusted, guest): numbers stay
   #                                             unused rather than recycled
   #
-  # Service VIPs are 172.16.48.0/20 — 4,094 addresses inside srv. Which block the pool is cut
-  # from depends on how MetalLB announces: in L2 mode the VIP must sit in the subnet of the
-  # node that answers for it (so the pool moves into the lab block, 172.16.24.0/21 is reserved
-  # there for exactly that); in BGP mode the router routes the VIP block and the pool stays in
-  # srv. Either way the space exists before it is needed.
+  # Service VIPs: the MetalLB pool is 172.16.48.1 - 172.16.63.254 (Martin, 2026-09-14), i.e. the
+  # usable range of 172.16.48.0/20 — 4,094 addresses inside srv.
+  #
+  # That range *requires BGP mode*, and it is worth knowing why: MetalLB in L2 answers ARP for
+  # the VIP itself, so the VIP has to sit in a subnet a node has an interface in. The nodes live
+  # in lab (172.16.16.0/20), the VIPs in srv (172.16.48.0/20) — different subnets, so L2 is not
+  # merely undesirable here, it is impossible. In BGP mode the RB5009 peers with each node's
+  # speaker and routes 172.16.48.0/20 towards the nodes, which is also the cleaner split: the
+  # services announce their own presence and the nodes stay where they are.
+  #
+  # Consequences carried forward: the router needs a BGP peer group (TCP/179 allowed from the
+  # cluster) and the /20 routed without NAT; MetalLB's speaker needs FRR privileges; and the
+  # lab reserve 172.16.24.0/21 — held for the L2 alternative — can be released back to lab.
+  # The pool is announced only once MetalLB exists; until then this is an address list
   #
   # IPv6 is deliberately out of scope for this overhaul (2026-09-14): the estate has enough
   # moving parts without a second address family. The blocks are aligned power-of-two

@@ -235,7 +235,7 @@ makes the next upgrade a byte-level check.
 | mgmt | `172.16.0.0/20` | `172.16.10.0/24` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
 | lab | `172.16.16.0/20` | `172.16.30.0/24` | devops cluster `main-*` **and the VIP `.15`**, sandboxes, spark1-4 management, `.189` | trunk to balteus (per-VM tags) + access on spark ports |
 | srv | **`172.16.32.0/19`** | `172.16.40.0/24` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box | **balteus' uplink becomes a trunk** — the largest single change |
-| → service VIPs | *inside srv* | `172.16.48.0/20` | **the MetalLB pool** — 4,094 addresses, so VIP space stops being the constraint | routed (BGP) or announced in the nodes' subnet (L2) — see below |
+| → service VIPs | *inside srv* | `172.16.48.0/20` | **the MetalLB pool, `172.16.48.1–172.16.63.254`** — 4,094 addresses, so VIP space stops being the constraint | **routed by BGP** (see below) |
 | iot | `172.16.64.0/20` | `172.16.70.0/24` | **the whole WiFi segment**: `ether16` → the dumb switch → Deco BE22 (all SSIDs, it cannot tag) + TV + gaming PC | one access port (`ether16`), PVID 70 |
 | vpn (zone, not a VLAN) | `172.16.96.0/20` | `172.16.96.0/24` | WireGuard clients | arrives on the tunnel interface — no VID; must have DNS + NTP from day one |
 | compat | `172.16.100.0/24` | — | everything not yet migrated; **fabric excluded entirely** | stays until the last wave |
@@ -248,12 +248,17 @@ never needs re-cutting because it outgrew its range — `srv` doubles as the ser
 is a /19 for that reason. Host space keeps the familiar third octet so the diagrams and port
 tables stay readable while the *blocks* are what the router aggregates.
 
-**MetalLB still has one open decision**, and it is the only thing that could move the pool: in
-**L2 mode** the announced VIP must sit in the subnet of the node answering for it, so the pool is
-cut from the lab block (`172.16.24.0/21` is held there for exactly that); in **BGP mode** the
-router routes the VIP block to the nodes and the pool stays in `srv` (`172.16.48.0/20`), which is
-the cleaner split — services announce, nodes stay in lab. Today's pool (`172.16.100.15-16`) is in
-compat and has to move either way.
+**MetalLB runs in BGP mode — decided by the pool range itself** (2026-09-14). The pool is
+`172.16.48.1–172.16.63.254`: 4,094 addresses inside `srv`, while the cluster nodes live in `lab`.
+In L2 mode MetalLB answers ARP for the VIP, so the VIP must sit in a subnet a node has an
+interface in — with the pool in srv and the nodes in lab that is impossible, not merely
+undesirable. So the RB5009 peers with each node's speaker (TCP/179 from the cluster) and routes
+`172.16.48.0/20` towards them, without NAT. The lab reserve `172.16.24.0/21`, held for the L2
+alternative, is released back to lab.
+
+Carried forward as work: router BGP peer group + firewall allowance, MetalLB speaker with FRR
+privileges, and the pool announced only once MetalLB exists. Today's pool
+(`172.16.100.15-16`, in compat) still has to move.
 
 **IPv6 is deliberately out of scope** for this overhaul (2026-09-14). It would be the largest
 single capability upgrade available, and it is also the largest surface for things to go wrong

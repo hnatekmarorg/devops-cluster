@@ -28,10 +28,26 @@
 # membership cannot disturb the WAN at all.
 
 # ---------------------------------------------------------------------------
-# Wave 2a — the PPPoE client leaves the bridge for the port the ISP actually answers on.
-# This is the step that ends the WAN/LAN L2 overlap: with the client bound to `bridge`, the
-# bridge had to carry its frames to `ether5` — and therefore carried the ISP's frames into
-# every LAN port too. Bound to `ether5` directly, the session never touches the bridge.
+# Wave 2 — the PPPoE client leaves the bridge for the port the ISP actually answers on.
+# This ends the WAN/LAN L2 overlap: with the client bound to `bridge`, the bridge had to carry
+# its frames to `ether5` — and therefore carried the ISP's frames into every LAN port too.
+#
+# ORDER MATTERS, and the device taught us why (Martin, 2026-09-14):
+#   RouterOS refuses a PPPoE client on a bridge **slave** — it flags the client `invalid` with
+#   the comment "Client is on slave interface". So `ether5` must leave the bridge *first*; only
+#   then can the client bind to it. Doing it in the other order (client first) simply does not
+#   come up. The consequence is that a few seconds of WAN outage are inherent to this change, not
+#   avoidable: removing the port kills the session, and the next command restores it on the port.
+#   Paste the two commands together so that window is as short as the CLI can make it:
+#
+#     /interface bridge port remove [find interface=ether5]
+#     /interface pppoe-client set [find name=t-mobile] interface=ether5
+#
+#   Rollback is the reverse order, for the same reason — client back to `bridge` first, then the
+#   port back into the bridge:
+#
+#     /interface pppoe-client set [find name=t-mobile] interface=bridge
+#     /interface bridge port add bridge=bridge interface=ether5
 # ---------------------------------------------------------------------------
 import {
   to = routeros_interface_pppoe_client.t_mobile

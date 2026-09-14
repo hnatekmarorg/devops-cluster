@@ -49,7 +49,12 @@ outside the LAN carve, but know it before the hardware arrives.
 ## Two notes the diagram has no room for
 
 - **The WAN port is `ether5` on the RB5009** — measured, and it is the one port the carve must
-  never tag: the PPPoE client currently rides the *bridge*, so wave 2 moves it onto the port first.
+  never tag. Wave 2 ends the WAN/LAN overlap, and **the device set the order**: RouterOS refuses a
+  PPPoE client on a bridge *slave* (`invalid` — "Client is on slave interface"), so the port must
+  leave the bridge **before** the client binds to it. A few seconds of WAN outage are therefore
+  inherent to the change, and the rollback is the same order reversed. As of 2026-09-14 the leak
+  is live, not theoretical: **five** non-local MACs (the ISP's neighbours) sit on `ether5` in the
+  LAN's bridge host table.
 - **Negotiated link rates hide.** RouterOS' API reports each port's *advertised* speed, not what it
   negotiated — which is how `Spark 3` sat at 100 M (a damaged cable pair, since swapped) with
   nothing anywhere reporting a problem. SwOS' Link tab and WinBox's "Rate" column show the truth.

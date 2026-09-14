@@ -230,15 +230,36 @@ makes the next upgrade a byte-level check.
 
 ## Layer 2 — proposed, for review
 
-| Class | Subnet | Candidates from the measurements | Port mechanism |
-|---|---|---|---|
-| mgmt | `172.16.10.0/24` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
-| trusted | `172.16.20.0/24` | **wired personal devices without WiFi in them** — the gaming PC behind `ether16` gets its own port and lands here, firewall matrix **WAN-only** (internal access = VPN). Resolved 2026-09-14: the class survives | access ports |
-| lab | `172.16.30.0/24` | devops cluster `main-*` **and the VIP `.15`**, sandbox, spark1-4 management, `.189` | trunk to balteus (per-VM tags) + access on spark ports |
-| srv | `172.16.40.0/24` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box | **balteus' uplink becomes a trunk** — the largest single change |
-| guest | `172.16.50.0/24` | **the WiFi segment**: `ether16` → the dumb switch → Deco BE22 (all its SSIDs, since it cannot tag) + whatever else hangs there; internal access via VPN only | one access port (`ether16`), PVID 50 |
-| iot | `172.16.70.0/24` | wired IoT (printers, TV, `.167` embedded) and — if we split SSIDs on the MikroTik AP — the IoT SSID; the Tapo P110s and Shelly plug currently sit on WiFi | access ports |
-| compat | VLAN 1, `172.16.100.0/24` | everything not yet migrated; **fabric excluded entirely** | stays until the last wave |
+| Class | Block | Host space | Candidates from the measurements | Port mechanism |
+|---|---|---|---|---|
+| mgmt | `172.16.0.0/20` | `172.16.10.0/24` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
+| lab | `172.16.16.0/20` | `172.16.30.0/24` | devops cluster `main-*` **and the VIP `.15`**, sandboxes, spark1-4 management, `.189` | trunk to balteus (per-VM tags) + access on spark ports |
+| srv | **`172.16.32.0/19`** | `172.16.40.0/24` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box | **balteus' uplink becomes a trunk** — the largest single change |
+| → service VIPs | *inside srv* | `172.16.48.0/20` | **the MetalLB pool** — 4,094 addresses, so VIP space stops being the constraint | routed (BGP) or announced in the nodes' subnet (L2) — see below |
+| iot | `172.16.64.0/20` | `172.16.70.0/24` | **the whole WiFi segment**: `ether16` → the dumb switch → Deco BE22 (all SSIDs, it cannot tag) + TV + gaming PC | one access port (`ether16`), PVID 70 |
+| vpn (zone, not a VLAN) | `172.16.96.0/20` | `172.16.96.0/24` | WireGuard clients | arrives on the tunnel interface — no VID; must have DNS + NTP from day one |
+| compat | `172.16.100.0/24` | — | everything not yet migrated; **fabric excluded entirely** | stays until the last wave |
+| ~~trusted~~ `172.16.20.0/24` | retired | — | the gaming PC shares one cable with the AP and TV, so it is IoT | number stays unused |
+| ~~guest~~ `172.16.50.0/24` | retired | — | the WiFi segment is one untrusted segment → IoT | number stays unused |
+| parking | VLAN **999** | — | end-state trunks only: a tag that must pass and reach nothing | bridge-VLAN entry, no interface, no address |
+
+**Sizing rationale (2026-09-14).** Classes get aligned blocks rather than /24 slices, so a class
+never needs re-cutting because it outgrew its range — `srv` doubles as the service-VIP home and
+is a /19 for that reason. Host space keeps the familiar third octet so the diagrams and port
+tables stay readable while the *blocks* are what the router aggregates.
+
+**MetalLB still has one open decision**, and it is the only thing that could move the pool: in
+**L2 mode** the announced VIP must sit in the subnet of the node answering for it, so the pool is
+cut from the lab block (`172.16.24.0/21` is held there for exactly that); in **BGP mode** the
+router routes the VIP block to the nodes and the pool stays in `srv` (`172.16.48.0/20`), which is
+the cleaner split — services announce, nodes stay in lab. Today's pool (`172.16.100.15-16`) is in
+compat and has to move either way.
+
+**IPv6 is deliberately out of scope** for this overhaul (2026-09-14). It would be the largest
+single capability upgrade available, and it is also the largest surface for things to go wrong
+mid-carve, so it is deferred rather than dismissed: the blocks above are aligned power-of-two
+aggregates so a later v6 plan can mirror them one-for-one, and names stay the interface
+everywhere so re-addressing never becomes re-architecting.
 
 ## Constraints that decide the order of work
 

@@ -61,18 +61,21 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 | Class | Subnet | Candidates from the measurements | Port mechanism |
 |---|---|---|---|
 | mgmt | `172.16.10.0/24` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
-| trusted | `172.16.20.0/24` | workstations, phones, AP uplinks | trunk to the AP — **SSID → VLAN** |
+| trusted | `172.16.20.0/24` | what is left once WiFi moves out of it: **wired personal devices only** — TBC whether the class survives the WiFi decision (see constraint 3) | access ports |
 | lab | `172.16.30.0/24` | devops cluster `main-*` **and the VIP `.15`**, sandbox, spark1-4 management, `.189` | trunk to balteus (per-VM tags) + access on spark ports |
 | srv | `172.16.40.0/24` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box | **balteus' uplink becomes a trunk** — the largest single change |
-| guest | `172.16.50.0/24` | guest SSID, unknown devices | blocked on the AP question below |
-| iot | `172.16.70.0/24` | Tapo P110 ×2, Shelly plug, printers, TV, `.167` embedded | access ports + an IoT SSID |
+| guest | `172.16.50.0/24` | **the WiFi segment** (Deco uplink, untrusted by design) + unknown devices; internal access via VPN only | one access port for the Deco uplink |
+| iot | `172.16.70.0/24` | wired IoT (printers, TV, `.167` embedded) and — if we split SSIDs on the MikroTik AP — the IoT SSID; the Tapo P110s and Shelly plug currently sit on WiFi | access ports |
 | compat | VLAN 1, `172.16.100.0/24` | everything not yet migrated; **fabric excluded entirely** | stays until the last wave |
 
 ## Constraints that decide the order of work
 
 1. **`bridge-compute` is not touched.** It carries both the RoCE fabric and balteus' 10 G NAS path. PDU/RDMA does not survive a router, so an "isolated VLAN" would sever GPU RDMA.
 2. **CSS610 must be configured by hand** and it sits on the path to the work PC, the Sparks' management and the spine's management. Any trunk design has to name its ports explicitly and be verified physically.
-3. **The Deco mesh AP cannot tag SSIDs**, so guest and IoT VLANs on WiFi need either a VLAN-capable AP (MikroTik) or a Deco whose *whole* uplink belongs to one VLAN. This is the one item that may need hardware, not configuration.
+3. **WiFi is one untrusted segment, and that is accepted** (Martin, 2026-09-14): the Deco cannot tag SSIDs, so it keeps its whole uplink in one VLAN — no per-SSID VLAN mapping, no hardware change. Access to internal networks is expected over the **VPN**, not over WiFi. Two consequences are promoted to requirements:
+   - **The resolver must serve VPN clients** (split-horizon: internal names → internal addresses over the tunnel, everything else forwarded). The VPN zone (`172.16.60.0/24`) needs DNS/NTP reachability from day one, not as a later rule.
+   - **WireGuard becomes load-bearing before WiFi is isolated.** Today the phone and any wireless client reach internal services directly over the flat LAN; once the WiFi segment is untrusted, that path is the tunnel. Sequencing therefore changes: the VPN (and its DNS path) lands **before or with** the WiFi isolation, not after it as an optional phase-5 nicety.
+   - Still worth one decision: with a single untrusted segment, IoT and guest devices share L2 and can talk to each other. If that matters, the **MikroTik AP** (which can tag per SSID) can carry a second SSID for IoT while the Deco stays single-VLAN.
 4. **balteus' uplink becomes a trunk** with per-VM tags on the PVE bridge (46 guests) — the most delicate change of the carve.
 5. **The router's LAN IP sits on a bridge slave whose link is down.** Moving it onto the bridge/VLAN interfaces is the first real cut-over risk.
 6. **DHCP leases are 10 minutes** — fast propagation works in both directions.

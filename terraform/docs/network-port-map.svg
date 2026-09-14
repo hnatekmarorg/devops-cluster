@@ -156,9 +156,9 @@
 <rect x="372" y="938" width="300" height="140" rx="7" fill="#0f172a"/>
 <rect x="372" y="938" width="300" height="140" rx="7" fill="rgba(30,41,59,0.65)" stroke="#94a3b8" stroke-width="1.5"/>
 <text x="382.0" y="956.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">vlan50-guest   172.16.50.0/24</text>
-<text x="382.0" y="972.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Guest SSID + unknown devices.</text>
-<text x="382.0" y="984.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">BLOCKER: the TP-Link Deco cannot tag</text>
-<text x="382.0" y="997.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">SSIDs → needs a VLAN-capable AP.</text>
+<text x="382.0" y="972.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">WiFi = ONE untrusted segment (the Deco</text>
+<text x="382.0" y="984.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">cannot tag SSIDs — accepted, no new AP).</text>
+<text x="382.0" y="997.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Internal access from here is via VPN only.</text>
 <rect x="688" y="938" width="300" height="140" rx="7" fill="#0f172a"/>
 <rect x="688" y="938" width="300" height="140" rx="7" fill="rgba(120,53,15,0.40)" stroke="#fbbf24" stroke-width="1.5"/>
 <text x="698.0" y="956.0" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="600">vlan70-iot   172.16.70.0/24</text>
@@ -183,7 +183,7 @@
 <text x="58.0" y="1150.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">internal resolution needs the internet</text>
 <text x="58.0" y="1162.5" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">and a hairpin. Block WAN for one VLAN</text>
 <text x="58.0" y="1175.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">and DNS dies before the VLAN does.</text>
-<text x="372.0" y="1122.0" font-size="11" fill="#fbbf24" text-anchor="start" font-weight="600">Order that avoids the trap:   LAN resolver first (additive)   →   VLAN waves   →   egress classes LAST.</text>
+<text x="372.0" y="1122.0" font-size="11" fill="#fbbf24" text-anchor="start" font-weight="600">Order that avoids the trap:   LAN resolver first (additive)   →   WireGuard + its DNS path   →   VLAN waves   →   egress classes LAST.</text>
 <text x="372.0" y="1144.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">VIP 172.16.100.15 is ARP'd by main-4 → it moves with the cluster into vlan30, so the Cloudflare records move in the same wave.</text>
 <text x="372.0" y="1162.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Wildcard TLS is DNS-01 via Cloudflare and .dev is HSTS-preloaded: a renewal broken by the carve is a hard browser failure, not a warning.</text>
 <text x="372.0" y="1180.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">DHCP leases are 10 minutes, so a DNS-server change propagates fast — a lever, and a hazard.</text>

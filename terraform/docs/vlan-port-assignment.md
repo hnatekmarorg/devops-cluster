@@ -57,15 +57,22 @@ Port map supplied from the switch's own UI (2026-09-14) — it labels its ports 
 | **Port2** | `Charon` | 1 G | **access, pvid 10** | mgmt |
 | **Port3** | `Spark 4` | 1 G | **access, pvid 30** | lab |
 | **Port4** | `CRS04-4DDQ ETH1` | 1 G | **access, pvid 10** | mgmt |
-| **Port5** | `Spark 3` | **100 M** ⚠ | **access, pvid 30** | lab |
+| **Port5** | `Spark 3` | 1 G ✅ | **access, pvid 30** | lab |
 | **Port6** | `Spark 2` | 1 G | **access, pvid 30** | lab |
 | **Port7** | `CRS326 Port 4` | 1 G | **trunk**, tagged `10,30` | — |
 | **Port8** | `Spark 1` | 1 G | **access, pvid 30** | lab |
 | SFP+1, SFP+2 | — | no link | spare (10 G) | — |
 
-**Finding on Port5: `Spark 3` negotiates 100 M while its three siblings do 1 G.** Management
-traffic only, so nothing is broken — but 100 M on a gigabit port is the classic signature of a
-damaged pair or a bad crimp, and it is worth a cable swap the next time someone is at the rack.
+**Resolved: `Spark 3`'s 100 M link.** Port5 negotiated 100 M while its three siblings did 1 G —
+management traffic only, so nothing was broken, but 100 M on a gigabit port is the classic
+signature of a damaged pair. Martin swapped the patch cable the same day and the port now reads
+**1 G full duplex**. Recorded because the signal was worth acting on: a gigabit port stuck at 100 M
+is a cable, not a configuration.
+
+Worth repeating on the other switches when we are next in their UIs: the negotiated rate is easy
+to miss because RouterOS' API shows each port's *advertised* speed, not what it actually
+negotiated. SwOS (Link tab, as above) and WinBox (Interface list, "Rate" column) are where it is
+visible.
 
 **Opportunity, not a task:** Port1 and both SFP+ ports here are free, and so are **both SFP+ ports
 on the CRS326** — so the CSS610's uplink (today 1 G on `Port7`, carrying charon, the spine's

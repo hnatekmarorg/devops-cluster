@@ -34,30 +34,22 @@ locals {
   #   172.16.20.0/24 / 172.16.50.0/24          retired classes (trusted, guest): numbers stay
   #                                             unused rather than recycled
   #
-  # Service VIPs: the MetalLB pool is 172.16.48.1 - 172.16.63.254 (Martin, 2026-09-14), i.e. the
-  # usable range of 172.16.48.0/20 — 4,094 addresses inside srv.
-  #
-  # That range *requires BGP mode*, and it is worth knowing why: MetalLB in L2 answers ARP for
-  # the VIP itself, so the VIP has to sit in a subnet a node has an interface in. The nodes live
-  # in lab (172.16.16.0/20), the VIPs in srv (172.16.48.0/20) — different subnets, so L2 is not
-  # merely undesirable here, it is impossible. In BGP mode the RB5009 peers with each node's
-  # speaker and routes 172.16.48.0/20 towards the nodes, which is also the cleaner split: the
-  # services announce their own presence and the nodes stay where they are.
-  #
-  # Consequences carried forward: the router needs a BGP peer group (TCP/179 allowed from the
-  # cluster) and the /20 routed without NAT; MetalLB's speaker needs FRR privileges; and the
-  # lab reserve 172.16.24.0/21 — held for the L2 alternative — can be released back to lab.
-  # The pool is announced only once MetalLB exists; until then this is an address list
+  # Service VIPs: the MetalLB pool is 172.16.48.1 - 172.16.63.254 (Martin, 2026-09-14), inside
+  # srv's /19 — see the gateway comment above for why that placement is the whole point: pool
+  # and announcing nodes end up in one subnet, so L2 announcement works and no routing protocol
+  # is needed. If the single-announcer hotspot of L2 ever becomes a real constraint, BGP remains
+  # the upgrade path and this range works there unchanged (the router would route the /20 to the
+  # nodes) — but that is an optimisation to reach for later, not a prerequisite.
   #
   # IPv6 is deliberately out of scope for this overhaul (2026-09-14): the estate has enough
   # moving parts without a second address family. The blocks are aligned power-of-two
   # aggregates so a later v6 plan can mirror them one-for-one rather than re-cut the estate,
   # and names remain the interface everywhere so re-addressing is not re-architecting.
   vlans = {
-    mgmt = { vlan_id = 10, name = "vlan10-mgmt", cidr = "172.16.10.0/24", block = "172.16.0.0/20" }
-    lab  = { vlan_id = 30, name = "vlan30-lab", cidr = "172.16.30.0/24", block = "172.16.16.0/20" }
-    srv  = { vlan_id = 40, name = "vlan40-srv", cidr = "172.16.40.0/24", block = "172.16.32.0/19" }
-    iot  = { vlan_id = 70, name = "vlan70-iot", cidr = "172.16.70.0/24", block = "172.16.64.0/20" }
+    mgmt = { vlan_id = 10, name = "vlan10-mgmt", subnet = "172.16.0.0/20", gateway = "172.16.10.1/20" }
+    lab  = { vlan_id = 30, name = "vlan30-lab", subnet = "172.16.16.0/20", gateway = "172.16.30.1/20" }
+    srv  = { vlan_id = 40, name = "vlan40-srv", subnet = "172.16.32.0/19", gateway = "172.16.40.1/19" }
+    iot  = { vlan_id = 70, name = "vlan70-iot", subnet = "172.16.64.0/20", gateway = "172.16.70.1/20" }
   }
   # No VLAN interface for these, on purpose:
   #   * VLAN 999 — the unrouted parking VID. It exists so an end-state trunk can carry a tag
@@ -105,9 +97,12 @@ resource "routeros_interface_vlan" "vlan" {
 resource "routeros_ip_address" "vlan_gateway" {
   for_each = local.vlans
 
-  # .1 of each VLAN: the gateway address the firewall matrix and DHCP scopes
-  # will point at once the bridge becomes VLAN-aware.
-  address   = format("%s/%s", cidrhost(each.value.cidr, 1), split("/", each.value.cidr)[1])
+  # One subnet per class, sized by its block: the interface carries the *class* prefix, with
+  # its address at the .1 of the host area. That is what makes the address space allocatable
+  # rather than just documented — the MetalLB pool (172.16.48.1-172.16.63.254) sits inside
+  # srv's /19 as a sibling of the host addresses, so a node in srv and a VIP in the pool are
+  # in the same subnet and L2 announcement works.
+  address   = each.value.gateway
   interface = routeros_interface_vlan.vlan[each.key].name
   comment   = "${local.managed_by} (${var.router_name})"
 }

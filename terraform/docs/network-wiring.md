@@ -230,41 +230,34 @@ makes the next upgrade a byte-level check.
 
 ## Layer 2 — proposed, for review
 
-| Class | Block | Host space | Candidates from the measurements | Port mechanism |
+| Class | Subnet (gateway) | Host addressing | Candidates from the measurements | Port mechanism |
 |---|---|---|---|---|
-| mgmt | `172.16.0.0/20` | `172.16.10.0/24` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
-| lab | `172.16.16.0/20` | `172.16.30.0/24` | devops cluster `main-*` **and the VIP `.15`**, sandboxes, spark1-4 management, `.189` | trunk to balteus (per-VM tags) + access on spark ports |
-| srv | **`172.16.32.0/19`** | `172.16.40.0/24` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box | **balteus' uplink becomes a trunk** — the largest single change |
-| → service VIPs | *inside srv* | `172.16.48.0/20` | **the MetalLB pool, `172.16.48.1–172.16.63.254`** — 4,094 addresses, so VIP space stops being the constraint | **routed by BGP** (see below) |
-| iot | `172.16.64.0/20` | `172.16.70.0/24` | **the whole WiFi segment**: `ether16` → the dumb switch → Deco BE22 (all SSIDs, it cannot tag) + TV + gaming PC | one access port (`ether16`), PVID 70 |
-| vpn (zone, not a VLAN) | `172.16.96.0/20` | `172.16.96.0/24` | WireGuard clients | arrives on the tunnel interface — no VID; must have DNS + NTP from day one |
+| mgmt | `172.16.0.0/20` (`172.16.10.1/20`) | `172.16.10.x` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
+| lab | `172.16.16.0/20` (`172.16.30.1/20`) | `172.16.30.x` | **AI compute**: spark1-4 management, `.189`; sandboxes | trunk to balteus (per-VM tags) + access on spark ports |
+| srv | **`172.16.32.0/19`** (`172.16.40.1/19`) | `172.16.40.x` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box, **and the devops cluster nodes** (see below) | **balteus' uplink becomes a trunk** — the largest single change |
+| → service VIPs | *inside srv, one subnet* | `172.16.48.1 – 172.16.63.254` | **the MetalLB pool** — 4,094 addresses | **L2 announcement** — possible precisely because pool and nodes share srv's /19 |
+| iot | `172.16.64.0/20` (`172.16.70.1/20`) | `172.16.70.x` | **the whole WiFi segment**: `ether16` → dumb switch → Deco BE22 (all SSIDs, it cannot tag) + TV + gaming PC | one access port (`ether16`), PVID 70 |
+| vpn (zone, not a VLAN) | `172.16.96.0/20` (`172.16.96.1/20`) | `172.16.96.x` | WireGuard clients | arrives on the tunnel interface — no VID; needs DNS + NTP from day one |
 | compat | `172.16.100.0/24` | — | everything not yet migrated; **fabric excluded entirely** | stays until the last wave |
-| ~~trusted~~ `172.16.20.0/24` | retired | — | the gaming PC shares one cable with the AP and TV, so it is IoT | number stays unused |
-| ~~guest~~ `172.16.50.0/24` | retired | — | the WiFi segment is one untrusted segment → IoT | number stays unused |
-| parking | VLAN **999** | — | end-state trunks only: a tag that must pass and reach nothing | bridge-VLAN entry, no interface, no address |
+| ~~trusted~~ `172.16.20.0/24` · ~~guest~~ `172.16.50.0/24` | retired | — | the gaming PC shares one cable with the AP and TV → IoT; the WiFi segment is one untrusted segment | numbers stay unused |
+| parking | VLAN **999** | — | end-state trunks only: a tag that passes and reaches nothing | bridge-VLAN entry — no interface, no address |
 
-**Sizing rationale (2026-09-14).** Classes get aligned blocks rather than /24 slices, so a class
-never needs re-cutting because it outgrew its range — `srv` doubles as the service-VIP home and
-is a /19 for that reason. Host space keeps the familiar third octet so the diagrams and port
-tables stay readable while the *blocks* are what the router aggregates.
+**One subnet per class, sized by its block** (2026-09-14). Each VLAN interface carries the class
+prefix with its own address at the `.1` of the host area — `srv` is `172.16.40.1/19`, not
+`/24`. This is the difference between *documenting* room and *having* it: hosts number from
+`.40.x` by habit, the MetalLB pool takes `.48–.63`, and both are addresses in one subnet.
 
-**MetalLB runs in BGP mode — decided by the pool range itself** (2026-09-14). The pool is
-`172.16.48.1–172.16.63.254`: 4,094 addresses inside `srv`, while the cluster nodes live in `lab`.
-In L2 mode MetalLB answers ARP for the VIP, so the VIP must sit in a subnet a node has an
-interface in — with the pool in srv and the nodes in lab that is impossible, not merely
-undesirable. So the RB5009 peers with each node's speaker (TCP/179 from the cluster) and routes
-`172.16.48.0/20` towards them, without NAT. The lab reserve `172.16.24.0/21`, held for the L2
-alternative, is released back to lab.
+**That placement is what lets MetalLB run in L2 mode** — pool and announcing nodes in the same
+subnet, no routing protocol, no FRR privileges on the speaker, no BGP peer group on the router.
+BGP stays the upgrade path if L2's single-announcer behaviour ever becomes a real constraint;
+the range works unchanged there.
 
-Carried forward as work: router BGP peer group + firewall allowance, MetalLB speaker with FRR
-privileges, and the pool announced only once MetalLB exists. Today's pool
-(`172.16.100.15-16`, in compat) still has to move.
-
-**IPv6 is deliberately out of scope** for this overhaul (2026-09-14). It would be the largest
-single capability upgrade available, and it is also the largest surface for things to go wrong
-mid-carve, so it is deferred rather than dismissed: the blocks above are aligned power-of-two
-aggregates so a later v6 plan can mirror them one-for-one, and names stay the interface
-everywhere so re-addressing never becomes re-architecting.
+**Where the cluster nodes live is the one consequence to settle.** For L2, the nodes must be in
+the pool's subnet, so either they move to `srv` (recommended: the cluster hosts the keepers —
+gitea, the IdP, the registry — and it needs real internet egress for image and ACME pulls, which
+`lab` deliberately restricts) or they stay in `lab` and the pool moves into lab's block instead.
+Recommendation: **cluster → srv**, leaving `lab` meaning "AI compute and sandboxes", which is the
+cleaner pair of definitions.
 
 ## Constraints that decide the order of work
 

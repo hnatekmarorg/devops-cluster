@@ -116,9 +116,25 @@ jobs:
           set -e
           case "$code" in
             0) echo "No drift: the device matches the repository." ;;
-            2) echo "Drift detected: something on the device differs from the repository." ;;
-            *) echo "The drift plan failed (exit $code)."; tail -40 drift.txt ;;
+            2)
+              # exit 2 means "changes", but this module's *outputs* are read from the device, so
+              # they shift whenever anything on the router changes — including our own applies and
+              # any hand-change. Only a change to a RESOURCE is drift, and a plan with resource
+              # changes always prints a "Plan: N to …" summary line; an outputs-only diff does not.
+              # Getting this wrong would open a drift issue every night until the alert meant nothing.
+              if grep -qE "^Plan: [0-9]+ to" drift.txt; then
+                echo "Drift detected: something on the device differs from the repository."
+              else
+                echo "::notice::plan reported changes in outputs only (outputs are read from the device) — not drift."
+                code=0
+              fi
+              ;;
+            *) echo "The drift plan failed (exit $code)."; grep -avE "MikrotikResourceDataToTerraform|^Warning: Field |^Schema development: |^\(and [0-9]+ more" drift.txt | tail -40 ;;
           esac
+          # The provider reports fields it does not model yet (trusted_ra, trusted_dhcpv6, managed…)
+          # as multi-line warnings. Known-benign, and they bury the actual diff.
+          grep -avE "MikrotikResourceDataToTerraform|^Warning: Field |^Schema development: |^\(and [0-9]+ more|^$" drift.txt > drift-filtered.txt || true
+          mv drift-filtered.txt drift.txt
           echo "exitcode=$code" >> "$GITHUB_OUTPUT"
           echo "--- drift report ---"
           tail -40 drift.txt

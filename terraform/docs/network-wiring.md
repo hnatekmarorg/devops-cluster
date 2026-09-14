@@ -71,6 +71,47 @@ After that the LAN bridge has no WAN members at all, which is what makes "the WA
 VLAN" a property rather than a promise — and the carve's port table stops containing a port it must
 not touch.
 
+## DNS: the router is not a resolver (found 2026-09-14)
+
+The CRS326 "cannot reach the internet" — but it can. Measured from the switch itself:
+
+```
+ping 172.16.100.1     2/2 replies      (gateway — L2 and router input fine)
+ping 8.8.8.8          2/2 replies      (routing and NAT fine)
+ping one.one.one.one  resolve failed   ← the actual fault
+```
+
+`/ip dns` on the switch points at **172.16.100.1**, and the router has
+`allow-remote-requests = no` — **it does not answer queries.** So every name lookup on a
+statically addressed device fails, while DHCP clients are fine: the DHCP network hands out
+`dns-server = 8.8.8.8`. That split is visible on the devices themselves — the CRS804 is a DHCP
+client with a *dynamic* DNS server (`8.8.8.8`) and resolves; the CRS326 is static, points at the
+router, and cannot. It is also why the CRS326's clock ran nine days behind: NTP by name.
+
+Two ways out, and they are different decisions:
+
+- **(a) Point the device's DNS at real resolvers** (`8.8.8.8, 1.1.1.1`) — one line per device,
+  consistent with what DHCP already hands out. A fix, not a design change.
+- **(b) Make the router the LAN's resolver** (`/ip dns set allow-remote-requests=yes`) — this is
+  what the carve's DNS phase wants anyway (split-horizon answers for VPN clients), and it would
+  activate the static entries the router already carries (`ipmi-balteus` → `.46` and friends)
+  for the whole LAN. It is also a decision: a resolver on the router must be scoped to the LAN
+  and VPN segments by firewall, never exposed to the WAN.
+
+Recommended order: (a) now, per device, to unblock; (b) deliberately in the carve's DNS step,
+with the firewall rule and the VPN scope landing at the same time.
+
+## Stale configuration found in the same pass
+
+Leftovers, all dormant, each with a way to wake up:
+
+| Where | Leftover | Why it is dormant | Why it matters |
+|---|---|---|---|
+| CRS326 `ether1` | `192.168.88.1/24` — the **storage network's** address | `ether1` is a bridge slave (via the `balteus` bond), so the address is inactive | pull `ether1` out of the bond — which is exactly what "delete the LACP" does — and `.88.1` becomes live, **duplicating the CRS317's address** on the storage island |
+| CRS326 routes | `172.16.101.0/24 via 172.16.100.1` | the work subnet has no link (see below) | a route to a network that no longer exists; dead weight in every route table read |
+| Router NAT | **nine** `masquerade` rules with `src=172.16.100.0/24` and `out-interface-list=LAN`, plus the real one (masquerade out `t-mobile`) | they permit nothing extra — the internet path is the `t-mobile` rule | looks like repeated hairpin-NAT attempts; harmless, but nine copies of one rule is drift worth retiring during the port-forward audit |
+| CRS326 `ether1` link | bond member with **no link** (`balteus` runs on `ether2` alone) | a single-member LACP bond still forwards | if atuin's cable is in `ether1`, this is the port "we will reuse", and deleting the bond is what frees it |
+
 ## The two islands, and who has a foot in both
 
 Neither island is on the LAN, and neither is touched by the carve — but both matter to it,

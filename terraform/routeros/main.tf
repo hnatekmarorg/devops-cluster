@@ -50,13 +50,19 @@ locals {
     lab  = { vlan_id = 30, name = "vlan30-lab", subnet = "172.16.16.0/20", gateway = "172.16.30.1/20" }
     srv  = { vlan_id = 40, name = "vlan40-srv", subnet = "172.16.32.0/19", gateway = "172.16.40.1/19" }
     iot  = { vlan_id = 70, name = "vlan70-iot", subnet = "172.16.64.0/20", gateway = "172.16.70.1/20" }
+    vpn  = { vlan_id = 60, name = "vlan60-vpn", subnet = "172.16.96.0/20", gateway = "172.16.96.1/20" }
   }
   # No VLAN interface for these, on purpose:
   #   * VLAN 999 — the unrouted parking VID. It exists so an end-state trunk can carry a tag
   #     that reaches nothing; it is a bridge-VLAN entry (`/interface/bridge/vlan`), never an
   #     interface with an address, so it is created in the filtering stage, not here.
-  #   * the VPN zone (172.16.96.0/24) — WireGuard clients arrive on the tunnel interface, not
-  #     on a switch port, so it is a *zone* without a VID. The 60 number stays unused.
+  # The VPN zone does have a VID after all (60): Martin's requirement is that balteus can place
+  # VMs in lab, srv **and vpn**, and a zone you cannot put a machine in is only half a zone. So
+  # VLAN 60 carries the zone on the trunk, and WireGuard clients are routed into the same zone
+  # from the tunnel. The two arrive by different transports and share one policy — which means
+  # the firewall matrix references an *address list* (`vpn-nets`), not a subnet identity, for
+  # this zone. The tunnel's own peer transport keeps a separate block (172.16.112.0/20) precisely
+  # so the two never have to be the same subnet on two interfaces, which RouterOS dislikes.
 
   ai_compute = [for ip in split(",", var.ai_compute_hosts) : trimspace(ip) if trimspace(ip) != ""]
 
@@ -66,7 +72,7 @@ locals {
   address_lists = {
     "lan-nets"       = ["172.16.100.0/24"]
     "mgmt-nets"      = ["172.16.0.0/20"]
-    "vpn-nets"       = ["172.16.96.0/20"]
+    "vpn-nets"       = ["172.16.96.0/20", "172.16.112.0/20"]
     "lab-nets"       = ["172.16.16.0/20"]
     "srv-nets"       = ["172.16.32.0/19"]
     "iot-nets"       = ["172.16.64.0/20"]

@@ -237,7 +237,7 @@ makes the next upgrade a byte-level check.
 | srv | **`172.16.32.0/19`** (`172.16.40.1/19`) | `172.16.40.x` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box, **and the devops cluster nodes** (see below) | **balteus' uplink becomes a trunk** — the largest single change |
 | → service VIPs | *inside srv, one subnet* | `172.16.48.1 – 172.16.63.254` | **the MetalLB pool** — 4,094 addresses | **L2 announcement** — possible precisely because pool and nodes share srv's /19 |
 | iot | `172.16.64.0/20` (`172.16.70.1/20`) | `172.16.70.x` | **the whole WiFi segment**: `ether16` → dumb switch → Deco BE22 (all SSIDs, it cannot tag) + TV + gaming PC | one access port (`ether16`), PVID 70 |
-| vpn (zone, not a VLAN) | `172.16.96.0/20` (`172.16.96.1/20`) | `172.16.96.x` | WireGuard clients | arrives on the tunnel interface — no VID; needs DNS + NTP from day one |
+| vpn | **`172.16.96.0/20`** (`172.16.96.1/20`) | `172.16.96.x` | **VMs placed in the VPN zone** (balteus: any guest that should be VPN-only) *and* WireGuard clients, routed in from `172.16.112.0/20` | **VID 60 on the trunk**; clients arrive on the tunnel — one zone, two transports, one policy via the `vpn-nets` list |
 | compat | `172.16.100.0/24` | — | everything not yet migrated; **fabric excluded entirely** | stays until the last wave |
 | ~~trusted~~ `172.16.20.0/24` · ~~guest~~ `172.16.50.0/24` | retired | — | the gaming PC shares one cable with the AP and TV → IoT; the WiFi segment is one untrusted segment | numbers stay unused |
 | parking | VLAN **999** | — | end-state trunks only: a tag that passes and reaches nothing | bridge-VLAN entry — no interface, no address |
@@ -251,6 +251,22 @@ prefix with its own address at the `.1` of the host area — `srv` is `172.16.40
 subnet, no routing protocol, no FRR privileges on the speaker, no BGP peer group on the router.
 BGP stays the upgrade path if L2's single-announcer behaviour ever becomes a real constraint;
 the range works unchanged there.
+
+**Balteus must be able to place a VM in any class** (Martin, 2026-09-14) — `lab`, `srv` and `vpn`
+named. That is what the trunk is *for*: the uplink carries every tag, so placing a guest is a
+one-line change in the VM's config (`tag=` on the NIC) rather than a cabling job. Practically:
+
+- PVE's bridge becomes VLAN-aware (`bridge-vlan-aware yes`, `bridge-vids 2-4094`), and each guest
+  NIC carries its class tag; the 46 existing guests migrate one at a time — this is the largest
+  single change of the carve and the reason the port table calls balteus' uplink a trunk.
+- The PVE host's **own** management address belongs in `srv` (it is a keeper); its storage NIC
+  stays on the storage island, and `vmbr3` (host-internal fast path) is untouched.
+- Consequence worth stating rather than discovering: same-host, same-class guest pairs keep
+  switching inside balteus; **cross-class pairs go via the router**, so policy applies to them —
+  which is the point, but it also means the router's CPU sees that traffic.
+- One caveat: the bond carrying all of this is **1 Gb on a single live member**. Guests' *storage*
+  and *fabric* traffic is on separate paths, so this is not a capacity problem today — but it is
+  the reason the bond deletion question keeps coming up rather than being cosmetic.
 
 **Where the cluster nodes live is the one consequence to settle.** For L2, the nodes must be in
 the pool's subnet, so either they move to `srv` (recommended: the cluster hosts the keepers —

@@ -38,11 +38,25 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 
 | Device | State | Live ports with measured occupants |
 |---|---|---|
-| **RB5009** (`172.16.100.1`, 7.12.1) | one bridge, LAN IP `172.16.100.1/24` on **`ether2`** — a bridge slave whose link is **down** (the plan's cut-over risk #1) | `ether4` UP · 1 Gb → CRS326 `ether18` (33 MACs behind it); `ether5` UP → 3 MACs, AP or small switch **TBC**; `sfp-sfpplus1` = the work subnet `172.16.101.1/24` |
-| **CRS326-24G-2S+** (`172.16.100.2`, **7.5** from 2022) | 24 ports + 2 SFP+, one flat bridge; 6 ports live | `ether18` → RB5009; **`balteus`** = an **LACP bond** (`ether1`+`ether2`, 802.3ad) → the PVE host, **18 guest NICs** — one member was **repurposed by design** as the 10 Gbps NAS↔fabric link (the cable now lands on CRS804 `ether2`), so the bond runs on a single 1 Gb member; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; **`bukefalos`** = a second LACP bond (`ether23`+`ether24`), idle, waiting for that server. Two 10 G SFP+ ports sit unused while the server side runs at 1 G |
+| **RB5009** (`172.16.100.1`, **7.24.2** — upgraded 2026-09-14 from 7.12.1) | one bridge, LAN IP `172.16.100.1/24` on **`ether2`** — a bridge slave whose link is **down** (the plan's cut-over risk #1) | `ether4` UP · 1 Gb → CRS326 `ether18` (33 MACs behind it); `ether5` UP → 3 MACs, AP or small switch **TBC**; `sfp-sfpplus1` = the work subnet `172.16.101.1/24` |
+| **CRS326-24G-2S+** (`172.16.100.2`, **7.24.2** — upgraded 2026-09-14 from **7.5/2022**) | 24 ports + 2 SFP+, one flat bridge; 6 ports live | `ether18` → RB5009; **`balteus`** = an **LACP bond** (`ether1`+`ether2`, 802.3ad) → the PVE host, **18 guest NICs** — one member was **repurposed by design** as the 10 Gbps NAS↔fabric link (the cable now lands on CRS804 `ether2`), so the bond runs on a single 1 Gb member; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; **`bukefalos`** = a second LACP bond (`ether23`+`ether24`), idle, waiting for that server. Two 10 G SFP+ ports sit unused while the server side runs at 1 G |
 | **CSS610-8G-2S+** (SwOS 2.21, `.117`) | **no RouterOS API** → outside IaC, hand-config only | *Not a leaf:* the measured MAC table shows it is the middle hop for **charon (work PC, `.227`)**, the **spark1-4 management NICs**, and **CRS804's management uplink** |
-| **CRS804-4DDQ** (`.113`, 7.23.3) | **two bridges, and only one of them carries traffic** | `bridge1`: **`ether1` only — management access, nothing else** (~1 GiB in three weeks; being single-port, CPU bridging is expected here, not a fault). `bridge-compute` (`10.0.0.1/24`) is the **storage + RDMA fabric by design**: 4× QSFP-DD at `200G-baseCR4` → spark1..4 (**hardware-offloaded**, ~300 TiB each way since boot) plus **`ether2` → balteus' 10G NAS link** (~43.6 TiB received since boot, **software-bridged**, no drops or errors, average ~24 Mbit/s) |
+| **CRS804-4DDQ** (`.113`, **7.24.2** — upgraded 2026-09-14 from 7.23.3) | **two bridges, and only one of them carries traffic** | `bridge1`: **`ether1` only — management access, nothing else** (~1 GiB in three weeks; being single-port, CPU bridging is expected here, not a fault). `bridge-compute` (`10.0.0.1/24`) is the **storage + RDMA fabric by design**: 4× QSFP-DD at `200G-baseCR4` → spark1..4 (**hardware-offloaded**, ~300 TiB each way since boot) plus **`ether2` → balteus' 10G NAS link** (~43.6 TiB received since boot, **software-bridged**, no drops or errors, average ~24 Mbit/s) |
 | **Endpoints** | — | `balteus` (Proxmox, 46 guests, 19 running) carries the live devops cluster `main-*` and the VIP `.15` (ARP'd by `main-4`); the Sparks have a management NIC on the flat LAN (`.110/.112/.136/.137`) **and** a RoCE NIC on the fabric |
+
+### The air-gapped 10 G island (not on the LAN, not in scope)
+
+A **CRS317-1G-16S+** (16×SFP+ 10 G + 1 GbE management) sits next to the CRS326, densely cabled
+in its SFP+ ports, with its **1 GbE management port empty** — an air-gapped 10 G island
+(Martin, 2026-09-14). It is unreachable from the LAN and therefore outside both the module and
+the VLAN carve. It was also **not** part of the firmware upgrade, which only covered LAN-connected
+devices.
+
+Two things to confirm: **what hangs off it**, and whether **anything is dual-homed** between it
+and the LAN — a box with a NIC on each side bridges the two islands and would silently bypass the
+segmentation. Related: the CRS326 reports **both SFP+ ports down**, although the rack photo shows
+what looks like a cable in the left cage — if that cage is meant to link to the CRS317, the link is
+not coming up and that is worth a look before any VLAN work.
 
 ### Corrections this pass produced
 
@@ -53,6 +67,24 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 5. **CSS610 is a middle hop, not a leaf** (this pass): cutting or mis-trunking it takes out the work PC, the Sparks' management *and* the spine's own management.
 6. **`balteus` and `bukefalos` are LACP bonds, not renamed ports** — `ether1`+`ether2` and `ether23`+`ether24` respectively. For the carve this means the *bond* is the bridge port that carries the trunk; slaves are never configured individually.
 7. **The NAS path and the balteus bond are the same port, moved.** The second bond member now terminates on CRS804 `ether2` (bridge-compute) and carries a balteus VM NIC — that is TrueNAS reaching the Sparks at 10 Gbps. One cable, two facts.
+
+### Post-upgrade verification (2026-09-14)
+
+All three RouterOS devices were upgraded to **7.24.2** (RB5009 from 7.12.1, CRS326 from 7.5/2022,
+CRS804 from 7.23.3). Re-measured and diffed against the pre-upgrade inventory taken the same
+morning:
+
+| Check | Result |
+|---|---|
+| Switch chips | unchanged (`88E6393X`, `98DX3236`, `98DX7335`) |
+| Hardware offload | unchanged: 9/9 · 24/24 · 4/6 — the same two CRS804 ports stay software-bridged |
+| Bonds | `balteus` (`ether1`+`ether2`) and `bukefalos` (`ether23`+`ether24`) intact |
+| Fabric | PFC profile **`pfc-roce`** still applied to the four live QSFP ports, 200 G queue-3 shaping intact; all four fabric links + the NAS link + the mgmt uplink up |
+| Config drift | **none** — bridges, bridge ports, VLAN entries, addresses, user groups and NTP are identical to the pre-upgrade inventory (only volatile fields differ: RSTP debug strings, ARP) |
+
+Caveat: the inventory script does not capture the QoS/PFC menu, so PFC was verified by presence and
+profile, not by a field-level diff. Adding that menu to the inventory is a small follow-up that
+makes the next upgrade a byte-level check.
 
 ### Resolved on 2026-09-14 (Martin)
 

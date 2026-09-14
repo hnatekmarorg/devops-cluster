@@ -40,11 +40,12 @@ as the parking VLAN** (new, for tag hygiene). `172.16.60.0/24` stays reserved fo
 | `ether4` | **UP → CSS610** | **trunk**, tagged `10,30` (+`10` for the CRS804 mgmt uplink) | — | the CSS610 is the middle hop for charon, the Sparks' management and the spine's management |
 | `ether5`,`ether6`,`ether8`–`ether15`,`ether17`,`ether19`–`ether22` | down | spare (available for the gaming PC, IoT, printers as they are classified) | — | |
 | `ether7` | **UP → HPE box #2** `3c:ec:ef:73:09:9d` | **access, pvid 40** | srv | the second physical server, to be integrated |
-| `ether16` | **UP → dumb switch → Deco BE22 + clients** | **access, pvid 50** | guest | one segment: the dumb switch cannot tag. Gaming PC moves off it (own port, pvid 20) |
+| `ether16` | **UP → dumb switch → AP + TV + gaming PC** | **access, pvid 70** | iot | **one cable, one segment** (Martin, 2026-09-14): the dumb switch cannot tag, so the AP, the TV and the gaming PC all land in the IoT VLAN. Everything on it reaches internal networks over the VPN |
 | `ether18` | **UP → RB5009** | **trunk**, tagged `10,20,30,40,50,70`, pvid 1 → later tagged-only + pvid 999 | — | |
 | `ether23`+`ether24` | **LACP bond `bukefalos`** (down) | bond as **trunk** when the server arrives | srv | already cabled for a 2-port LACP bond |
 | `sfp-sfpplus1`,`sfp-sfpplus2` | down | spare · **opportunity:** 10 G uplink for balteus, or for the CSS610 hop | — | both 10 G and both unused while the server side runs at 1 G |
-| gaming PC | currently behind `ether16` | **access, pvid 20** | trusted | own port; WAN-only matrix, internal access via VPN |
+| gaming PC | behind `ether16` (the dumb switch) | **stays there — `vlan70-iot`** | iot | Martin's call: anything on that single line is IoT-class and reaches internals via VPN. No extra port needed |
+| `vlan20-trusted` | — | **proposed to be dropped** | — | with charon in mgmt and the AP/TV/PC in iot, nothing is left for `trusted`; same for `vlan50-guest`. Running 4 classes instead of 6 is fewer rules and fewer default-allow surprises. Numbering stays free if a member appears later |
 
 ## CSS610 (`172.16.100.117`, SwOS Lite 2.21 · **hand config, no API**)
 
@@ -70,7 +71,7 @@ its occupants but not which physical port is which.
 ## Order of work this table implies
 
 1. RB5009: move the LAN IP off `ether2` → bridge/VLAN, pre-assign `ether1` as the escape port, then enable filtering with everything still on compat.
-2. CRS326: **firmware upgrade first**, then escape port, then filtering with everything on compat; fix the degraded `balteus` bond member while in there.
+2. CRS326: escape port, then filtering with everything on compat. ~~firmware upgrade first~~ — **done** (7.5 → 7.24.2 on 2026-09-14), so this device is no longer blocked.
 3. CSS610: apply the hand config (trunk + per-port modes) with the recovery step written down first.
 4. Move devices one access port at a time, verifying as we go.
 5. CRS804: the single mgmt move, last of the switches.

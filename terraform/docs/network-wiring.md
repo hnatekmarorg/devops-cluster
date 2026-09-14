@@ -101,6 +101,21 @@ Two ways out, and they are different decisions:
 Recommended order: (a) now, per device, to unblock; (b) deliberately in the carve's DNS step,
 with the firewall rule and the VPN scope landing at the same time.
 
+**Status 2026-09-14: (a) applied to the CRS326 and verified.** It now resolves and responds —
+`ping one.one.one.one` 2/2 at 8 ms, `ping upgrade.mikrotik.com` 2/2 at 54 ms — so the device
+"could not reach the internet" for exactly the reason above and nothing else. The CRS804 keeps
+its DHCP-provided resolver, and the router keeps `8.8.8.8, 1.1.1.1` for its own lookups.
+
+Two follow-ons from the same pass, both per-device bootstrap rather than design:
+
+- **NTP is disabled on both switches** (`/system ntp client` → `enabled=no`), which is why the
+  CRS326 drifted nine days before this. The router already runs NTP against the europe pool.
+  Enable it on the switches in the same sitting as the read-group change below — a switch whose
+  clock drifts makes every log, backup filename and certificate check lie.
+- The router carries **nine static DNS entries** that currently reach nobody, because it does not
+  serve DNS. They become useful the moment (b) happens — that is the argument for (b) being a
+  deliberate step rather than an accident.
+
 ## Stale configuration found in the same pass
 
 Leftovers, all dormant, each with a way to wake up:

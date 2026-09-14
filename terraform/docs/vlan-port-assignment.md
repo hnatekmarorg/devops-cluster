@@ -72,6 +72,17 @@ switch's own address might suggest.
 | `bridge1` | `ether1` | UP, mgmt only (~1 GiB in 3 weeks), software-bridged | **access, pvid 10** — gated: do this **only after charon is in `vlan10-mgmt`**, because this port is the only way into the box |
 | `bridge-compute` | `ether2` + 4× QSFP-DD | the storage + RDMA fabric, by design | **not touched.** No VLAN filtering, ever |
 
+## Reserved for known-future hardware
+
+| Device | Evidence | Reservation |
+|---|---|---|
+| **atuin** (the new cluster node, `172.16.100.171`) | Martin, 2026-09-14: joins **after** the network upgrade; its NotReady Node object in the cluster is expected, not stale | **lab-class** access port on the main switch, **plus its IPMI (`172.16.100.123`, DHCP name "ipmi - atuin") in the mgmt VLAN** |
+| **bukefalos** (second server) | already cabled as an idle LACP bond (`ether23`+`ether24` on the CRS326) | bond reserved as a **srv** trunk when it comes online |
+
+Reserving these now is the cheap direction: the ports sit in their future VLAN, unoccupied, and the
+carve does not have to be revisited when the hardware arrives. The other direction (assigning them
+compat "for now") means touching the same switch twice.
+
 ## Order of work this table implies
 
 1. RB5009: move the LAN IP off `ether2` → bridge/VLAN, pre-assign `ether1` as the escape port, then enable filtering with everything still on compat.

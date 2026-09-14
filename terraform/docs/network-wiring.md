@@ -6,6 +6,11 @@ Two views of the same network, on purpose:
 |---|---|---|
 | **Architecture & intent** | [`network-wiring.svg`](network-wiring.svg) | the shape of the estate, the fabric, the DNS/DHCP trap, and what the carve is *for* — the narrative a reviewer reads first |
 | **Port-level map** | [`network-port-map.svg`](network-port-map.svg) | every live port with its measured occupant and MAC count, plus the proposed class per segment — the artifact stage 2 is actually written against |
+| **Tagging reference** | [`vlan-tagging.md`](vlan-tagging.md) | where an 802.1Q tag is inserted and stripped, who adds tags here and who never will, and the three gotchas that lock people out |
+
+**A note on state vs target:** the diagrams say `one flat bridge, 0 VLAN entries` because that is
+**today** — nothing on this estate is tagged yet, on any link. Everything about classes and trunks
+describes the **target**. `vlan-tagging.md` exists so those two are never confused again.
 
 **Sources (read from the devices, 2026-09-14 — not from memory or the plan):** MNDP/LLDP
 neighbour tables (`/ip/neighbor`), bridge MAC tables (`/interface/bridge/host` — this is
@@ -61,10 +66,10 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 | Class | Subnet | Candidates from the measurements | Port mechanism |
 |---|---|---|---|
 | mgmt | `172.16.10.0/24` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
-| trusted | `172.16.20.0/24` | what is left once WiFi moves out of it: **wired personal devices only** — TBC whether the class survives the WiFi decision (see constraint 3) | access ports |
+| trusted | `172.16.20.0/24` | **wired personal devices without WiFi in them** — the gaming PC behind `ether16` gets its own port and lands here, firewall matrix **WAN-only** (internal access = VPN). Resolved 2026-09-14: the class survives | access ports |
 | lab | `172.16.30.0/24` | devops cluster `main-*` **and the VIP `.15`**, sandbox, spark1-4 management, `.189` | trunk to balteus (per-VM tags) + access on spark ports |
 | srv | `172.16.40.0/24` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box | **balteus' uplink becomes a trunk** — the largest single change |
-| guest | `172.16.50.0/24` | **the WiFi segment** (Deco uplink, untrusted by design) + unknown devices; internal access via VPN only | one access port for the Deco uplink |
+| guest | `172.16.50.0/24` | **the WiFi segment**: `ether16` → the dumb switch → Deco BE22 (all its SSIDs, since it cannot tag) + whatever else hangs there; internal access via VPN only | one access port (`ether16`), PVID 50 |
 | iot | `172.16.70.0/24` | wired IoT (printers, TV, `.167` embedded) and — if we split SSIDs on the MikroTik AP — the IoT SSID; the Tapo P110s and Shelly plug currently sit on WiFi | access ports |
 | compat | VLAN 1, `172.16.100.0/24` | everything not yet migrated; **fabric excluded entirely** | stays until the last wave |
 

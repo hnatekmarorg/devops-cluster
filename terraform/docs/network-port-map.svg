@@ -116,8 +116,8 @@
 <text x="1120.0" y="494.0" font-size="9" fill="#fb7185" text-anchor="middle" font-weight="normal">mgmt</text>
 <path d="M 1300.0 492.0 L 1300.0 566.0" fill="none" stroke="#fb923c" stroke-width="1.5" marker-end="url(#a-fb923c)"/>
 <text x="1306.0" y="540.0" font-size="9" fill="#fb923c" text-anchor="middle" font-weight="normal">fabric 200G ×4</text>
-<text x="52.0" y="700.0" font-size="9.5" fill="#94a3b8" text-anchor="start" font-weight="normal">Read it as: one flat L2 domain. Every bridge above runs vlan-filtering=off with every port pvid=1 — there is no VLAN anywhere on the wire yet.</text>
-<text x="52.0" y="716.0" font-size="9.5" fill="#94a3b8" text-anchor="start" font-weight="normal">The CRS326's 'dumb switch, servers on random ports' is exactly where an unmapped port stays silently in the compat segment.</text>
+<text x="52.0" y="700.0" font-size="9.5" fill="#fbbf24" text-anchor="start" font-weight="600">TODAY: nothing is tagged. Every frame on every link drawn above is an ordinary untagged Ethernet frame — one broadcast domain, every port PVID 1, zero 802.1Q headers on the wire.</text>
+<text x="52.0" y="716.0" font-size="9.5" fill="#94a3b8" text-anchor="start" font-weight="normal">'0 VLAN entries' in the boxes above means exactly that: no tagging exists yet — not on a trunk, not on a port, not anywhere on this estate. What is described below is the target, not the current state.</text>
 <rect x="30" y="742" width="1620" height="470" rx="12" fill="none" stroke="#34d399" stroke-width="1.2" stroke-dasharray="8,4"/>
 <text x="42.0" y="735.0" font-size="10" fill="#34d399" text-anchor="start" font-weight="600">PANEL 2 — PROPOSED logical plan (review this layer)</text>
 <rect x="48" y="772" width="300" height="140" rx="7" fill="#0f172a"/>
@@ -187,6 +187,8 @@
 <text x="372.0" y="1144.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">VIP 172.16.100.15 is ARP'd by main-4 → it moves with the cluster into vlan30, so the Cloudflare records move in the same wave.</text>
 <text x="372.0" y="1162.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">Wildcard TLS is DNS-01 via Cloudflare and .dev is HSTS-preloaded: a renewal broken by the carve is a hard browser failure, not a warning.</text>
 <text x="372.0" y="1180.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">DHCP leases are 10 minutes, so a DNS-server change propagates fast — a lever, and a hazard.</text>
+<text x="372.0" y="1200.0" font-size="9.5" fill="#34d399" text-anchor="start" font-weight="600">PROPOSED: 802.1Q tags exist ONLY on trunks — switch uplinks, the router's VLAN interfaces, and balteus' PVE bridge (per-VM tag).</text>
+<text x="372.0" y="1216.0" font-size="9" fill="#94a3b8" text-anchor="start" font-weight="normal">They never appear on the Deco, on a PC, or anywhere behind a dumb switch: those are access ports, and the tag is added by the first switch that reaches a trunk.</text>
 <rect x="30" y="1232" width="1620" height="40" rx="10" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="1,0"/>
 <text x="48.0" y="1256.0" font-size="9.5" fill="#94a3b8" text-anchor="start" font-weight="normal">solid = physical link (labelled with the measured port) · dashed = path via another device · rose = constraint or exclusion · TBC = needs a physical trace</text>
 <text x="1632.0" y="1256.0" font-size="9" fill="#64748b" text-anchor="end" font-weight="normal">source: /ip/neighbor · /interface/bridge/{port,vlan,host} · /ip/dhcp-server/lease</text>

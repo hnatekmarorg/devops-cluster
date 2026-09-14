@@ -28,22 +28,14 @@
 # membership cannot disturb the WAN at all.
 
 # ---------------------------------------------------------------------------
-# Wave 1 — adoption only. Nothing here changes behaviour; the plan after this
-# commit is "2 to import, 0 to add, 0 to change, 0 to destroy", which is the
-# proof that the baseline is faithful. Delete these import blocks once the
-# first apply has run (they become no-ops, but they are noise afterwards).
-#
-# The bridge-port id is RouterOS' internal id at the time of writing; if it no
-# longer matches, re-read it: /interface/bridge/port print
+# Wave 1 — adoption only. Nothing here changes behaviour: this file's share of
+# the plan is "1 to import, 0 to change", which is the proof that the baseline
+# is faithful. Delete the import block once the first apply has run (it becomes
+# a no-op, but it is noise afterwards).
 # ---------------------------------------------------------------------------
 import {
   to = routeros_interface_pppoe_client.t_mobile
   id = "t-mobile"
-}
-
-import {
-  to = routeros_interface_bridge_port.ether5
-  id = "*3"
 }
 
 resource "routeros_interface_pppoe_client" "t_mobile" {

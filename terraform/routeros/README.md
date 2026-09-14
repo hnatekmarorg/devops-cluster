@@ -1,7 +1,8 @@
 # `routeros/` — RB5009 module
 
 Stage 1 of the network IaC track: **additive groundwork only, zero behavioural
-change**. See [`../README.md`](../README.md) for the runner, credential, state
+change**. For how this device is wired today — port by port, measured — and the
+proposed VLAN carve, see [`../docs/network-wiring.md`](../docs/network-wiring.md). See [`../README.md`](../README.md) for the runner, credential, state
 and workflow contracts — this file is about the module itself.
 
 ## What this stage creates, and what it refuses to touch

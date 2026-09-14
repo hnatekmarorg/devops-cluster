@@ -18,9 +18,59 @@ The first draft of this scaffold ran in **dev mode (in-memory)**. That was wrong
 |---|---|---|---|
 | Storage engine | raft (`/openbao/data`) | raft | same |
 | Snapshot tuning | `threshold 8192`, `interval 120`, `trailing_logs 10000` | same | copied from prod values |
-| StorageClass | `longhorn` | `local-path` | this cluster's default. Longhorn is network-attached → *pessimistic* latency, i.e. errs toward showing a problem. Safe direction for a safety test; not a substitute for a final check on local disk |
+| StorageClass | see *Storage: two paths* below | `local-path` (k3s/Rancher → hostPath under `/var/lib/rancher/k3s/storage`) | production is effectively **hostPath already**; staging should match, not stay on longhorn |
 | Audit device | enabled via MR | possibly off (finding) | rehearsed here first |
 | Replicas | 1 | 1 | single-node raft either way |
+
+## Storage: two paths (pick after one command)
+
+Production's `local-path` is the Rancher provisioner writing to a host path — i.e. **already hostPath under the hood**. Talos ships no local provisioner, so check what this cluster actually has:
+
+```bash
+kubectl get storageclass
+```
+
+**Path A — a local/hostPath SC already exists** (e.g. `local-path`, `openebs-hostpath`, `zfs-localpv`): set it and delete the fidelity caveat.
+
+```yaml
+server:
+  dataStorage:
+    enabled: true
+    size: 1Gi
+    storageClass: local-path      # <- whatever kubectl reported
+  auditStorage:
+    enabled: true
+    size: 512Mi
+    storageClass: local-path
+```
+
+**Path B — only longhorn exists**: don't install a cluster-wide provisioner just for this rehearsal (that would be a cluster-level decision, not a staging detail — and the AGENTS.md convention here is longhorn-by-default). Instead pin a single hand-made **`local` PV** — no provisioner required, it is core Kubernetes — and pin the pod to that node:
+
+```yaml
+# not applied by ArgoCD (documented for manual apply); replace NODE + path
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: bao-staging-local
+spec:
+  capacity: { storage: 2Gi }
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local-staging
+  local:
+    path: /var/local/bao-staging        # Talos: /var is persistent; /var/mnt/<disk> for extra disks
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: [ "<node>" ]
+```
+
+…plus `server.nodeSelector: { kubernetes.io/hostname: "<node>" }` in `values.yaml` and `storageClass: local-staging`.
+
+**Either way, the staging fidelity caveat disappears** — and Path B has the side benefit of rehearsing the *pinning* constraint that any node-local raft deployment carries (a local PV binds a pod to a node; node failure takes the data with it — which is why the raft snapshot backup finding matters).
 
 ## Safety properties
 

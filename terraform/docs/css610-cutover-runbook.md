@@ -24,8 +24,9 @@ local exception, and it is revisited at compat retirement (step 7).
 ## Preconditions — do not start without these
 
 1. **The trunk VLANs are applied and verified.** The router's `ether4` and the CRS326's `ether18`/`ether4`
-   must carry **tagged 10 and 30** (additive change: `terraform/*/stage2-filtering.tf`, the `mgmt_trunk`
-   and `lab_trunk` entries — creates only, nothing edited). Verify by reading `/interface/bridge/vlan` on both devices, not from memory —
+   must carry **tagged 10 and 30** (`terraform/*/stage2-filtering.tf`: the `mgmt` row gains the trunk
+   ports *in place*, plus one new `lab_trunk` row per device — VLAN 30 had no static row of its own,
+   and RouterOS permits only one static row per VLAN ID, so VLAN 10 could not get one). Verify by reading `/interface/bridge/vlan` on both devices, not from memory —
    and check that the compat LAN is still fine (`172.16.100.1`, `.2`, `.113`, `.117` all answering).
    Without this, a moved port resolves nothing: VLAN 30 has no port on any device, and VLAN 10 does not
    cross the uplink.

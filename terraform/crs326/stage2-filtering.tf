@@ -57,33 +57,30 @@ resource "routeros_interface_bridge_vlan" "compat" {
 resource "routeros_interface_bridge_vlan" "mgmt" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["10"]
-  tagged   = [routeros_interface_bridge.bridge.name]
+  # Trunk membership extended in place, not in a row of its own: RouterOS allows exactly **one static
+  # row per VLAN ID per bridge**, and a second one is refused at apply time with
+  # `failure: vlan already added` (measured — that is how #53's first attempt failed, after a clean
+  # plan). A dynamic row is not a precedent; the system creates those.
+  #
+  # Tagged on both uplinks: `ether18` toward the router (so this switch and the router share one mgmt
+  # segment) and `ether4` toward the CSS610 (so charon, on that box, can live in mgmt). `ether3` stays
+  # the untagged escape port, and every port keeps its compat pvid 1 — nothing moves here.
+  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4"]
   untagged = ["ether3"]
-  comment  = "mgmt — the escape port's segment; reachable whatever compat does"
+  comment  = "mgmt — the escape port's segment; tagged on both uplinks"
 }
 
 # ---------------------------------------------------------------------------
-# The uplink carries both new segments, one entry per VLAN so each segment's carriage reads in one
-# place (and both are creates, not edits of live rows).
+# Lab (30) — transport to the CSS610's Spark ports.
 #
-# VLAN 10 (mgmt) — `ether18` joins this switch's mgmt segment to the router's; `ether4` carries it to
-# the CSS610, where charon moves into mgmt. `ether3` stays the untagged escape port and every port
-# keeps its compat pvid 1: nothing moves here.
-#
-# VLAN 30 (lab) — transport to the CSS610's Spark ports. No bridge membership on purpose: this switch
-# has no L3 in the segment, so sending those frames to the CPU would only cost. The router terminates
-# it (172.16.30.1/20 + `dhcp-lab`) and `ether18` carries the tag there.
+# No bridge membership on purpose: this switch has no L3 in the segment, so sending those frames to
+# the CPU would only cost. The router terminates it (172.16.30.1/20 + `dhcp-lab`) and `ether18` carries
+# the tag there. This is the only static row for VLAN 30 on this bridge, which is why it can have one
+# of its own (see the note on the mgmt row).
 #
 # Before these entries exist, VLAN 30 has *no port on any device* and VLAN 10 does not cross the
 # uplink — which is why the CSS610's per-port modes wait for this change to be applied.
 # ---------------------------------------------------------------------------
-resource "routeros_interface_bridge_vlan" "mgmt_trunk" {
-  bridge   = routeros_interface_bridge.bridge.name
-  vlan_ids = ["10"]
-  tagged   = ["ether18", "ether4"]
-  comment  = "mgmt — carried on both uplinks: ether18 to the router, ether4 to the CSS610"
-}
-
 resource "routeros_interface_bridge_vlan" "lab_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["30"]

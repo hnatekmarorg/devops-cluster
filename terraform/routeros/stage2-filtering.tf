@@ -72,36 +72,31 @@ resource "routeros_interface_bridge_vlan" "compat" {
 resource "routeros_interface_bridge_vlan" "mgmt" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["10"]
-  tagged   = [routeros_interface_bridge.bridge.name]
+  # The trunk membership lives HERE, extended in place, and not in a row of its own — and the reason is
+  # a device rule, not taste: RouterOS allows exactly **one static row per VLAN ID per bridge**. A
+  # second static row for VLAN 10 is refused at apply time with `failure: vlan already added`
+  # (measured: that is how #53's first attempt failed, after the plan reported a clean create — a plan
+  # cannot prove the device will accept a create). A *dynamic* row is not a precedent: the system
+  # creates those, they are not user rows.
+  #
+  # Tagged on `ether4` as well as on the bridge: this is what joins the router's mgmt segment to the
+  # switch's, what lets a device behind the CSS610 (charon) live in mgmt, and what makes the switch's
+  # escape port "a laptop here reaches the router *and* the switches". `ether4` keeps its untagged
+  # compat membership (pvid 1) untouched.
+  tagged   = [routeros_interface_bridge.bridge.name, "ether4"]
   untagged = ["ether1"]
-  comment  = "mgmt — the escape port's segment; reachable whatever compat does"
+  comment  = "mgmt — the escape port's segment; tagged on ether4 so the switch shares it"
 }
 
 # ---------------------------------------------------------------------------
-# The uplink carries both new segments. One entry per VLAN, deliberately: each segment's carriage
-# reads in one place instead of hiding inside another entry's member list, and both are creates
-# rather than edits of live rows.
+# Lab (30) on the uplink — transport only.
 #
-# VLAN 10 (mgmt) — this is what joins the router's mgmt segment to the switch's, what lets a device
-# behind the CSS610 (charon) live in mgmt, and what makes the switch's escape port "a laptop here
-# reaches the router *and* the switches".
-#
-# VLAN 30 (lab) — the CSS610's Spark ports become lab access ports, and this router is the segment's
-# L3 (172.16.30.1/20) and its address source (`dhcp-lab`).
-#
-# Both are transport-only rows. `ether4` keeps its untagged compat membership (pvid 1) untouched, and
-# the bridge keeps its own VLAN 30 membership through RouterOS' dynamic entry for 30/40/60/70, which
-# these do not touch. A second row for a VLAN ID is deliberate — RouterOS merges memberships across
-# rows, and this estate already relies on that (the CRS326 carries one dynamic and one static row for
-# VLAN 1 today). 40/60/70 get their rows when their devices move, not before.
+# The CSS610's Spark ports become lab access ports, which is useless without a path to this router:
+# 172.16.30.1/20 (`vlan30-lab`) is the segment's L3 and `dhcp-lab` its address source. VLAN 30 has no
+# *static* row today (only RouterOS' dynamic entry for 30/40/60/70, which this does not touch), so it
+# gets a row of its own here — a static row alongside a dynamic one is accepted, and that is allowed.
+# 40/60/70 get theirs when their devices move.
 # ---------------------------------------------------------------------------
-resource "routeros_interface_bridge_vlan" "mgmt_trunk" {
-  bridge   = routeros_interface_bridge.bridge.name
-  vlan_ids = ["10"]
-  tagged   = ["ether4"]
-  comment  = "mgmt — carried to the switch on the uplink"
-}
-
 resource "routeros_interface_bridge_vlan" "lab_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["30"]

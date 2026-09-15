@@ -1,29 +1,26 @@
-# Device IaC — apply on merge (the only path that writes to a device).
+# Device IaC — apply the ROUTER on merge (RB5009 only).
 #
-# Triggers only when a reviewed PR that changes terraform/** lands on main, and only when the repo
-# variable ROUTEROS_CI_ENABLED is 'true' (the arming switch).
+# One workflow per device, on purpose. The environment must sit on a plain job (a job that calls a
+# reusable workflow cannot carry `environment:`, and an environment secret does not reach a job whose
+# environment is declared inside a called workflow), which is why the shared steps live in the
+# composite action `.github/actions/tofu-apply` and each device gets its own job here.
 #
-# ONE JOB PER DEVICE, and each is a *plain* job — not a caller of a reusable workflow. That shape is
-# forced by the two facts measured here:
-#   * `environment:` is not available on a job that `uses:` a reusable workflow (GitHub rejects the
-#     whole file), and
-#   * declaring the environment inside the called workflow does gate the job, but the environment's
-#     secrets do not reach that job's env: run 34937366672 (2026-09-15) printed
-#     `ROS_WRITE_USERNAME:` empty on the crs326 job while `crs326-production` had it set.
-# So each device gets its own job with the environment on it, the write identity in the job env, and
-# the shared steps live in the composite action `.github/actions/tofu-apply` (duplication of the logic
-# was the thing being avoided, not of the job).
+# WHY THE TRIGGER IS SCOPED TO THIS MODULE: a merge to `main` *is* the authorization to apply (the plan
+# is reviewed on the PR, and `main` is protected by required PR + 1 approval), so the applied scope has
+# to equal the reviewed scope. A merge touching only the switch must not run an apply against the
+# router. If a shared module ever appears under `terraform/`, add it to BOTH workflows' `paths:`.
 #
-# The gate remains per device: approving the router's apply says nothing about the switch's, so one
-# merge can be applied to one device and declined for the other.
-name: tf-apply
+# Fires only when a reviewed PR that changes this module lands on main, and only when the repository
+# variable ROUTEROS_CI_ENABLED is 'true' (the arming switch — the panic button: set it to anything
+# else and merges stop touching devices).
+name: tf-apply (routeros)
 
 on:
   push:
     branches: [main]
     paths:
-      - 'terraform/**'
-      - '.github/workflows/tf-*.yml'
+      - 'terraform/routeros/**'
+      - '.github/workflows/tf-apply-routeros.yml'
       - '.github/actions/**'
       - 'scripts/tofu-ci.sh'
   workflow_dispatch:
@@ -57,8 +54,9 @@ jobs:
   apply-routeros:
     name: apply · routeros (RB5009)
     runs-on: gha-runner-scale-set-hnatekmarorg
-    # Second gate, independent of the merge: this environment has Martin as a required reviewer, so the
-    # job waits for an explicit approval before it starts — and it is what scopes the write identity.
+    # The environment scopes the write identity and enforces "protected branches only", i.e. this can
+    # only be deployed from `main` — reviewed code. It no longer adds an approval click: the review and
+    # the posted plan on the PR are the authorization.
     environment: routeros-production
     # Applies are serialised per device: one writer at a time, ever.
     concurrency:
@@ -81,26 +79,4 @@ jobs:
       - uses: ./.github/actions/tofu-apply
         with:
           module: routeros
-          note: ${{ inputs.note || '' }}
-
-  apply-crs326:
-    name: apply · crs326 (main switch)
-    runs-on: gha-runner-scale-set-hnatekmarorg
-    environment: crs326-production
-    concurrency:
-      group: tf-apply-crs326
-      cancel-in-progress: false
-    env:
-      ROS_HOSTURL: api://172.16.100.2:8728
-      TF_STATE_KEY: crs326/crs326.tfstate
-      ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
-      ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    steps:
-      # Checkout stays in the job, not in the composite (see the routeros job above).
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/tofu-apply
-        with:
-          module: crs326
           note: ${{ inputs.note || '' }}

@@ -6,8 +6,8 @@
 # that possible is not a trade this estate takes.
 #
 # Read-only by construction: this job uses the `agent-ro` (read policy)
-# credential. The write credential (`iac`) is referenced only by tf-apply.yml,
-# which runs on main after review — a pull request can never reach it.
+# credential. The write credential (`iac`) is referenced only by the per-device `tf-apply-*.yml`
+# workflows, which run on main after the merge — a pull request can never reach it.
 name: tf-plan (routeros)
 
 on:
@@ -163,7 +163,7 @@ jobs:
               '',
               '</details>',
               '',
-              '_Read-only: computed with the `ci-ro` (read) credential; applies nothing. Apply happens on merge via `tf-apply`._',
+              '_Read-only: computed with the `ci-ro` (read) credential; applies nothing. A merge to `main` applies it, via the per-device `tf-apply` workflow._',
               stripped > 0
                 ? `_${stripped} characters of provider schema warnings removed (fields the provider does not model yet: \`trusted_ra\`, \`trusted_dhcpv6\`, \`managed\`, \`vrf\`, \`status\`)._`
                 : '',

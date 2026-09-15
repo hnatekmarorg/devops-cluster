@@ -13,6 +13,7 @@
 # this script exists as something a human runs.
 set -uo pipefail
 
+LMCFG=/opt/lmproxy/config.yaml     # lives on the Hermes host; absent elsewhere
 MODE="${1:-}"
 case "$MODE" in pre|post) ;; *) echo "usage: $0 pre|post" >&2; exit 64 ;; esac
 
@@ -59,8 +60,13 @@ if [ "$MODE" = pre ]; then
   ping1 172.16.100.227 "charon (flat .227)"
   echo
   echo "-- what the agent's brain depends on --"
-  echo "  lmproxy: $(systemctl is-active lmproxy 2>/dev/null) | endpoints in /opt/lmproxy/config.yaml:"
-  grep -nE '^ *- host:' /opt/lmproxy/config.yaml 2>/dev/null | sed 's/^/    /'
+  if [ -f "$LMCFG" ]; then
+    echo "  lmproxy: $(systemctl is-active lmproxy 2>/dev/null) | endpoints in $LMCFG:"
+    grep -nE '^ *- host:' "$LMCFG" 2>/dev/null | sed 's/^/    /'
+  else
+    echo "  lmproxy: NOT ON THIS HOST — that check only means something on the Hermes host (.180)."
+    echo "           From anywhere else it proves nothing, so it is skipped, not counted."
+  fi
   echo
   echo "BASELINE: ${ok} up, ${bad} not answering. Keep this output — it is the 'before' record."
   exit 0
@@ -89,10 +95,16 @@ done
 
 echo
 echo "-- the agent's brain: lmproxy must now point at the lab address --"
-echo "  lmproxy: $(systemctl is-active lmproxy 2>/dev/null)"
-grep -nE '^ *- host:' /opt/lmproxy/config.yaml 2>/dev/null | grep -q '172.16.30.136' \
-  && line "lmproxy config" "172.16.30.136" "updated" \
-  || { line "lmproxy config" "still 172.16.100.136?" "NOT updated — the agent stays dark"; bad=$((bad+1)); }
+if [ -f "$LMCFG" ]; then
+  echo "  lmproxy: $(systemctl is-active lmproxy 2>/dev/null)"
+  grep -nE '^ *- host:' "$LMCFG" 2>/dev/null | grep -q '172.16.30.136' \
+    && line "lmproxy config" "172.16.30.136" "updated" \
+    || { line "lmproxy config" "still 172.16.100.136?" "NOT updated — the agent stays dark"; bad=$((bad+1)); }
+else
+  echo "  lmproxy: not present on this host — nothing to check from here."
+  echo "  Run this mode on the Hermes host (.180) for that line to mean anything:"
+  echo "    sudo sed -i 's|http://172.16.100.136:8000|http://172.16.30.136:8000|' $LMCFG && sudo systemctl restart lmproxy"
+fi
 
 echo
 echo "-- charon: its flat address must be gone; its mgmt lease is in 172.16.10.200-250 --"

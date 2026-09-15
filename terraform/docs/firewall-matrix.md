@@ -56,6 +56,25 @@ Tightening a live estate on the strength of a table is how outages get scheduled
 3. **Then the service-boundary rows**, port by port, where the logs showed real traffic.
 4. **Retire compat** and delete its row.
 
+### The invariant has a guardian
+
+RouterOS has no rule priority — order *is* the priority, first match wins — and the provider models no
+position, so **placement is invisible to `plan`**: a bare `accept` inserted above the matrix changes the
+policy with no diff anywhere. `scripts/matrix-order-check.py` therefore asserts the three things the rules
+depend on, against the live router, read-only:
+
+1. each matrix rule (`log-prefix` starting `MTX-`) exists **at most once** — a recycled `.id` can make the
+   provider re-create a rule, and a duplicate is a silent second judgement;
+2. every matrix rule sits **below** its chain's connection-tracking accept — above it, a deny breaks reply
+   packets, whose tuple (src iot, dst internal) matches the deny itself;
+3. no **blanket accept** sits in the chain at all: an accept without any narrowing criterion
+   (connection-state / nat-state / ipsec / address / port / protocol) is exactly the shadow the invariant
+   forbids.
+
+Exit 0 holds, 1 violated, 2 could not measure. It belongs in the plan workflow (the job already has read
+credentials) and in whatever cadence reads the deny logs — the two together are the measure-then-enforce
+loop: this one says the policy *can* work, the report says what it would cost.
+
 The existing *defconf* rules stay: they govern the WAN side (`drop all from WAN not DSTNATed`, the
 input chain's WAN handling) and the matrix is about east-west. Two interactions to keep in mind:
 the router's own resolver (`allow-remote-requests`) is off, so DNS in the matrix means *public*

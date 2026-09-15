@@ -36,7 +36,7 @@ env:
   # form is set: the provider is Go, and Go's httpproxy checks NO_PROXY first
   # (declaring both forms makes them the same key to GitHub's env handling).
   NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
-  ROS_HOSTURL: ${{ vars.ROS_HOSTURL || 'api://172.16.100.1:8728' }}
+  ROS_HOSTURL: ${{ vars.ROS_HOSTURL || 'api://172.16.10.1:8728' }}
   TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
   # Measured, not assumed: `http://minio.minio.svc.cluster.local:9000` does NOT
   # resolve from the runner (`lookup ... on 10.96.0.10:53: no such host`), so the
@@ -77,7 +77,7 @@ jobs:
       matrix:
         include:
           - module: routeros
-            host: api://172.16.100.1:8728
+            host: api://172.16.10.1:8728
             state_key: routeros/rb5009.tfstate
             environment: routeros-production
           - module: crs326

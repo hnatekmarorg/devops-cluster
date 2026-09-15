@@ -90,3 +90,16 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
   tagged   = ["ether18", "ether4"]
   comment  = "lab — transport only; the router terminates it"
 }
+
+# ---------------------------------------------------------------------------
+# IoT (70) — same transport-only shape. `ether18` carries it to the router (L3 + DHCP), and `ether16`
+# becomes the access port when the WiFi segment moves: one port serves the Deco BE22 (which cannot tag),
+# the TV and the gaming PC, which is why the doc gives that segment one access port at PVID 70. `ether4`
+# rides along for symmetry — a device behind the CSS610 can be placed in iot later without touching this.
+# ---------------------------------------------------------------------------
+resource "routeros_interface_bridge_vlan" "iot_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["70"]
+  tagged   = ["ether18", "ether4"]
+  comment  = "iot — transport to ether16's segment; the router terminates it"
+}

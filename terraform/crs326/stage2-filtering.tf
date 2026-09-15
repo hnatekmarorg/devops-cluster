@@ -49,7 +49,7 @@ resource "routeros_interface_bridge_vlan" "compat" {
   vlan_ids = ["1"]
   # `ether7` is absent for the same reason `ether3` is: it is no longer a compat port. It became the
   # out-of-band plane's access port (balteus IPMI, `.46`) — an untagged member of VLAN 10 only.
-  untagged = ["balteus", "bukefalos", "ether4", "ether6", "ether8", "ether9",
+  untagged = ["ether2", "bukefalos", "ether4", "ether6", "ether8", "ether9",
     "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether17",
     "ether18", "ether19", "ether20", "ether21", "ether22", "sfp-sfpplus1", "sfp-sfpplus2",
   "bridge"]
@@ -69,10 +69,10 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
   # the two access ports that belong to the out-of-band/management plane: `ether3` (the escape hatch)
   # and `ether7` (balteus IPMI). Every other port keeps its compat pvid 1.
   #
-  # `balteus` is here because the Proxmox host is becoming a trunk: the host itself stays on compat
-  # (the bond's pvid is 1, untouched), and its guests are tagged into the class they belong to. A VM in
-  # mgmt is therefore possible without moving the host — which is what keeps this additive.
-  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4", "balteus"]
+  # `ether2` is here because the Proxmox host is a trunk: the host itself stays on compat (the port's
+  # pvid is 1, untouched), and its guests are tagged into the class they belong to. A VM in mgmt is
+  # therefore possible without moving the host — which is what keeps this additive.
+  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4", "ether2"]
   untagged = ["ether3", "ether7"]
   comment  = "mgmt — the escape hatch, the IPMI's access port, tagged on both uplinks"
 }
@@ -91,7 +91,7 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
 resource "routeros_interface_bridge_vlan" "lab_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["30"]
-  tagged   = ["ether18", "ether4", "balteus"]
+  tagged   = ["ether18", "ether4", "ether2"]
   comment  = "lab — transport only; the router terminates it, balteus's guests live in it"
 }
 
@@ -101,7 +101,7 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
 # the TV and the gaming PC, which is why the doc gives that segment one access port at PVID 70. `ether4`
 # rides along for symmetry — a device behind the CSS610 can be placed in iot later without touching this.
 # ---------------------------------------------------------------------------
-# balteus's side of srv and vpn. Same reasoning as the mgmt row: purely additive. Making the bond a
+# The PVE host's side of srv and vpn. Same reasoning as the mgmt row: purely additive. Making the port a
 # *tagged* member of a class changes nothing for the 19 MACs already learned on it — untagged traffic still
 # lands in compat via the port's pvid 1 — and it means a guest that is tagged into the class is carried
 # instead of dropped. This is what lets balteus's guests move one at a time, which matters because the same
@@ -109,14 +109,14 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
 resource "routeros_interface_bridge_vlan" "srv_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["40"]
-  tagged   = ["ether18", "balteus"]
+  tagged   = ["ether18", "ether2"]
   comment  = "srv — transport only; the router terminates it, balteus's guests live in it"
 }
 
 resource "routeros_interface_bridge_vlan" "vpn_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["60"]
-  tagged   = ["ether18", "balteus"]
+  tagged   = ["ether18", "ether2"]
   comment  = "vpn — transport only; the router terminates the zone, WireGuard clients join it there"
 }
 
@@ -134,7 +134,7 @@ resource "routeros_interface_bridge_vlan" "iot_trunk" {
   # is an UNTAGGED member and its `pvid` is 70 (see crs326/bridge.tf). Tagging it instead would leave
   # the segment's devices — a dumb switch, a Deco, a TV, a gaming PC, none of which can tag — receiving
   # VLAN 70 frames they cannot read, and would leave the probe sitting in compat.
-  tagged   = ["ether18", "balteus"]
+  tagged   = ["ether18", "ether2"]
   untagged = ["ether16"]
   comment  = "iot — tagged to the router on ether18; ether16 is the untagged access port to the devices"
 }

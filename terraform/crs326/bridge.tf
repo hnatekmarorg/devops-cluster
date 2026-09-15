@@ -113,7 +113,8 @@ import {
   id = "*19"
 }
 import {
-  to = routeros_interface_bridge_port.balteus
+  # the host's LAN port; renamed in the same change that moved it from the bond to `ether2`
+  to = routeros_interface_bridge_port.balteus_lan
   id = "*1A"
 }
 import {
@@ -145,7 +146,15 @@ resource "routeros_interface_bridge" "bridge" {
   vlan_filtering      = true
 }
 
-# the PVE host's bond — becomes a **trunk** carrying every class when per-VM tags land
+# The PVE host's LAN bond — **dissolved**. The host now presents a bare `eno1`, because a
+# single-member 802.3ad bond aggregated nothing while making this side *expect* LACP: the moment the
+# host stopped negotiating, the link would stop passing that VLAN. `ether2` is released here and
+# becomes the host's plain port below.
+#
+# This bond survives as a parked single-member on a dark `ether1` — deliberately. Releasing the slave
+# is an in-place change, whereas deleting the bond and attaching a port in the same apply cannot be
+# ordered (Terraform would be free to attach `ether2` while it is still a slave, and RouterOS refuses
+# that). A follow-up removes this husk once the link is stable.
 resource "routeros_interface_bonding" "balteus" {
   arp                  = "enabled"
   arp_interval         = "100ms"
@@ -162,7 +171,7 @@ resource "routeros_interface_bonding" "balteus" {
   mtu                  = 1500
   name                 = "balteus"
   primary              = "none"
-  slaves               = ["ether1", "ether2"]
+  slaves               = ["ether1"]
   transmit_hash_policy = "layer-3-and-4"
   up_delay             = "0ms"
 }
@@ -190,7 +199,16 @@ resource "routeros_interface_bonding" "bukefalos" {
 }
 
 # the PVE host's bond — becomes a **trunk** carrying every class when per-VM tags land
-resource "routeros_interface_bridge_port" "balteus" {
+moved {
+  from = routeros_interface_bridge_port.balteus
+  to   = routeros_interface_bridge_port.balteus_lan
+}
+
+# The PVE host's LAN port — a bare `ether2` since the LACP bond was dissolved. Untagged in compat
+# (pvid 1, unchanged) and tagged for every class, which is what lets guests move one at a time.
+# `depends_on` is the whole ordering mechanism: the slave must be released above before this port can
+# attach to `ether2`, or RouterOS refuses with "interface is slave of bond".
+resource "routeros_interface_bridge_port" "balteus_lan" {
   auto_isolate            = false
   bpdu_guard              = false
   bridge                  = "bridge"
@@ -202,7 +220,7 @@ resource "routeros_interface_bridge_port" "balteus" {
   horizon                 = "none"
   hw                      = true
   ingress_filtering       = true
-  interface               = "balteus"
+  interface               = "ether2"
   internal_path_cost      = 10
   learn                   = "auto"
   multicast_router        = "temporary-query"
@@ -218,6 +236,8 @@ resource "routeros_interface_bridge_port" "balteus" {
   trusted                 = false
   unknown_multicast_flood = true
   unknown_unicast_flood   = true
+
+  depends_on = [routeros_interface_bonding.balteus]
 }
 
 # idle bond, reserved for the second server

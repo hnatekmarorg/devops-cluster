@@ -39,6 +39,8 @@ outside the LAN carve, but know it before the hardware arrives.
    (7.5 → 7.24.2), so this device is no longer blocked by anything.
 3. **CSS610** — hand config (trunk on `Port7`, per-port modes), with the recovery step written
    down first: it has no API, and it sits on the path to the work PC and the Spark management.
+   → **Runbook: [`css610-cutover-runbook.md`](css610-cutover-runbook.md)** (preconditions, per-port
+   targets, the two ports that must *not* move in that window, verification and rollback per step).
 4. **Move devices one access port at a time**, verifying each.
 5. **CRS804** — the single management move, **last** of the switches, gated on charon already
    being in mgmt.

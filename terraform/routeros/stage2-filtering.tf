@@ -78,6 +78,38 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
 }
 
 # ---------------------------------------------------------------------------
+# The uplink carries both new segments. One entry per VLAN, deliberately: each segment's carriage
+# reads in one place instead of hiding inside another entry's member list, and both are creates
+# rather than edits of live rows.
+#
+# VLAN 10 (mgmt) — this is what joins the router's mgmt segment to the switch's, what lets a device
+# behind the CSS610 (charon) live in mgmt, and what makes the switch's escape port "a laptop here
+# reaches the router *and* the switches".
+#
+# VLAN 30 (lab) — the CSS610's Spark ports become lab access ports, and this router is the segment's
+# L3 (172.16.30.1/20) and its address source (`dhcp-lab`).
+#
+# Both are transport-only rows. `ether4` keeps its untagged compat membership (pvid 1) untouched, and
+# the bridge keeps its own VLAN 30 membership through RouterOS' dynamic entry for 30/40/60/70, which
+# these do not touch. A second row for a VLAN ID is deliberate — RouterOS merges memberships across
+# rows, and this estate already relies on that (the CRS326 carries one dynamic and one static row for
+# VLAN 1 today). 40/60/70 get their rows when their devices move, not before.
+# ---------------------------------------------------------------------------
+resource "routeros_interface_bridge_vlan" "mgmt_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["10"]
+  tagged   = ["ether4"]
+  comment  = "mgmt — carried to the switch on the uplink"
+}
+
+resource "routeros_interface_bridge_vlan" "lab_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["30"]
+  tagged   = ["ether4"]
+  comment  = "lab — carried to the CSS610's Spark ports; L3 is vlan30-lab here"
+}
+
+# ---------------------------------------------------------------------------
 # The class VLANs join the **LAN** interface list — for now, and deliberately.
 #
 # Today the router has no policy at all between internal segments: the forward chain has no

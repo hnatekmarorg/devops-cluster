@@ -61,3 +61,32 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
   untagged = ["ether3"]
   comment  = "mgmt — the escape port's segment; reachable whatever compat does"
 }
+
+# ---------------------------------------------------------------------------
+# The uplink carries both new segments, one entry per VLAN so each segment's carriage reads in one
+# place (and both are creates, not edits of live rows).
+#
+# VLAN 10 (mgmt) — `ether18` joins this switch's mgmt segment to the router's; `ether4` carries it to
+# the CSS610, where charon moves into mgmt. `ether3` stays the untagged escape port and every port
+# keeps its compat pvid 1: nothing moves here.
+#
+# VLAN 30 (lab) — transport to the CSS610's Spark ports. No bridge membership on purpose: this switch
+# has no L3 in the segment, so sending those frames to the CPU would only cost. The router terminates
+# it (172.16.30.1/20 + `dhcp-lab`) and `ether18` carries the tag there.
+#
+# Before these entries exist, VLAN 30 has *no port on any device* and VLAN 10 does not cross the
+# uplink — which is why the CSS610's per-port modes wait for this change to be applied.
+# ---------------------------------------------------------------------------
+resource "routeros_interface_bridge_vlan" "mgmt_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["10"]
+  tagged   = ["ether18", "ether4"]
+  comment  = "mgmt — carried on both uplinks: ether18 to the router, ether4 to the CSS610"
+}
+
+resource "routeros_interface_bridge_vlan" "lab_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["30"]
+  tagged   = ["ether18", "ether4"]
+  comment  = "lab — transport only; the router terminates it"
+}

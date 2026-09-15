@@ -34,6 +34,7 @@ locals {
     "crs804.mgmt.hnatekmar.dev"      = "172.16.10.201"
     "bmc-balteus.mgmt.hnatekmar.dev" = "172.16.10.46"
     "charon.mgmt.hnatekmar.dev"      = "172.16.10.200"
+    "runner.mgmt.hnatekmar.dev"      = "172.16.10.140"
 
     # srv — the keepers. Addresses are still compat-side where the host has not moved yet.
     "truenas.srv.hnatekmar.dev"            = "172.16.100.148"

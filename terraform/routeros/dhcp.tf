@@ -83,6 +83,12 @@ locals {
     "inference"    = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
     "balteus-ipmi" = { mac = "3C:EC:EF:73:09:9D", address = "172.16.10.46", class = "mgmt" }
 
+    # The dedicated CI runner (a ZimaBoard, plugged in by hand). It is on a *compat* port today
+    # (`.100.126`) and takes this address as soon as it hangs off a mgmt access port — the router's
+    # `ether1`, which is already prepared for exactly this (pvid 10, admit-only-untagged). Mgmt class
+    # because it holds the device write credentials (Q27/Q29).
+    "runner" = { mac = "00:E0:4C:2A:36:AC", address = "172.16.10.140", class = "mgmt" }
+
     # srv: the keepers. Each keeps its compat suffix, so a guest that is tagged into srv comes up at the
     # address its record already names — zero address changes, and nothing that references it by IP has
     # to change either. Suffix preservation outranks the `.100-.199` band here: a reservation excludes

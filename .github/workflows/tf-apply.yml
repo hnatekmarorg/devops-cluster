@@ -68,8 +68,26 @@ jobs:
     # Second gate, independent of the merge: create the environment in
     # Settings → Environments with Martin as a required reviewer. The job then
     # waits for an explicit approval before it starts.
-    environment: routeros-production
+    environment: ${{ matrix.environment }}
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: routeros
+            host: api://172.16.100.1:8728
+            state_key: routeros/rb5009.tfstate
+            environment: ${{ matrix.environment }}
+          - module: crs326
+            host: api://172.16.100.2:8728
+            state_key: crs326/crs326.tfstate
+            environment: crs326-production
+    # Per-module overrides of the workflow-level env: one device per matrix entry, one state file
+    # each, and (for apply) one environment each — which is what makes a per-device approval gate
+    # possible: approving the router's apply says nothing about the switch's.
+    env:
+      ROS_HOSTURL: ${{ matrix.host }}
+      TF_STATE_KEY: ${{ matrix.state_key }}
     steps:
       - uses: actions/checkout@v4
 
@@ -160,8 +178,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: routeros-apply-${{ github.run_id }}
+          name: ${{ matrix.module }}-apply-${{ github.run_id }}
           path: |
-            terraform/routeros/apply-plan.txt
-            terraform/routeros/apply.txt
+            terraform/${{ matrix.module }}/apply-plan.txt
+            terraform/${{ matrix.module }}/apply.txt
           retention-days: 30

@@ -57,6 +57,24 @@ jobs:
     name: nightly plan
     runs-on: gha-runner-scale-set-hnatekmarorg
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: routeros
+            host: api://172.16.100.1:8728
+            state_key: routeros/rb5009.tfstate
+            environment: routeros-production
+          - module: crs326
+            host: api://172.16.100.2:8728
+            state_key: crs326/crs326.tfstate
+            environment: crs326-production
+    # Per-module overrides of the workflow-level env: one device per matrix entry, one state file
+    # each, and (for apply) one environment each — which is what makes a per-device approval gate
+    # possible: approving the router's apply says nothing about the switch's.
+    env:
+      ROS_HOSTURL: ${{ matrix.host }}
+      TF_STATE_KEY: ${{ matrix.state_key }}
     steps:
       - uses: actions/checkout@v4
 
@@ -145,12 +163,13 @@ jobs:
         uses: actions/github-script@v7
         env:
           DRIFT_EXIT: ${{ steps.drift.outputs.exitcode }}
-          DRIFT_PATH: terraform/routeros/drift.txt
+          DRIFT_PATH: terraform/${{ matrix.module }}/drift.txt
+          MODULE: ${{ matrix.module }}
         with:
           script: |
             const fs = require('fs');
-            const marker = '<!-- routeros-drift -->';
-            const title = 'RouterOS drift detected (rb5009)';
+            const marker = `<!-- ${process.env.MODULE}-drift -->`;
+            const title = `${process.env.MODULE} drift detected`;
             const code = process.env.DRIFT_EXIT;
             let out = '';
             try { out = fs.readFileSync(process.env.DRIFT_PATH, 'utf8'); } catch (e) { out = '(no plan output captured)'; }

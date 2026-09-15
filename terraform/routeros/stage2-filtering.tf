@@ -110,6 +110,25 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
 # WiFi segment follows. L3 is `vlan70-iot` here (172.16.70.1/20) with `dhcp-iot` addressing it; the
 # bridge keeps its own membership through RouterOS' dynamic entry for 30/40/60/70, untouched.
 # ---------------------------------------------------------------------------
+# srv and vpn had no static row on the uplink at all: the router's own `vlan40-srv`/`vlan60-vpn`
+# interfaces gave the bridge a *dynamic* membership, which is enough for the router to terminate them and
+# nothing like enough to carry them — measured 2026-09-15, when the switch's VLAN table showed no row for
+# either. They are what balteus's guests in those classes need to reach their gateway, so they arrive with
+# the trunk that makes those classes usable.
+resource "routeros_interface_bridge_vlan" "srv_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["40"]
+  tagged   = ["ether4"]
+  comment  = "srv — transport to the switch and balteus's guests; L3 is vlan40-srv here"
+}
+
+resource "routeros_interface_bridge_vlan" "vpn_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["60"]
+  tagged   = ["ether4"]
+  comment  = "vpn — transport to the switch and balteus's guests; L3 is vlan60-vpn here"
+}
+
 resource "routeros_interface_bridge_vlan" "iot_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["70"]

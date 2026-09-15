@@ -68,7 +68,11 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
   # segment) and `ether4` toward the CSS610 (so charon, on that box, can live in mgmt). Untagged for
   # the two access ports that belong to the out-of-band/management plane: `ether3` (the escape hatch)
   # and `ether7` (balteus IPMI). Every other port keeps its compat pvid 1.
-  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4"]
+  #
+  # `balteus` is here because the Proxmox host is becoming a trunk: the host itself stays on compat
+  # (the bond's pvid is 1, untouched), and its guests are tagged into the class they belong to. A VM in
+  # mgmt is therefore possible without moving the host — which is what keeps this additive.
+  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4", "balteus"]
   untagged = ["ether3", "ether7"]
   comment  = "mgmt — the escape hatch, the IPMI's access port, tagged on both uplinks"
 }
@@ -87,8 +91,8 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
 resource "routeros_interface_bridge_vlan" "lab_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["30"]
-  tagged   = ["ether18", "ether4"]
-  comment  = "lab — transport only; the router terminates it"
+  tagged   = ["ether18", "ether4", "balteus"]
+  comment  = "lab — transport only; the router terminates it, balteus's guests live in it"
 }
 
 # ---------------------------------------------------------------------------
@@ -97,6 +101,25 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
 # the TV and the gaming PC, which is why the doc gives that segment one access port at PVID 70. `ether4`
 # rides along for symmetry — a device behind the CSS610 can be placed in iot later without touching this.
 # ---------------------------------------------------------------------------
+# balteus's side of srv and vpn. Same reasoning as the mgmt row: purely additive. Making the bond a
+# *tagged* member of a class changes nothing for the 19 MACs already learned on it — untagged traffic still
+# lands in compat via the port's pvid 1 — and it means a guest that is tagged into the class is carried
+# instead of dropped. This is what lets balteus's guests move one at a time, which matters because the same
+# port carries the vault's storage path and this agent's own NFS mount.
+resource "routeros_interface_bridge_vlan" "srv_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["40"]
+  tagged   = ["ether18", "balteus"]
+  comment  = "srv — transport only; the router terminates it, balteus's guests live in it"
+}
+
+resource "routeros_interface_bridge_vlan" "vpn_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["60"]
+  tagged   = ["ether18", "balteus"]
+  comment  = "vpn — transport only; the router terminates the zone, WireGuard clients join it there"
+}
+
 resource "routeros_interface_bridge_vlan" "iot_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["70"]
@@ -111,7 +134,7 @@ resource "routeros_interface_bridge_vlan" "iot_trunk" {
   # is an UNTAGGED member and its `pvid` is 70 (see crs326/bridge.tf). Tagging it instead would leave
   # the segment's devices — a dumb switch, a Deco, a TV, a gaming PC, none of which can tag — receiving
   # VLAN 70 frames they cannot read, and would leave the probe sitting in compat.
-  tagged   = ["ether18"]
+  tagged   = ["ether18", "balteus"]
   untagged = ["ether16"]
   comment  = "iot — tagged to the router on ether18; ether16 is the untagged access port to the devices"
 }

@@ -72,9 +72,32 @@ resource "routeros_interface_bridge_vlan" "compat" {
 resource "routeros_interface_bridge_vlan" "mgmt" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["10"]
-  tagged   = [routeros_interface_bridge.bridge.name]
+  # Tagged on the uplink as well as on the bridge: this is what connects the router's mgmt segment to
+  # the switch's, i.e. what turns the switch's escape port (`ether3`) into "a laptop here reaches the
+  # router *and* the switches", and what lets a device behind the CSS610 (charon) live in mgmt.
+  # Additive by construction: `ether4` keeps its untagged compat membership (pvid 1) untouched.
+  tagged   = [routeros_interface_bridge.bridge.name, "ether4"]
   untagged = ["ether1"]
-  comment  = "mgmt — the escape port's segment; reachable whatever compat does"
+  comment  = "mgmt — the escape port's segment; tagged on ether4 so the switch shares it"
+}
+
+# ---------------------------------------------------------------------------
+# Lab (30) on the uplink — transport only.
+#
+# The CSS610's Spark ports become lab access ports, which is useless without a path to this router:
+# 172.16.30.1/20 (`vlan30-lab`) is the segment's L3 and `dhcp-lab` its address source. So VLAN 30
+# needs a tagged member on `ether4`. Deliberately *only* tagged on the port here — the bridge keeps
+# its own membership through RouterOS' dynamic entry for 30/40/60/70, which this does not touch.
+#
+# This row is a second entry for VLAN 30 alongside that dynamic one on purpose: RouterOS merges
+# memberships across rows, and the estate already relies on that (the CRS326 carries one dynamic and
+# one static row for VLAN 1). 40/60/70 get their tagged members when their devices move, not now.
+# ---------------------------------------------------------------------------
+resource "routeros_interface_bridge_vlan" "lab_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["30"]
+  tagged   = ["ether4"]
+  comment  = "lab — transport to the CSS610's Spark ports; L3 is vlan30-lab here"
 }
 
 # ---------------------------------------------------------------------------

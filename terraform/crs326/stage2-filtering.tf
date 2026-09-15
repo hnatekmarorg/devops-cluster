@@ -57,7 +57,25 @@ resource "routeros_interface_bridge_vlan" "compat" {
 resource "routeros_interface_bridge_vlan" "mgmt" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["10"]
-  tagged   = [routeros_interface_bridge.bridge.name]
+  # Tagged on both uplinks: `ether18` toward the router (so this switch and the router share one mgmt
+  # segment) and `ether4` toward the CSS610 (so charon, on that box, can live in mgmt). `ether3` stays
+  # the untagged escape port, and every port keeps its compat pvid 1 — nothing moves here.
+  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4"]
   untagged = ["ether3"]
-  comment  = "mgmt — the escape port's segment; reachable whatever compat does"
+  comment  = "mgmt — the escape port's segment; tagged on both uplinks"
+}
+
+# ---------------------------------------------------------------------------
+# Lab (30) — transport to the CSS610's Spark ports.
+#
+# No bridge membership on purpose: this switch has no L3 in the segment, so sending those frames to
+# the CPU would only cost. The router terminates VLAN 30 (172.16.30.1/20 + dhcp-lab), and `ether18`
+# carries the tag there. Before this entry exists, VLAN 30 has *no port on any device* — the reason
+# the CSS610's per-port modes wait for this change to be applied.
+# ---------------------------------------------------------------------------
+resource "routeros_interface_bridge_vlan" "lab_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["30"]
+  tagged   = ["ether18", "ether4"]
+  comment  = "lab — transport only; the router terminates it"
 }

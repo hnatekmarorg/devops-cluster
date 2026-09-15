@@ -1,0 +1,128 @@
+name: tofu apply one module
+description: >
+  Arming switch, preflight, init · plan · apply and the record, for ONE device. The device's endpoint,
+  state key and write credential arrive from the calling JOB's env — see the note below.
+
+# A composite action, deliberately, and not a reusable workflow.
+#
+# The per-device gate is an environment, and the write identity is an environment secret. Both must be
+# resolved on a job GitHub is willing to attach an environment to:
+#   * `environment:` is not available on a job that `uses:` a reusable workflow (the file is rejected
+#     outright), and
+#   * declaring the environment *inside* the called workflow does gate the job, but the environment's
+#     secrets do NOT appear in that job's env — measured on the first real run: the job's env printed
+#     `ROS_WRITE_USERNAME:` empty while the environment had it set.
+# A composite action runs *inside* the calling job, so it inherits that job's approved environment and
+# its env — and the steps still live in exactly one place.
+#
+# Expected env, set by the calling job (values are never printed by these steps):
+#   ROS_HOSTURL          api://<device>:8728      the endpoint this module talks to
+#   TF_STATE_KEY         <module>/<device>.tfstate  never shared between devices
+#   ROS_WRITE_USERNAME / ROS_WRITE_PASSWORD         the device's write identity
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY       state backend credential
+#   TF_STATE_BUCKET / TF_STATE_ENDPOINT / TF_STATE_REGION, TF_IN_AUTOMATION, TF_INPUT, NO_PROXY
+
+inputs:
+  module:
+    description: 'module directory under terraform/ (routeros, crs326)'
+    required: true
+  note:
+    description: 'why this apply is being run (recorded in the run summary)'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+
+      # tofu_wrapper: false — the action's default wrapper is a Node script and this runner image has
+      # no `node` on PATH (only the runner's bundled copy), so the wrapper dies with
+      # "/usr/bin/env: 'node': No such file or directory".
+    - uses: opentofu/setup-opentofu@v1
+      with:
+        tofu_version: 1.12.6
+        tofu_wrapper: false
+
+    - name: Arming switch + preflight (write credential)
+      id: preflight
+      shell: bash
+      working-directory: terraform/${{ inputs.module }}
+      env:
+        ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
+      run: |
+        if [ "$ROUTEROS_CI_ENABLED" != "true" ]; then
+          {
+            echo "### RouterOS CI is not armed — nothing was applied"
+            echo
+            echo "Repository variable \`ROUTEROS_CI_ENABLED\` is not \`true\`. It is the switch that"
+            echo "turns merging \`terraform/**\` into a device change."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::ROUTEROS_CI_ENABLED != true — apply skipped by design."
+          echo "armed=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        # Armed: a missing credential is now a real failure, not a skip.
+        ../../scripts/tofu-ci.sh --role=write check
+        echo "armed=true" >> "$GITHUB_OUTPUT"
+
+    - name: init · plan · apply
+      if: steps.preflight.outputs.armed == 'true'
+      shell: bash
+      working-directory: terraform/${{ inputs.module }}
+      run: |
+        set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
+        ../../scripts/tofu-ci.sh --role=write init -input=false
+        ../../scripts/tofu-ci.sh --role=write plan \
+          -input=false -no-color -lock-timeout=5m -out=apply.tfplan | tee apply-plan.txt
+        ../../scripts/tofu-ci.sh --role=write apply -input=false -no-color apply.tfplan | tee apply.txt
+
+    - name: Record what changed
+      if: steps.preflight.outputs.armed == 'true'
+      shell: bash
+      working-directory: terraform/${{ inputs.module }}
+      run: |
+        {
+          echo "### ${{ inputs.module }} apply — $(date -u +%FT%TZ)"
+          echo
+          echo "Commit: \`${GITHUB_SHA}\` · run: \`${GITHUB_RUN_ID}\`"
+          if [ -n "${{ inputs.note }}" ]; then echo "Note: ${{ inputs.note }}"; fi
+          echo
+          echo '<details><summary>plan</summary>'
+          echo
+          echo '```'
+          tail -60 apply-plan.txt
+          echo '```'
+          echo
+          echo '</details>'
+          echo
+          echo '<details><summary>apply</summary>'
+          echo
+          echo '```'
+          tail -60 apply.txt
+          echo '```'
+          echo
+          echo '</details>'
+          echo
+          echo '<details><summary>outputs (post-apply state)</summary>'
+          echo
+          echo '```'
+          ../../scripts/tofu-ci.sh output
+          echo '```'
+          echo
+          echo '</details>'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+      # A record-keeping upload must never fail a run that already changed the device: it went red
+      # after a successful apply twice (a credential this job deliberately lacks, then ECONNRESET
+      # mid-upload through the runner's proxy — likelier the bigger the plan).
+    - name: Keep the plan for the record
+      if: steps.preflight.outputs.armed == 'true'
+      continue-on-error: true
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.module }}-apply-${{ github.run_id }}
+        path: |
+          terraform/${{ inputs.module }}/apply-plan.txt
+          terraform/${{ inputs.module }}/apply.txt
+        retention-days: 30

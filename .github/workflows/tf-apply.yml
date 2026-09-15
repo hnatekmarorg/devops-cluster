@@ -3,14 +3,19 @@
 # Triggers only when a reviewed PR that changes terraform/** lands on main, and only when the repo
 # variable ROUTEROS_CI_ENABLED is 'true' (the arming switch).
 #
-# ONE JOB PER DEVICE. Not a matrix, because `environment:` cannot take a matrix value — and because
-# a job that calls a reusable workflow cannot carry `environment:` at all (GitHub's validator rejects
-# the whole file). The environment is passed to the called workflow as an input, and that workflow
-# declares it on its own job. That is also the only arrangement in which the device's write
-# credential can reach the steps: an environment secret cannot be passed from the caller, because
-# `on.workflow_call` has no environment keyword. The benefit is a better gate than a single switch:
-# approving the router's apply says nothing about the switch's, so one merge can be applied to one
-# device and declined for the other.
+# ONE JOB PER DEVICE, and each is a *plain* job — not a caller of a reusable workflow. That shape is
+# forced by the two facts measured here:
+#   * `environment:` is not available on a job that `uses:` a reusable workflow (GitHub rejects the
+#     whole file), and
+#   * declaring the environment inside the called workflow does gate the job, but the environment's
+#     secrets do not reach that job's env: run 34937366672 (2026-09-15) printed
+#     `ROS_WRITE_USERNAME:` empty on the crs326 job while `crs326-production` had it set.
+# So each device gets its own job with the environment on it, the write identity in the job env, and
+# the shared steps live in the composite action `.github/actions/tofu-apply` (duplication of the logic
+# was the thing being avoided, not of the job).
+#
+# The gate remains per device: approving the router's apply says nothing about the switch's, so one
+# merge can be applied to one device and declined for the other.
 name: tf-apply
 
 on:
@@ -19,7 +24,7 @@ on:
     paths:
       - 'terraform/**'
       - '.github/workflows/tf-*.yml'
-      - '.github/workflows/_apply-module.yml'
+      - '.github/actions/**'
       - 'scripts/tofu-ci.sh'
   workflow_dispatch:
     inputs:
@@ -31,40 +36,63 @@ on:
 permissions:
   contents: read
 
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  # The runner pod egresses through a proxy; LAN traffic must bypass it or the call to the device gets
+  # proxied and fails. Uppercase only — Go's httpproxy checks NO_PROXY first, and both spellings are
+  # one key to GitHub's env.
+  NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  # Measured, not assumed: the in-cluster MinIO name does not resolve from the ARC runner. The
+  # endpoint below is the one verified to work from both the runner and a LAN host.
+  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT || 'https://console-minio.hnatekmar.xyz' }}
+  # MinIO advertises `europe` (x-amz-bucket-region); signing with anything else risks a mismatch.
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'europe' }}
+
 jobs:
   apply-routeros:
     name: apply · routeros (RB5009)
-    uses: ./.github/workflows/_apply-module.yml
-    with:
-      module: routeros
-      host: api://172.16.100.1:8728
-      state_key: routeros/rb5009.tfstate
-      # Which environment gates this device. It is what the called workflow declares on the job it
-      # runs, so it decides both the approval prompt and which write identity the steps get.
-      environment: routeros-production
-      note: ${{ inputs.note || '' }}
-    # State credentials only — those are repository-scoped. The write identity is deliberately absent
-    # here: it exists in the environment above and nowhere a PR-triggered job can read it.
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    runs-on: gha-runner-scale-set-hnatekmarorg
+    # Second gate, independent of the merge: this environment has Martin as a required reviewer, so the
+    # job waits for an explicit approval before it starts — and it is what scopes the write identity.
+    environment: routeros-production
     # Applies are serialised per device: one writer at a time, ever.
     concurrency:
       group: tf-apply-routeros
       cancel-in-progress: false
+    # Device-specific: the endpoint, the state key, and the write identity. The key is never shared
+    # between devices, and the endpoint sits next to it so a wrong pair is visible in one glance.
+    env:
+      ROS_HOSTURL: api://172.16.100.1:8728
+      TF_STATE_KEY: routeros/rb5009.tfstate
+      ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
+      ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
+      # State credential (repository-scoped — the state is not a device).
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: ./.github/actions/tofu-apply
+        with:
+          module: routeros
+          note: ${{ inputs.note || '' }}
 
   apply-crs326:
     name: apply · crs326 (main switch)
-    uses: ./.github/workflows/_apply-module.yml
-    with:
-      module: crs326
-      host: api://172.16.100.2:8728
-      state_key: crs326/crs326.tfstate
-      environment: crs326-production
-      note: ${{ inputs.note || '' }}
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    runs-on: gha-runner-scale-set-hnatekmarorg
+    environment: crs326-production
     concurrency:
       group: tf-apply-crs326
       cancel-in-progress: false
+    env:
+      ROS_HOSTURL: api://172.16.100.2:8728
+      TF_STATE_KEY: crs326/crs326.tfstate
+      ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
+      ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: ./.github/actions/tofu-apply
+        with:
+          module: crs326
+          note: ${{ inputs.note || '' }}

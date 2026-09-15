@@ -56,6 +56,15 @@ Tightening a live estate on the strength of a table is how outages get scheduled
 3. **Then the service-boundary rows**, port by port, where the logs showed real traffic.
 4. **Retire compat** and delete its row.
 
+### Class lists must be disjoint
+
+A class row is written against an address *list*, and two lists that overlap make a packet match two rules —
+at which point first-match-wins decides the class, not policy. That is not hypothetical: the enforced
+`lab → vpn` drop swallowed every `lab → compat` flow on 2026-09-15, because **compat `172.16.100.0/24`
+sits inside the vpn block `172.16.96.0/20`**. The plan puts compat "outside the blocks", which is true of the
+*host spaces* and false of the *policy blocks*. `vpn-nets` therefore enumerates the /20 minus `100.0/24`,
+so each address has exactly one class and rule order cannot change a verdict.
+
 ### The invariant has a guardian
 
 RouterOS has no rule priority — order *is* the priority, first match wins — and the provider models no

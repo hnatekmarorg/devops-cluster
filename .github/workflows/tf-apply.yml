@@ -68,26 +68,8 @@ jobs:
     # Second gate, independent of the merge: create the environment in
     # Settings → Environments with Martin as a required reviewer. The job then
     # waits for an explicit approval before it starts.
-    environment: ${{ matrix.environment }}
+    environment: routeros-production
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - module: routeros
-            host: api://172.16.100.1:8728
-            state_key: routeros/rb5009.tfstate
-            environment: ${{ matrix.environment }}
-          - module: crs326
-            host: api://172.16.100.2:8728
-            state_key: crs326/crs326.tfstate
-            environment: crs326-production
-    # Per-module overrides of the workflow-level env: one device per matrix entry, one state file
-    # each, and (for apply) one environment each — which is what makes a per-device approval gate
-    # possible: approving the router's apply says nothing about the switch's.
-    env:
-      ROS_HOSTURL: ${{ matrix.host }}
-      TF_STATE_KEY: ${{ matrix.state_key }}
     steps:
       - uses: actions/checkout@v4
 
@@ -102,7 +84,7 @@ jobs:
 
       - name: Arming switch + preflight (write credential)
         id: preflight
-        working-directory: terraform/${{ matrix.module }}
+        working-directory: terraform/routeros
         env:
           ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
         run: |
@@ -126,9 +108,8 @@ jobs:
 
       - name: init · plan · apply
         if: steps.preflight.outputs.armed == 'true'
-        working-directory: terraform/${{ matrix.module }}
+        working-directory: terraform/routeros
         run: |
-          set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
           ../../scripts/tofu-ci.sh --role=write init -input=false
           ../../scripts/tofu-ci.sh --role=write plan \
             -input=false -no-color -lock-timeout=5m -out=apply.tfplan | tee apply-plan.txt
@@ -136,7 +117,7 @@ jobs:
 
       - name: Record what changed
         if: steps.preflight.outputs.armed == 'true'
-        working-directory: terraform/${{ matrix.module }}
+        working-directory: terraform/routeros
         run: |
           {
             echo "### RouterOS apply — $(date -u +%FT%TZ)"
@@ -179,8 +160,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.module }}-apply-${{ github.run_id }}
+          name: routeros-apply-${{ github.run_id }}
           path: |
-            terraform/${{ matrix.module }}/apply-plan.txt
-            terraform/${{ matrix.module }}/apply.txt
+            terraform/routeros/apply-plan.txt
+            terraform/routeros/apply.txt
           retention-days: 30

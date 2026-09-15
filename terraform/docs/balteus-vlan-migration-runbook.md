@@ -15,40 +15,45 @@ vault's storage path and the Hermes host's own NFS mount.**
   **14 qemu and 4 LXC are running**. `vm 101 truenas` is one of the running ones — it is the vault, so it
   is the *last* thing to move, not the first.
 
-## Step 0 — the lifeboat first (zero risk, and it is not where you would guess)
+## Step 0 — the lifeboat first (zero risk)
 
-Before anything on the LAN path changes, give the host an address on the **spark storage L2** so a broken
-`vmbr0` cannot lock anyone out. Measured topology, 2026-09-15:
+Before anything on the LAN path changes, give the host an address on the **spark storage L2**, so a broken
+`vmbr0` cannot lock anyone out.
 
-| Host side | Carries | Where it leads |
-|---|---|---|
-| `bond0` (LACP, `enp68s0f0`+`enp68s0f1`) → **`vmbr2`** (`192.168.88.20/24`) | the storage fabric | the CRS804's compute bridge — **the sparks' `192.168.0.x` NICs are on this same L2** |
-| `eno1` → **`vmbr0`** (`172.16.100.38/24`, gateway `.100.1`) | the LAN, all 46 guests | the CRS326 (`ether2` — the only live member of its bond) |
-| `eno2` → **`vmbr4`** (no address, comment `spark-nas`) | a **direct** link | *not* the shared fabric — nothing on it answers from spark1 |
-| `vmbr3` (`192.168.1.2/24`, no ports) | internal | WireGuard |
+Measured topology, 2026-09-15 (an earlier draft of this file put the lifeboat on `vmbr2` — that was wrong, and
+the error was inferring the bridge from which subnet was reachable instead of reading which bridge the NIC is
+actually on):
 
-So the lifeboat goes on **`vmbr2`, not `vmbr4`**. Proof rather than theory: from spark1,
-`ping 192.168.0.250` answers *on the same NIC as the other sparks*, and that MAC (`bc:24:11:…`) is a Proxmox
-guest — the vault's storage NIC. `vmbr2` is therefore the bridge the sparks can already reach; `vmbr4`'s
-cable touches something spark1 cannot see, and it is the truenas ↔ spark storage path you want left alone.
+| Host side | Bridge | Carries | Where it leads |
+|---|---|---|---|
+| `eno1` | `vmbr0` `172.16.100.38/24` (gw `.100.1`) | the LAN and all 46 guests | the CRS326's `ether2` — the only live member of its bond |
+| **`eno2`** | **`vmbr4`** (host has no address; the **vault's net3** is here at `192.168.0.250/24`) | the **sparks' storage L2** | the CRS804's **`ether2`** → `bridge-compute` → the QSFP ports → all four sparks |
+| `bond0` (LACP ×2) | `vmbr2` `192.168.88.20/24` | "storage" | peers **not** on the spine's compute bridge — unmeasured from here, so make no claims about it |
+| — | `vmbr3` `192.168.1.2/24`, no ports | internal | WireGuard |
+
+The identification of `vmbr4` comes from the far side: from spark1, `ping 192.168.0.250` resolves
+`bc:24:11:9c:7c:72` as a **directly attached neighbour** on its fabric NIC, and the spine's forwarding table
+learns that MAC on `ether2` — the only Proxmox MAC on that port. One guest NIC, one bridge, one cable, one
+spine port.
 
 ```bash
-# in the vmbr2 stanza of /etc/network/interfaces, keep the existing address and add a second one:
-#     address 192.168.88.20/24
-#     address 192.168.0.38/24        # new: the sparks' subnet, so they can reach us without a router
-#     gateway 172.16.100.1           # unchanged — do NOT put a gateway on the fabric subnet
+# in the vmbr4 stanza of /etc/network/interfaces, add:
+#     address 192.168.0.38/24        # the sparks' subnet, so a spark can reach us with no router involved
+#     # no gateway — the fabric has no router, and the default route must stay on vmbr0
 ifreload -a
 ```
 
-`192.168.0.38` was **free** (checked from spark1: no reply, neighbour entry `FAILED`). Adding a second
-address to a bridge is additive — no traffic moves, no interruption. Afterwards, from any spark:
-`ssh <user>@192.168.0.38` reaches balteus even if `vmbr0` is down. That is the whole point of it: the
-sparks are on the fabric and the fabric is a different NIC with a different cable.
+`192.168.0.38` was **free** (checked from spark1: no reply, neighbour entry `FAILED`). Adding an address to a
+bridge is additive — no traffic moves, no interruption — and it also gives the host a connected route to
+`192.168.0.0/24`, which is the point: afterwards, from any spark, `ssh <user>@192.168.0.38` reaches balteus
+even with `vmbr0` down, over a different NIC and a different cable. Leave `gateway` unset.
 
-Note the fabric is one L2 carrying several subnets — `192.168.0.x` (sparks, the vault's storage NIC),
-`192.168.1.x` (the sparks' second ports) and `192.168.88.x` (this host) — with no router between them. That
-is why the lifeboat must be in the *sparks'* subnet: they have no route to `192.168.88.0/24`, so
-`192.168.88.20` is unreachable from them (measured).
+### And a throughput note worth knowing
+
+The spine's `ether2` — the port this whole path crosses — reads **`hw=false`**, while all four QSFP ports
+(the sparks' side) read `hw=true`. So spark ↔ spark storage traffic is hardware-offloaded, but **spark ↔
+vault traffic is not**: it is bridged by the spine's CPU. That is the storage path for the AI hosts, so
+measure it before leaning on it, and consider whether balteus's fabric link belongs on an offloaded port.
 
 ## Step 1 — make the host bridge VLAN-aware (once)
 

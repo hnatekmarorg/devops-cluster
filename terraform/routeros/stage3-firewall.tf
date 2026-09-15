@@ -131,6 +131,63 @@ moved {
   to   = routeros_ip_firewall_filter.iot_router_deny
 }
 
-# Not in this phase, deliberately: `lab → mgmt` (the matrix's other confident row), the service-boundary
-# rows port by port (`lab → srv`), and the compat row's deletion. Each is its own reviewable step — the
-# order is the matrix's own: iot, then lab, then srv, then mgmt, compat last.
+## ---------------------------------------------------------------- the lab row
+
+# Lab is where code that runs other people's code lives — the Sparks, the sandboxes, the inference hosts.
+# Its row in the matrix: mgmt ✗, srv ✓ *on named service ports*, iot ✗, vpn ✗, internet restricted.
+#
+# Two groups, because the rows are not equally known:
+#
+#   * **enforced now** (mgmt, iot, vpn): nothing in lab has a legitimate reason to reach the admin plane,
+#     the WiFi segment or the tunnel clients, and the matrix calls lab → mgmt a *confident* row — a box
+#     that runs other people's code does not get the plane that holds the router, the switches and every
+#     IPMI. These are `drop` **with `log=true`**, so enforcement and evidence arrive together: if
+#     anything was relying on one of them, the same prefix names it in the next report.
+#   * **measured first** (srv, compat): lab → srv is not a yes/no but a *service boundary* — the matrix
+#     allows git, identity, DNS, NTP and the registry/model cache, port by port — so this phase only logs
+#     it, and the report's destinations and ports are what phase 2 turns into an accept-list. lab →
+#     compat is not in the matrix at all (compat is draining): logging it is how we learn what still
+#     depends on the flat segment, which is exactly what the retirement step needs to know.
+#
+# Note what is *not* here: `lab → internet restricted`. That row is an allow-list question (what may the
+# compute reach — HF, registries, mirrors?) and its only resident today is compat-side (`.189`, the
+# `wan-restricted`/`ai-compute` entry), so it belongs with the compat work, not this row.
+locals {
+  lab_deny = {
+    MGMT = "mgmt-nets"
+    IOT  = "iot-nets"
+    VPN  = "vpn-nets"
+  }
+  lab_measure = {
+    SRV    = "srv-nets"
+    COMPAT = "lan-nets"
+  }
+}
+
+resource "routeros_ip_firewall_filter" "lab_deny" {
+  for_each = local.lab_deny
+
+  chain            = "forward"
+  action           = "drop"
+  log              = true
+  src_address_list = "lab-nets"
+  dst_address_list = each.value
+  log_prefix       = "MTX-LAB>${each.key} "
+  comment          = "matrix phase 2 (enforced, logged): lab does not initiate to ${each.key} — firewall-matrix.md"
+}
+
+# Log-only, same prefixes the report already reads: the evidence for the port-by-port decision.
+resource "routeros_ip_firewall_filter" "lab_measure" {
+  for_each = local.lab_measure
+
+  chain            = "forward"
+  action           = "log"
+  src_address_list = "lab-nets"
+  dst_address_list = each.value
+  log_prefix       = "MTX-LAB>${each.key} "
+  comment          = "matrix phase 1 (log-only): measuring lab -> ${each.key} before its row is enforced"
+}
+
+# Not in this phase, deliberately: the service-boundary rows port by port (`lab → srv` enforcement), and
+# the compat row's deletion. Each is its own reviewable step — the order is the matrix's own: iot, then
+# lab, then srv, then mgmt, compat last.

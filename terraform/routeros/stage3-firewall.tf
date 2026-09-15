@@ -19,10 +19,10 @@
 # later. Destination lists are references, not copies: `main.tf` carries the class networks as
 # address-list entries.
 #
-# Placement (why no `place_before` is set). RouterOS has no numeric priority — rule *order* is the
-# priority, first match wins — and the provider's lever, `place_before`, is write-time intent only: no
-# attribute models where a rule sits, so `plan` cannot see placement. Leaving it unset appends these
-# rules to the end of each chain, which is the anchor both phases want:
+# Placement. RouterOS has no numeric priority — rule *order* is the priority, first match wins — and the
+# provider's lever, `place_before`, is write-time intent only: no attribute models where a rule sits, so
+# `plan` cannot see placement. The forward rules below therefore set **none**: leaving it unset appends
+# them to the end of the chain, which is the anchor they want —
 #
 #   * BELOW `accept established,related,untracked`. A *reply* packet from iot to an internal peer
 #     matches the same tuple as the deny (src `iot-nets`, dst `<class>-nets`), so a rule above
@@ -32,6 +32,10 @@
 #   * BELOW the chain's existing accepts, which is safe because they are scoped: the published-service
 #     accepts match `connection-nat-state=dstnat` AND `dst-address-list=wan`, so east-west iot traffic
 #     cannot reach them, and the other drops are MAC- or address-specific. (Measured, not assumed.)
+#
+# The one exception is the input pair further down (`iot_router_deny` + `iot_router_dhcp`): a catch-all
+# drop and the DHCP accept it must not swallow are created in the same apply, and two rules created in
+# one apply have no order between them unless it is stated. There the anchor is explicit.
 #
 # The invariant to protect in review: these rules are the last judgement on traffic no accept claimed,
 # so a *new* accept placed above them must be narrow — a named address or port with a class reason — or
@@ -77,20 +81,49 @@ resource "routeros_ip_firewall_filter" "iot_deny" {
   comment          = "matrix phase 2 (enforced, logged): iot does not reach ${each.key} — firewall-matrix.md"
 }
 
-# The router is part of the admin plane, and by default every class can reach it: the `LAN` interface
-# list holds all six class VLANs and the input chain's rule is `drop all not coming from LAN`, so an iot
-# device could open winbox/api/ssh on the router — demonstrated live from the probe during phase 1, which
-# connected to `172.16.70.1:8291` while the log recorded it. DHCP (udp 67/68), NTP and ICMP are not in
-# this rule's match, so an iot device keeps the services a segment needs and loses the ones it must not.
-resource "routeros_ip_firewall_filter" "iot_router_admin" {
+# The router itself. Every class can reach it by default — the `LAN` interface list holds all six class
+# VLANs and the input chain's rule is `drop all not coming from LAN` — so phase 1 demonstrated an iot
+# device opening winbox (`172.16.70.1:8291`) while the log recorded it.
+#
+# **This is a default-deny, and the first version was not: it enumerated ports.** An `nmap` from the probe
+# then showed why that shape is wrong — it cannot be complete. `22/80/443/8291` were filtered, but
+# `2000/tcp` and `8080/tcp` answered, because the router's `www` service lives on **8080** here (not the
+# 80 the list assumed) and `btest` listens on 2000. An enumerated list of *admin* ports ages badly and
+# knows nothing about services nobody has added yet; a default-deny does.
+#
+# Only the segment's own plumbing is allowed, and each line is a reason:
+#   * DHCP (udp 67/68) — without it the segment has no addresses at all. Explicit, because a catch-all
+#     drop makes the input chain's *fall-through* accept stop applying.
+#   * ICMP — not listed here: defconf's `accept ICMP` sits above this rule, so ping and PMTUD keep working.
+#
+# NTP (udp 123) is deliberately **not** allowed even though the router serves it: the probe uses public
+# pool servers, and if any iot device does want the router's clock the drop is logged under this same
+# prefix — measured rather than guessed, and one accept rule away.
+resource "routeros_ip_firewall_filter" "iot_router_deny" {
   chain            = "input"
+  place_before     = routeros_ip_firewall_filter.iot_router_dhcp.id
   action           = "drop"
   log              = true
-  protocol         = "tcp"
   src_address_list = "iot-nets"
-  dst_port         = "22,80,443,8291,8728,8729"
   log_prefix       = "MTX-IOT>ROUTER "
-  comment          = "matrix phase 2 (enforced, logged): iot does not administer the router (ssh, www, winbox, api)"
+  comment          = "matrix phase 2 (enforced, logged): iot reaches the router only for DHCP and ICMP"
+}
+
+# Ordered *before* the drop above: without this, DHCP from the whole segment would be the first casualty
+# of the catch-all, and the ordering of two rules created in the same apply is not something to leave to
+# chance. `place_before` anchored to a Terraform-managed rule is the provider's supported way to say it.
+resource "routeros_ip_firewall_filter" "iot_router_dhcp" {
+  chain            = "input"
+  action           = "accept"
+  protocol         = "udp"
+  src_address_list = "iot-nets"
+  dst_port         = "67,68"
+  comment          = "iot keeps the one router service a segment cannot live without (DHCP)"
+}
+
+moved {
+  from = routeros_ip_firewall_filter.iot_router_admin
+  to   = routeros_ip_firewall_filter.iot_router_deny
 }
 
 # Not in this phase, deliberately: `lab → mgmt` (the matrix's other confident row), the service-boundary

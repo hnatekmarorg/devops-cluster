@@ -2,6 +2,17 @@
 
 This repository contains infrastructure-as-code (IaC) configurations for deploying and managing a Kubernetes cluster using **ArgoCD**, **Crossplane**, **SOPS**, and **Helm**. It is designed to automate the provisioning of control planes, node groups, storage, networking, and application services.
 
+## Table of Contents
+
+- [Directory Structure](#-directory-structure)
+- [Getting Started](#-getting-started)
+- [Secret Management](#-secret-management)
+- [Helm Charts](#-helm-charts)
+- [Scripts](#-scripts)
+- [Notes](#-notes)
+- [Contributing](#-contributing)
+- [Renovate Automation](#-renovate-automation)
+
 ---
 
 ## 📁 Directory Structure
@@ -48,6 +59,30 @@ This repository contains infrastructure-as-code (IaC) configurations for deployi
 
 - Secrets are encrypted using **SOPS** and stored in `devops/argocd/secrets/enc.*.yaml`.
 - Decryption is handled by `scripts/decrypt.sh`, which uses the age key mounted at `/etc/sops-age-key-file`.
+
+---
+
+## 📦 Helm Charts
+
+The `charts/` directory contains reusable Helm charts for cluster components:
+
+| Chart | Description |
+|-------|-------------|
+| **cluster-base** | Core infrastructure (Crossplane, Nginx, SOPS, NFS provisioner) |
+| **crossplane-providers** | Crossplane provider configurations (Helm, Kubernetes, Vault) |
+| **llama-cpp** | LLM inference deployment with ComfyUI support |
+| **vllm-proxy** | VLLM proxy with configurable endpoints and ingress |
+| **README.md** | [Chart usage documentation](charts/README.md) |
+
+---
+
+## 📜 Scripts
+
+| Script | Description |
+|--------|-------------|
+| `scripts/init.sh` | Initialize SOPS age key in Kubernetes |
+| `scripts/encrypt.sh` | Encrypt files with SOPS |
+| `scripts/decrypt.sh` | Decrypt SOPS-encrypted files |
 
 ---
 

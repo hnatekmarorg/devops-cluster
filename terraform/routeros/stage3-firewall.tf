@@ -13,6 +13,23 @@
 # address-list entries (`mgmt-nets`, `srv-nets`, `lab-nets`, `vpn-nets`, `svc-vips`, `lan-nets`), so
 # these rules are references to that same data rather than a second copy of it.
 
+# Placement (why no `place_before` is set). RouterOS has no numeric priority — rule *order* is the
+# priority, first match wins, and the provider's lever is `place_before`. Leaving it unset appends these
+# rules to the end of each chain, which is the anchor both phases want:
+#
+#   * BELOW `accept established,related,untracked` (forward `*9`, input `*1`). A *reply* packet from iot
+#     to an internal peer matches the same tuple as the deny (src `iot-nets`, dst `<class>-nets`), so a
+#     rule placed above connection tracking would break every flow an internal host initiates *into* iot
+#     — the weekly digest's ssh to the TV gateway is precisely such a flow.
+#   * BELOW the chain's existing accepts, which is safe because they are scoped: the published-service
+#     accepts match `connection-nat-state=dstnat` AND `dst-address-list=wan`, so east-west iot traffic
+#     cannot reach them, and the other drops are MAC- or address-specific. (Measured, not assumed.)
+#
+# The invariant to protect in review: these rules are the last judgement on traffic no accept claimed, so
+# a *new* accept placed above them must be narrow — a named address or port with a class reason — or it
+# silently shadows the class policy. Order *among* the matrix rules does not matter: the pairs are
+# disjoint and every rule for one class carries the same action.
+
 locals {
   # iot may not *initiate* to any of these. Each pair gets its own rule and its own log prefix so the
   # report can count them separately instead of aggregating one indistinguishable stream of denies.

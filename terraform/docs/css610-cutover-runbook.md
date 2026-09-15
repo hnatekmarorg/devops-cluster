@@ -12,7 +12,7 @@ recovery step is written before the change, not after.
 | **In this window** | `Port7` | **trunk** — native/compat VLAN 1 untagged, **tagged members for 10 and 30** |
 | | `Port8`, `Port6`, `Port5`, `Port3` (Spark 1…4) | **lab access** — untagged, VLAN 30 only |
 | | `Port2` (charon, the work PC) | **mgmt access** — untagged, VLAN 10 only — **last** |
-| **Not in this window** | `Port4` (CRS804 `ether1`, the spine's management) | stays **compat** until the CRS804's own move (step 5). Setting it to mgmt now would take the spine off the compat L2 and strand `172.16.100.113` |
+| **Not in this window** | `Port4` (CRS804 `ether1`, the spine's management) | **done 2026-09-15** — the spine moved to mgmt (`172.16.10.201`, DHCP) and its compat `.113` retired. Leaving it compat during this window was deliberate: moving it then would have stranded the spine mid-window |
 | | `Port1` | stays **compat access** — the recovery perch (see below) |
 
 **Why Port1 stays compat rather than "mgmt" like the other switches' escape ports:** the CSS610's only
@@ -27,7 +27,7 @@ local exception, and it is revisited at compat retirement (step 7).
    must carry **tagged 10 and 30** (`terraform/*/stage2-filtering.tf`: the `mgmt` row gains the trunk
    ports *in place*, plus one new `lab_trunk` row per device — VLAN 30 had no static row of its own,
    and RouterOS permits only one static row per VLAN ID, so VLAN 10 could not get one). Verify by reading `/interface/bridge/vlan` on both devices, not from memory —
-   and check that the compat LAN is still fine (`172.16.100.1`, `.2`, `.113`, `.117` all answering).
+   and check that the compat LAN is still fine (`172.16.100.1`, `.2`, `.117`, and the spine on its mgmt address (`172.16.10.201` — its compat `.113` retired on 2026-09-15) all answering).
    Without this, a moved port resolves nothing: VLAN 30 has no port on any device, and VLAN 10 does not
    cross the uplink.
 2. **A config backup of the CSS610** — SwOS Lite *System → Backup* downloads its config. Do this before
@@ -44,7 +44,7 @@ local exception, and it is revisited at compat retirement (step 7).
 
 ### 0. Perch (2 min)
 Laptop on `Port1`, logged into `http://172.16.100.117`. Confirm from there that you can still reach
-`172.16.100.1`, `.2`, `.113` and that the cable you would use to fix a mistake is within reach.
+`172.16.100.1`, `.2`, and that the cable you would use to fix a mistake is within reach. (The spine is no longer on compat: it moved to mgmt at `172.16.10.201` on 2026-09-15.)
 
 ### 1. `Port7` → trunk
 Set `Port7` to carry the native/compat VLAN untagged **and** tagged members for VLAN 10 and 30. Nothing

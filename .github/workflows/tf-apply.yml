@@ -3,10 +3,14 @@
 # Triggers only when a reviewed PR that changes terraform/** lands on main, and only when the repo
 # variable ROUTEROS_CI_ENABLED is 'true' (the arming switch).
 #
-# ONE JOB PER DEVICE. Not a matrix, because `environment:` cannot take a matrix value — and the
-# environment is what scopes that device's write credential. The benefit is a better gate than a
-# single switch: approving the router's apply says nothing about the switch's, so one merge can be
-# applied to one device and declined for the other.
+# ONE JOB PER DEVICE. Not a matrix, because `environment:` cannot take a matrix value — and because
+# a job that calls a reusable workflow cannot carry `environment:` at all (GitHub's validator rejects
+# the whole file). The environment is passed to the called workflow as an input, and that workflow
+# declares it on its own job. That is also the only arrangement in which the device's write
+# credential can reach the steps: an environment secret cannot be passed from the caller, because
+# `on.workflow_call` has no environment keyword. The benefit is a better gate than a single switch:
+# approving the router's apply says nothing about the switch's, so one merge can be applied to one
+# device and declined for the other.
 name: tf-apply
 
 on:
@@ -35,15 +39,15 @@ jobs:
       module: routeros
       host: api://172.16.100.1:8728
       state_key: routeros/rb5009.tfstate
+      # Which environment gates this device. It is what the called workflow declares on the job it
+      # runs, so it decides both the approval prompt and which write identity the steps get.
+      environment: routeros-production
       note: ${{ inputs.note || '' }}
+    # State credentials only — those are repository-scoped. The write identity is deliberately absent
+    # here: it exists in the environment above and nowhere a PR-triggered job can read it.
     secrets:
-      ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
-      ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    # Second gate, independent of the merge: this environment has Martin as a required reviewer, so
-    # the job waits for an explicit approval before it starts.
-    environment: routeros-production
     # Applies are serialised per device: one writer at a time, ever.
     concurrency:
       group: tf-apply-routeros
@@ -56,13 +60,11 @@ jobs:
       module: crs326
       host: api://172.16.100.2:8728
       state_key: crs326/crs326.tfstate
+      environment: crs326-production
       note: ${{ inputs.note || '' }}
     secrets:
-      ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
-      ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    environment: crs326-production
     concurrency:
       group: tf-apply-crs326
       cancel-in-progress: false

@@ -1,12 +1,15 @@
 # The apply steps for ONE device, written once. Called by tf-apply.yml from a static job per device.
 #
 # Why not a matrix: `environment:` cannot take a matrix value — GitHub rejects
-# `environment: ${{ matrix.environment }}` outright ("Unrecognized named-value: 'matrix'"). The
-# environment is what scopes a device's *write* credential, so a per-device approval gate means a
-# job per device, and a job per device means the steps live here, once.
+# `environment: ${{ matrix.environment }}` outright ("Unrecognized named-value: 'matrix'"). And a job
+# that calls a reusable workflow cannot carry `environment:` at all: GitHub's validator refuses the
+# file. So the environment arrives here as an input and is declared on the job below, which is the
+# only place it can be declared — and, usefully, the only place an environment secret resolves for
+# these steps (an environment secret cannot be passed from the caller workflow).
 #
-# Inputs are three explicit strings rather than a module name to be looked up: the endpoint and the
-# state key are per device, and a wrong pair would apply one device's configuration to another.
+# Inputs are explicit strings rather than a module name to be looked up: the endpoint, the state key
+# and the environment are per device, and a wrong pair would apply one device's configuration to
+# another.
 name: apply one module
 
 on:
@@ -24,21 +27,27 @@ on:
         description: 'state object key in the bucket — unique per device, never shared'
         required: true
         type: string
+      environment:
+        description: 'environment that gates and credentials this device (routeros-production, crs326-production)'
+        required: true
+        type: string
       note:
         description: 'why this apply is being run (recorded in the run summary)'
         required: false
         type: string
         default: ''
-    # Explicitly declared, and mapped by the caller from its own context — the caller is the job
-    # that declares the environment, so that is where an environment-scoped secret resolves.
+    # State credentials only, passed by the caller. The device's write identity is NOT an interface:
+    # it is an environment secret, which cannot be passed from the caller workflow. These two names
+    # are declared anyway so the interface is explicit — the value the job actually reads comes from
+    # the environment declared on the job, which wins over anything a caller could pass.
     secrets:
-      ROS_WRITE_USERNAME:
-        required: false
-      ROS_WRITE_PASSWORD:
-        required: false
       AWS_ACCESS_KEY_ID:
         required: false
       AWS_SECRET_ACCESS_KEY:
+        required: false
+      ROS_WRITE_USERNAME:
+        required: false
+      ROS_WRITE_PASSWORD:
         required: false
 
 permissions:
@@ -55,15 +64,26 @@ env:
   TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT || 'https://console-minio.hnatekmar.xyz' }}
   TF_STATE_KEY: ${{ inputs.state_key }}
   TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'europe' }}
-  ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
-  ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
   plan-apply:
     name: plan · apply
     runs-on: gha-runner-scale-set-hnatekmarorg
+
+    # The per-device gate, and the reason the steps live behind an input: this environment waits for
+    # Martin's approval before the job starts, and it is what scopes the device's *write* credential.
+    environment:
+      name: ${{ inputs.environment }}
+
+    # Credentials are referenced on the job, not at workflow level, because the write identity comes
+    # from the environment above — it is injected into this job's secrets context, and reading it is
+    # only meaningful once the environment is resolved. It is not a caller parameter: an environment
+    # secret cannot be passed from the caller workflow.
+    env:
+      ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
+      ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     steps:
       - uses: actions/checkout@v4

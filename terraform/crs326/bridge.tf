@@ -110,15 +110,14 @@ import {
 }
 import {
   # the host's LAN port on `ether2`, adopted at the id the device actually holds: dissolving the bond
-  # took the old entry (`*1A`) with it. Re-importing under this address adopts the live entry — a
-  # `moved` block would carry the stale id across instead, and Terraform would try to re-create a port
-  # that already exists (RouterOS refuses, leaving a permanently non-empty plan and blocking applies).
-  to = routeros_interface_bridge_port.balteus_lan
+  # took the old entry (`*1A`) with it, so the live entry is `*1C`.
+  #
+  # The address is deliberately one the state has never held. An import block whose target is already in
+  # the state is *skipped* ("already managed"), and the refresh then drops the stale entry as vanished --
+  # leaving a `create` planned for a port that exists, which RouterOS refuses, so the plan would never
+  # come back empty. Both halves of that are measured, not guessed.
+  to = routeros_interface_bridge_port.pve_lan
   id = "*1C"
-}
-import {
-  to = routeros_interface_bridge_port.bukefalos
-  id = "*1B"
 }
 
 # the flat bridge: every port pvid=1, `vlan-filtering` off, no VLAN entries. Adopted as-is so the filtering step is a one-attribute diff.
@@ -177,7 +176,7 @@ resource "routeros_interface_bonding" "bukefalos" {
 
 # The PVE host's LAN port — a bare `ether2` since the LACP bond was dissolved. Untagged in compat
 # (pvid 1, unchanged) and tagged for every class, which is what lets guests move one at a time.
-resource "routeros_interface_bridge_port" "balteus_lan" {
+resource "routeros_interface_bridge_port" "pve_lan" {
   auto_isolate            = false
   bpdu_guard              = false
   bridge                  = "bridge"
@@ -207,36 +206,8 @@ resource "routeros_interface_bridge_port" "balteus_lan" {
   unknown_unicast_flood   = true
 }
 
-# idle bond, reserved for the second server
-resource "routeros_interface_bridge_port" "bukefalos" {
-  auto_isolate            = false
-  bpdu_guard              = false
-  bridge                  = "bridge"
-  broadcast_flood         = true
-  disabled                = false
-  edge                    = "auto"
-  fast_leave              = false
-  frame_types             = "admit-all"
-  horizon                 = "none"
-  hw                      = true
-  ingress_filtering       = true
-  interface               = "bukefalos"
-  internal_path_cost      = 10
-  learn                   = "auto"
-  multicast_router        = "temporary-query"
-  mvrp_applicant_state    = "normal-participant"
-  mvrp_registrar_state    = "normal"
-  path_cost               = "10"
-  point_to_point          = "auto"
-  priority                = "0x80"
-  pvid                    = 1
-  restricted_role         = false
-  restricted_tcn          = false
-  tag_stacking            = false
-  trusted                 = false
-  unknown_multicast_flood = true
-  unknown_unicast_flood   = true
-}
+# The idle bond has no bridge port on the device — it was removed with the other dead ports, and this
+# resource went with it. The bond itself stays: it is the second server's reservation.
 
 resource "routeros_interface_bridge_port" "ether10" {
   auto_isolate            = false

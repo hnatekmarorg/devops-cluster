@@ -721,15 +721,18 @@ resource "routeros_interface_bridge_port" "ether4" {
 }
 
 resource "routeros_interface_bridge_port" "ether5" {
-  auto_isolate            = false
-  bpdu_guard              = false
-  bridge                  = "bridge"
-  broadcast_flood         = true
-  comment                 = "defconf"
-  disabled                = false
-  edge                    = "auto"
-  fast_leave              = false
-  frame_types             = "admit-all"
+  auto_isolate    = false
+  bpdu_guard      = false
+  bridge          = "bridge"
+  broadcast_flood = true
+  comment         = "iot test access port — the probe's temporary lane"
+  disabled        = false
+  edge            = "auto"
+  fast_leave      = false
+  # The probe's iot test lane (2026-09-15): untagged VLAN 70 only, so the TV-isolation gateway
+  # can be moved here and observed *inside* iot before the WiFi segment (`ether16`) commits to it.
+  # Same shape as the escape port and the IPMI port: an untagged access port on one segment.
+  frame_types             = "admit-only-untagged-and-priority-tagged"
   horizon                 = "none"
   hw                      = true
   ingress_filtering       = true
@@ -742,7 +745,7 @@ resource "routeros_interface_bridge_port" "ether5" {
   path_cost               = "10"
   point_to_point          = "auto"
   priority                = "0x80"
-  pvid                    = 1
+  pvid                    = 70
   restricted_role         = false
   restricted_tcn          = false
   tag_stacking            = false

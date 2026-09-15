@@ -82,6 +82,29 @@ locals {
     "spark4"       = { mac = "30:C5:99:3F:A3:8B", address = "172.16.30.110", class = "lab" }
     "inference"    = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
     "balteus-ipmi" = { mac = "3C:EC:EF:73:09:9D", address = "172.16.10.46", class = "mgmt" }
+
+    # The dedicated CI runner (a ZimaBoard, plugged in by hand). It is on a *compat* port today
+    # (`.100.126`) and takes this address as soon as it hangs off a mgmt access port — the router's
+    # `ether1`, which is already prepared for exactly this (pvid 10, admit-only-untagged). Mgmt class
+    # because it holds the device write credentials (Q27/Q29).
+    "runner" = { mac = "00:E0:4C:2A:36:AC", address = "172.16.10.140", class = "mgmt" }
+
+    # srv: the keepers. Each keeps its compat suffix, so a guest that is tagged into srv comes up at the
+    # address its record already names — zero address changes, and nothing that references it by IP has
+    # to change either. Suffix preservation outranks the `.100-.199` band here: a reservation excludes
+    # the address from dynamic assignment wherever it sits.
+    "truenas"            = { mac = "BC:24:11:B8:73:CF", address = "172.16.40.148", class = "srv" }
+    "gitea"              = { mac = "BC:24:11:DE:C2:B9", address = "172.16.40.124", class = "srv" }
+    "github-dind"        = { mac = "BC:24:11:09:29:12", address = "172.16.40.145", class = "srv" }
+    "coder"              = { mac = "BC:24:11:15:09:81", address = "172.16.40.210", class = "srv" }
+    "kubernetes-sandbox" = { mac = "BC:24:11:34:A3:9C", address = "172.16.40.111", class = "srv" }
+    "personal-hermes"    = { mac = "BC:24:11:AA:F1:B6", address = "172.16.40.180", class = "srv" }
+    "stories-hermes"     = { mac = "BC:24:11:95:D1:9A", address = "172.16.40.188", class = "srv" }
+    "sister-hermes"      = { mac = "BC:24:11:58:A8:1E", address = "172.16.40.203", class = "srv" }
+    # The edge/identity/lmproxy host. `.100.30` is configured *statically on the box*, so this
+    # reservation is the documented claim on the address (the shape the BMC's `.46` has) and only takes
+    # effect if the box is switched to DHCP. Suffix preserved: `.40.30`.
+    "proxy" = { mac = "BC:24:11:75:DD:2B", address = "172.16.40.30", class = "srv" }
     # Infrastructure on a pool lease is a fragility: the spine's management address must not depend
     # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
     # than being moved again for suffix symmetry — one address change per device is enough.
@@ -121,9 +144,12 @@ resource "routeros_ip_dhcp_server" "class" {
 resource "routeros_ip_dhcp_server_network" "class" {
   for_each = local.dhcp_scopes
 
-  address    = each.value.subnet
-  gateway    = each.value.gateway
-  dns_server = ["8.8.8.8"] # the compat scope's convention; the router's own resolver is still off
+  address = each.value.subnet
+  gateway = each.value.gateway
+  # The router's address *in that class* is the resolver, so resolution never leaves the VLAN and the
+  # dependency on the router is explicit. `iot` keeps public DNS deliberately: that class must not be able
+  # to resolve an internal name, which makes resolution itself a class boundary. See docs/dns.md.
+  dns_server = each.key == "iot" ? ["8.8.8.8"] : [each.value.gateway]
   comment    = "${local.managed_by} (${var.router_name}) — ${each.key}"
 }
 
@@ -135,5 +161,5 @@ resource "routeros_ip_dhcp_server_lease" "reserved" {
   address     = each.value.address
   mac_address = each.value.mac
   server      = routeros_ip_dhcp_server.class[each.value.class].name
-  comment     = "${local.managed_by} — fixed identity: the Hermes host reaches this by IP"
+  comment     = "${local.managed_by} — fixed identity: the address its name resolves to"
 }

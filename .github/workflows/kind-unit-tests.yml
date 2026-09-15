@@ -1,0 +1,185 @@
+name: Kind Unit Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  test-argocd-applications:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install KinD
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Create KinD cluster
+        run: |
+          kind create cluster --name test-cluster --wait 5m
+
+      - name: Install kubectl
+        run: |
+          curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x /usr/local/bin/argocd
+
+      - name: Install ArgoCD
+        run: |
+          kubectl create namespace argocd
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+      - name: Wait for ArgoCD to be ready
+        run: |
+          until kubectl get pods -n argocd | grep -q "Running"; do
+            echo "Waiting for ArgoCD pods to be ready..."
+            sleep 10
+          done
+
+      - name: Port forward ArgoCD server
+        run: |
+          kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+          sleep 5
+
+      - name: ArgoCD login
+        run: |
+          argocd login localhost:8080 --username admin --password $(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath=\'{.data.password}\' | base64 --decode) --insecure
+
+      - name: Deploy test ArgoCD applications
+        run: |
+          # Create application manifests for testing
+          cat > test-applications.yaml << EOF
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: test-cert-manager
+            namespace: argocd
+          spec:
+            project: default
+            sources:
+              - chart: cert-manager
+                repoURL: https://charts.jetstack.io
+                targetRevision: 1.18.0
+                helm:
+                  releaseName: cert-manager
+                  valueFiles:
+                    - $repo/devops/argocd/cert-manager/values.yaml
+              - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+                targetRevision: main
+                ref: repo
+            destination:
+              server: "https://kubernetes.default.svc"
+              namespace: cert-manager
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+                allowEmpty: false
+              syncOptions:
+                - CreateNamespace=true
+
+          ---
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: test-nginx
+            namespace: argocd
+          spec:
+            project: default
+            sources:
+              - chart: ingress-nginx
+                repoURL: https://kubernetes.github.io/ingress-nginx
+                targetRevision: 4.11.3
+                helm:
+                  releaseName: ingress-nginx
+                  valueFiles:
+                    - $repo/devops/argocd/nginx/values.yaml
+              - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+                targetRevision: main
+                ref: repo
+            destination:
+              server: "https://kubernetes.default.svc"
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+                allowEmpty: false
+              syncOptions:
+                - CreateNamespace=false
+
+          ---
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: test-prometheus
+            namespace: argocd
+          spec:
+            project: default
+            sources:
+              - chart: kube-prometheus-stack
+                repoURL: https://prometheus-community.github.io/helm-charts
+                targetRevision: 73.2.2
+                helm:
+                  releaseName: kube-prometheus-stack
+                  valueFiles:
+                    - $repo/devops/argocd/prometheus/prometheus-values.yaml
+              - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+                targetRevision: main
+                ref: repo
+            destination:
+              server: "https://kubernetes.default.svc"
+              namespace: monitoring
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+                allowEmpty: false
+              syncOptions:
+                - CreateNamespace=false
+                - ServerSideApply=true
+          EOF
+
+          kubectl apply -f test-applications.yaml
+
+      - name: Wait for applications to sync
+        run: |
+          # Wait for all applications to be healthy
+          until argocd app list --output json | jq -r '.[].status.health.status' | grep -q "Healthy"; do
+            echo "Waiting for applications to be healthy..."
+            sleep 30
+          done
+
+      - name: Test application readiness
+        run: |
+          # Test that core applications are ready
+          echo "Testing cert-manager..."
+          kubectl wait --for=condition=Available -n cert-manager deployment/cert-manager --timeout=300s
+          kubectl wait --for=condition=Available -n cert-manager deployment/cert-manager-webhook --timeout=300s
+
+          echo "Testing nginx-controller..."
+          kubectl wait --for=condition=Available -n ingress-nginx deployment/nginx-ingress-controller --timeout=300s
+
+          echo "Testing prometheus stack..."
+          kubectl wait --for=condition=Available -n monitoring deployment/kube-prometheus-stack-prometheus --timeout=300s
+          kubectl wait --for=condition=Available -n monitoring deployment/kube-prometheus-stack-grafana --timeout=300s
+
+          echo "All tests passed!"
+
+      - name: Cleanup port forwarding
+        if: always()
+        run: |
+          pkill -f "kubectl port-forward svc/argocd-server"
+
+      - name: Cleanup KinD cluster
+        if: always()
+        run: |
+          kind delete cluster --name test-cluster

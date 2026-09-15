@@ -70,6 +70,10 @@ locals {
     "spark4"       = { mac = "30:C5:99:3F:A3:8B", address = "172.16.30.110", class = "lab" }
     "inference"    = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
     "balteus-ipmi" = { mac = "3C:EC:EF:73:09:9D", address = "172.16.10.46", class = "mgmt" }
+    # Infrastructure on a pool lease is a fragility: the spine's management address must not depend
+    # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
+    # than being moved again for suffix symmetry — one address change per device is enough.
+    "crs804" = { mac = "D0:EA:11:02:70:5A", address = "172.16.10.201", class = "mgmt" }
   }
 }
 

@@ -53,7 +53,10 @@ env:
 jobs:
   apply-routeros:
     name: apply · routeros (RB5009)
-    runs-on: gha-runner-scale-set-hnatekmarorg
+    # Runs on the dedicated mgmt-class runner (the ZimaBoard): it holds the device write
+    # credentials, so it lives in mgmt and nothing initiates into it. Revert this one line to
+    # `gha-runner-scale-set-hnatekmarorg` to fall back to the ARC runners on the k8s cluster.
+    runs-on: [self-hosted, mgmt, tofu]
     # The environment scopes the write identity and enforces "protected branches only", i.e. this can
     # only be deployed from `main` — reviewed code. It no longer adds an approval click: the review and
     # the posted plan on the PR are the authorization.

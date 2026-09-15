@@ -152,6 +152,12 @@ jobs:
 
       - name: Keep the plan for the record
         if: steps.preflight.outputs.armed == 'true'
+        # A record-keeping upload must never fail a run that already changed the device. Twice now
+        # the reporting half of this workflow has gone red *after* a successful apply: once asking
+        # for a credential this job deliberately lacks, once resetting mid-upload through the
+        # runner's proxy (ECONNRESET — and the bigger the plan, the more likely it is). The green
+        # work is done by then; the summary and the log are the fallback record.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: routeros-apply-${{ github.run_id }}

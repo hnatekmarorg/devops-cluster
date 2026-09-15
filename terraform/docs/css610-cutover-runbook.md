@@ -12,7 +12,7 @@ recovery step is written before the change, not after.
 | **In this window** | `Port7` | **trunk** — native/compat VLAN 1 untagged, **tagged members for 10 and 30** |
 | | `Port2` (charon, the work PC, `.227`) | **mgmt access** — untagged, VLAN 10 only |
 | | `Port8`, `Port6`, `Port5`, `Port3` (Spark 1…4) | **lab access** — untagged, VLAN 30 only |
-| **Not in this window** | `Port4` (CRS804 `ether1`, the spine's management) | stays **compat** until the CRS804's own move (step 5). Setting it to mgmt now would take the spine off the compat L2 and strand `172.16.100.113` |
+| **Not in this window** | `Port4` (CRS804 `ether1`, the spine's management) | **done 2026-09-15** — the spine moved to mgmt (`172.16.10.201`, DHCP, now pinned in IaC) and its compat `.113` retired. Leaving it compat during this window was deliberate: moving it then would have stranded the spine mid-window |
 | | `Port1` | stays **compat access** — the recovery perch (see below) |
 
 **Why Port1 stays compat rather than "mgmt" like the other switches' escape ports:** the CSS610's only
@@ -32,7 +32,7 @@ positionally, move it back to compat after the check and let the VPN be its ingr
 
 1. **The trunk VLANs are applied and verified.** The router's `ether4` and the CRS326's `ether18`/`ether4`
    must carry **tagged 10 and 30**. Verify by reading `/interface/bridge/vlan` on both devices, not from
-   memory — and check that the compat LAN is still fine (`172.16.100.1`, `.2`, `.113`, `.117` answering).
+   memory — and check that the compat LAN is still fine (`172.16.100.1`, `.2`, `.117`, and the spine on its mgmt address `172.16.10.201` — its compat `.113` retired on 2026-09-15 — answering).
 2. **Run the baseline:** `scripts/css610-window-check.sh pre` on the Hermes host — it records the Sparks'
    flat addresses, their endpoints, charon, and what lmproxy points at. Keep the output.
 3. **A config backup of the CSS610** — SwOS Lite *System → Backup* downloads its config. Do this before
@@ -73,7 +73,7 @@ sudo systemctl restart lmproxy          # expect the agent to come back once Spa
 
 ### 0. Perch (2 min)
 Laptop on `Port1`, logged into `http://172.16.100.117`. Confirm from there that you can still reach
-`172.16.100.1`, `.2`, `.113` and that the cable you would use to fix a mistake is within reach.
+`172.16.100.1`, `.2` and that the cable you would use to fix a mistake is within reach. (The spine is no longer on compat: it moved to mgmt at `172.16.10.201` on 2026-09-15.)
 
 ### 1. `Port7` → trunk
 Set `Port7` to carry the native/compat VLAN untagged **and** tagged members for VLAN 10 and 30. Nothing

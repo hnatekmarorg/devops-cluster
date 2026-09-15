@@ -66,7 +66,8 @@ failing writes. It is a leftover from an August install, not the live store — 
 | Workflow | Trigger | Role | Does |
 |---|---|---|---|
 | `tf-plan.yml` | PR touching `terraform/**`, manual | read | fmt, validate, plan; posts the plan as a PR comment |
-| `tf-apply.yml` | push to `main` touching `terraform/**`, manual | write | `plan -out`, then apply of that exact plan |
+| `tf-apply-routeros.yml` | push to `main` touching `terraform/routeros/**`, manual | write | `plan -out`, then apply of that exact plan, against the RB5009 |
+| `tf-apply-crs326.yml` | push to `main` touching `terraform/crs326/**`, manual | write | same, against the CRS326 |
 | `tf-drift.yml` | nightly 03:30 UTC, manual | read | `plan -detailed-exitcode`; opens/updates/closes the drift issue |
 
 Drift means *the device disagrees with state*, so the nightly job checks first that state exists at
@@ -78,9 +79,17 @@ a dead alert.
 exists, and merging a `terraform/**` change cannot produce a surprise apply. Once armed, a missing
 credential becomes a hard failure instead of a silent skip.
 
-Review gates, in order: branch protection on `main`, the plan comment on the PR, the
-`routeros-production` environment holding apply for a second explicit approval, and `tf-apply`
-re-planning so it can only apply what it printed.
+**A merge is the authorization to apply** (Martin, 2026-09-15). The plan on the PR is what gets
+reviewed, so the environments no longer hold a second approval click — the click added no information
+the plan had not already given. The environments stay, for the two properties that are not about the
+click: they scope the device's **write credential**, and their protected-branches policy restricts
+deployment to `main` — reviewed code only.
+
+Review gates, in order: branch protection on `main` (PR + 1 approval + conversation resolution), the
+plan comment on the PR, and the apply re-planning so it can only apply what it printed. Because the
+merge authorizes, each apply is triggered by changes to *its own* module (`terraform/routeros/**`,
+`terraform/crs326/**`) — the applied scope equals the reviewed scope, and a shared module added under
+`terraform/` must be listed in both workflows' `paths:`.
 
 ## Bootstrap still outstanding (Martin)
 

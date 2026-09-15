@@ -1,0 +1,61 @@
+# Device IaC — apply the MAIN SWITCH on merge (CRS326 only).
+#
+# Twin of `tf-apply-routeros.yml`; read the header there for why the environment, the composite action
+# and the module-scoped trigger are shaped the way they are. Short version: a merge to `main` is the
+# authorization to apply, `main` is protected (required PR + 1 approval), and the applied scope must
+# equal the reviewed scope — so a change to the switch's module runs the switch's apply and nothing
+# else. If a shared module ever appears under `terraform/`, add it to BOTH workflows' `paths:`.
+#
+# Fires only when a reviewed PR that changes this module lands on main, and only when the repository
+# variable ROUTEROS_CI_ENABLED is 'true' (the arming switch — the panic button).
+name: tf-apply (crs326)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/crs326/**'
+      - '.github/workflows/tf-apply-crs326.yml'
+      - '.github/actions/**'
+      - 'scripts/tofu-ci.sh'
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'Why this apply is being run (recorded in the run summary)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
+  NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT || 'https://console-minio.hnatekmar.xyz' }}
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'europe' }}
+
+jobs:
+  apply-crs326:
+    name: apply · crs326 (main switch)
+    runs-on: gha-runner-scale-set-hnatekmarorg
+    # Scopes the write identity; deploys from `main` only (protected-branches policy on the environment).
+    environment: crs326-production
+    concurrency:
+      group: tf-apply-crs326
+      cancel-in-progress: false
+    env:
+      ROS_HOSTURL: api://172.16.100.2:8728
+      TF_STATE_KEY: crs326/crs326.tfstate
+      ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
+      ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/tofu-apply
+        with:
+          module: crs326
+          note: ${{ inputs.note || '' }}

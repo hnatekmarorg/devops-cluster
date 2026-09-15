@@ -49,11 +49,11 @@ resource "routeros_interface_bridge_vlan" "compat" {
   vlan_ids = ["1"]
   # `ether7` is absent for the same reason `ether3` is: it is no longer a compat port. It became the
   # out-of-band plane's access port (balteus IPMI, `.46`) — an untagged member of VLAN 10 only.
-  untagged = ["balteus", "bukefalos", "ether4", "ether5", "ether6", "ether8", "ether9",
-    "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether16", "ether17",
+  untagged = ["balteus", "bukefalos", "ether4", "ether6", "ether8", "ether9",
+    "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether17",
     "ether18", "ether19", "ether20", "ether21", "ether22", "sfp-sfpplus1", "sfp-sfpplus2",
   "bridge"]
-  comment = "compat — everything not yet migrated; does not include ether3 or ether7"
+  comment = "compat — everything not yet migrated; does not include ether3, ether7 or ether16"
 }
 
 resource "routeros_interface_bridge_vlan" "mgmt" {
@@ -89,4 +89,29 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
   vlan_ids = ["30"]
   tagged   = ["ether18", "ether4"]
   comment  = "lab — transport only; the router terminates it"
+}
+
+# ---------------------------------------------------------------------------
+# IoT (70) — same transport-only shape. `ether18` carries it to the router (L3 + DHCP), and `ether16`
+# becomes the access port when the WiFi segment moves: one port serves the Deco BE22 (which cannot tag),
+# the TV and the gaming PC, which is why the doc gives that segment one access port at PVID 70. `ether4`
+# rides along for symmetry — a device behind the CSS610 can be placed in iot later without touching this.
+# ---------------------------------------------------------------------------
+resource "routeros_interface_bridge_vlan" "iot_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["70"]
+  # ONE row per VLAN ID — RouterOS refuses a second static row (`failure: vlan already added`), so every
+  # membership this segment has rides here.
+  #
+  # `ether18` (tagged) is the transport: the router holds the L3 (172.16.70.1/20) and `dhcp-iot`.
+  # `ether4` is deliberately absent — that is the CSS610 uplink and no iot device sits behind it; the
+  # segment's devices are reached through `ether16`, and a class only lists the ports that carry it.
+  #
+  # The port membership and the port's `pvid` travel together, which is why this is one row: `ether16`
+  # is an UNTAGGED member and its `pvid` is 70 (see crs326/bridge.tf). Tagging it instead would leave
+  # the segment's devices — a dumb switch, a Deco, a TV, a gaming PC, none of which can tag — receiving
+  # VLAN 70 frames they cannot read, and would leave the probe sitting in compat.
+  tagged   = ["ether18"]
+  untagged = ["ether16"]
+  comment  = "iot — tagged to the router on ether18; ether16 is the untagged access port to the devices"
 }

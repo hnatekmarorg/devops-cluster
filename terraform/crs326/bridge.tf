@@ -437,17 +437,22 @@ resource "routeros_interface_bridge_port" "ether15" {
   unknown_unicast_flood   = true
 }
 
-# → dumb switch → AP + TV + gaming PC: one cable, one segment, therefore one class (iot)
+# → dumb switch → AP + TV + gaming PC: one cable, one segment, therefore one class (iot).
+#
+# **This is the iot segment's access port** (flipped 2026-09-15, tested with the TV-isolation gateway
+# before the rest of the segment was trusted to it). The dumb switch was measured first: it cannot tag,
+# and neither can the Deco, the TV or the gaming PC — so this is an untagged access port on VLAN 70 and
+# nothing else. `admit-only-untagged-and-priority-tagged` also drops whatever a device emits tagged.
 resource "routeros_interface_bridge_port" "ether16" {
   auto_isolate            = false
   bpdu_guard              = false
   bridge                  = "bridge"
   broadcast_flood         = true
-  comment                 = "defconf"
+  comment                 = "iot access port — dumb switch: Deco, TV, gaming PC, probe"
   disabled                = false
   edge                    = "auto"
   fast_leave              = false
-  frame_types             = "admit-all"
+  frame_types             = "admit-only-untagged-and-priority-tagged"
   horizon                 = "none"
   hw                      = true
   ingress_filtering       = true
@@ -460,7 +465,7 @@ resource "routeros_interface_bridge_port" "ether16" {
   path_cost               = "10"
   point_to_point          = "auto"
   priority                = "0x80"
-  pvid                    = 1
+  pvid                    = 70
   restricted_role         = false
   restricted_tcn          = false
   tag_stacking            = false

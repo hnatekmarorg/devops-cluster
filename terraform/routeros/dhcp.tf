@@ -12,9 +12,11 @@
 #      a device moving into `lab` keeps the number everyone already knows — only the subnet
 #      changes. Widening a pool into that band would quietly reintroduce the hazard.
 #
-#   2. **No `iot` scope.** The WiFi segment hangs off the Deco BE22, which may serve DHCP itself;
-#      two servers on one segment is a conflict, not a convenience. Whether the Deco or the router
-#      addresses the WiFi segment is a question for the step that moves it.
+#   2. **`iot` gets a scope — for the host we own, not for the WiFi.** The TV-isolation gateway is
+#      moving into that segment by cable and must be addressable there (`.70.125` keeps its suffix, the
+#      same rule as everywhere else). Whether the Deco BE22 serves its *own* clients or expects this
+#      router to is still open — two servers on one segment is a conflict, not a convenience — so the
+#      pool stays modest and that question is answered when the WiFi segment actually moves.
 #
 # The compat scope (172.16.100.0/24, pool `public`) is left unmanaged and untouched — it drains
 # last, and adopting it buys nothing while it is on its way out.
@@ -48,6 +50,16 @@ locals {
       # The service-VIP block (172.16.48.0/20) is not in this range and must never be.
       ranges = ["172.16.40.20-172.16.40.99", "172.16.40.200-172.16.40.250"]
     }
+    iot = {
+      subnet    = "172.16.64.0/20"
+      gateway   = "172.16.70.1"
+      interface = "vlan70-iot"
+      server    = "dhcp-iot"
+      pool      = "dhcp-pool-iot"
+      # Same shape as lab, and for the same reason (rule 1): the host space is the `.70` block of the
+      # /20, and the pool stays clear of `.100–.199` where the fixed identities live.
+      ranges = ["172.16.70.20-172.16.70.99", "172.16.70.200-172.16.70.250"]
+    }
   }
 
   # Fixed addresses for the hosts the estate's own paths depend on — including the out-of-band plane.
@@ -74,6 +86,11 @@ locals {
     # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
     # than being moved again for suffix symmetry — one address change per device is enough.
     "crs804" = { mac = "D0:EA:11:02:70:5A", address = "172.16.10.201", class = "mgmt" }
+    # The TV-isolation gateway again, in the class it is moving to: `.125` keeps its suffix the way it
+    # did in compat (`172.16.100.125`, reserved in the unmanaged compat scope) and in mgmt. Different
+    # subnet, same identity — so the weekly digest and the TV harness keep working from wherever the box
+    # sits, and the iot segment can be observed from a device inside it.
+    "probe-iot" = { mac = "00:E0:4C:2A:2E:C6", address = "172.16.70.125", class = "iot" }
   }
 }
 

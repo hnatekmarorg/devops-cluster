@@ -105,6 +105,19 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
 }
 
 # ---------------------------------------------------------------------------
+# IoT (70) on the uplink — the same transport-only shape as lab, added because this segment stops being
+# hypothetical: the TV-isolation gateway moves into it (access port is the CRS326's `ether16`), and the
+# WiFi segment follows. L3 is `vlan70-iot` here (172.16.70.1/20) with `dhcp-iot` addressing it; the
+# bridge keeps its own membership through RouterOS' dynamic entry for 30/40/60/70, untouched.
+# ---------------------------------------------------------------------------
+resource "routeros_interface_bridge_vlan" "iot_trunk" {
+  bridge   = routeros_interface_bridge.bridge.name
+  vlan_ids = ["70"]
+  tagged   = ["ether4"]
+  comment  = "iot — carried toward ether16 (the WiFi/TV segment); L3 is vlan70-iot here"
+}
+
+# ---------------------------------------------------------------------------
 # The class VLANs join the **LAN** interface list — for now, and deliberately.
 #
 # Today the router has no policy at all between internal segments: the forward chain has no

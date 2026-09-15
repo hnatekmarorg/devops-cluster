@@ -15,6 +15,41 @@ vault's storage path and the Hermes host's own NFS mount.**
   **14 qemu and 4 LXC are running**. `vm 101 truenas` is one of the running ones — it is the vault, so it
   is the *last* thing to move, not the first.
 
+## Step 0 — the lifeboat first (zero risk, and it is not where you would guess)
+
+Before anything on the LAN path changes, give the host an address on the **spark storage L2** so a broken
+`vmbr0` cannot lock anyone out. Measured topology, 2026-09-15:
+
+| Host side | Carries | Where it leads |
+|---|---|---|
+| `bond0` (LACP, `enp68s0f0`+`enp68s0f1`) → **`vmbr2`** (`192.168.88.20/24`) | the storage fabric | the CRS804's compute bridge — **the sparks' `192.168.0.x` NICs are on this same L2** |
+| `eno1` → **`vmbr0`** (`172.16.100.38/24`, gateway `.100.1`) | the LAN, all 46 guests | the CRS326 (`ether2` — the only live member of its bond) |
+| `eno2` → **`vmbr4`** (no address, comment `spark-nas`) | a **direct** link | *not* the shared fabric — nothing on it answers from spark1 |
+| `vmbr3` (`192.168.1.2/24`, no ports) | internal | WireGuard |
+
+So the lifeboat goes on **`vmbr2`, not `vmbr4`**. Proof rather than theory: from spark1,
+`ping 192.168.0.250` answers *on the same NIC as the other sparks*, and that MAC (`bc:24:11:…`) is a Proxmox
+guest — the vault's storage NIC. `vmbr2` is therefore the bridge the sparks can already reach; `vmbr4`'s
+cable touches something spark1 cannot see, and it is the truenas ↔ spark storage path you want left alone.
+
+```bash
+# in the vmbr2 stanza of /etc/network/interfaces, keep the existing address and add a second one:
+#     address 192.168.88.20/24
+#     address 192.168.0.38/24        # new: the sparks' subnet, so they can reach us without a router
+#     gateway 172.16.100.1           # unchanged — do NOT put a gateway on the fabric subnet
+ifreload -a
+```
+
+`192.168.0.38` was **free** (checked from spark1: no reply, neighbour entry `FAILED`). Adding a second
+address to a bridge is additive — no traffic moves, no interruption. Afterwards, from any spark:
+`ssh <user>@192.168.0.38` reaches balteus even if `vmbr0` is down. That is the whole point of it: the
+sparks are on the fabric and the fabric is a different NIC with a different cable.
+
+Note the fabric is one L2 carrying several subnets — `192.168.0.x` (sparks, the vault's storage NIC),
+`192.168.1.x` (the sparks' second ports) and `192.168.88.x` (this host) — with no router between them. That
+is why the lifeboat must be in the *sparks'* subnet: they have no route to `192.168.88.0/24`, so
+`192.168.88.20` is unreachable from them (measured).
+
 ## Step 1 — make the host bridge VLAN-aware (once)
 
 Proxmox refuses to start a guest with a `tag=` on a bridge that is not VLAN-aware, so this comes first.
@@ -53,6 +88,30 @@ tag question — `iot` reaches nothing internal, `lab` reaches nothing in mgmt, 
 Authoring note: `dhcp.tf` is where fixed identities are declared, so a guest that must keep its address
 suffix across classes gets a reservation there, in the same PR that moves it — the pattern the Sparks and
 the probe already follow.
+
+## About `bond1` — measured, and the answer is "leave it"
+
+`bond1` has exactly **one** slave (`eno1`), and the switch's side has exactly **one live member**: `ether2`
+(`13.7 GB` transmitted; `ether1` is dark, `rx=0 tx=0`). So there is nothing to dissolve "for `eno2`" — `eno2`
+was never in the bond; it is a separate device on its own bridge. A single-member LACP bond gives no
+aggregation and costs nothing; the switch negotiates LACP on the one live link and carries on.
+
+If you want it tidied anyway, both sides must change **in the same window** or the LAN link dies in between:
+the host drops to bare `eno1` (no LACP) and the switch's bond is replaced by a plain `ether2`. That is a
+switch change this repo owns, so it would be a PR merged *in* that window — and the lifeboat from Step 0 is
+what makes the window safe, since `bond0` and the fabric are untouched by it. Not worth doing for its own
+sake.
+
+Worth considering later instead: the switch's `ether1` is dark, and `enp68s0` on the host is unused
+(`autostart=No`). If it is a usable port on that card, it would make a real two-member LAN bond — the
+guests' estate-facing traffic (the vault's NFS at `172.16.100.148` included) runs over one link today.
+
+## The vault has two addresses, and both matter
+
+`truenas` (`vm 101`) answers at `172.16.100.148` (compat, estate-facing — the NFS the Hermes host mounts)
+**and** at `192.168.0.250` on the storage fabric (spark-facing). Moving it to `srv` has to keep both paths
+working, which is the second reason it goes last: its NICs sit on two different bridges with two different
+jobs.
 
 ## Suggested order
 

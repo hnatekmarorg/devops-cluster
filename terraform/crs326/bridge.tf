@@ -177,18 +177,22 @@ resource "routeros_interface_bonding" "bukefalos" {
 # The PVE host's LAN port — a bare `ether2` since the LACP bond was dissolved. Untagged in compat
 # (pvid 1, unchanged) and tagged for every class, which is what lets guests move one at a time.
 resource "routeros_interface_bridge_port" "pve_lan" {
-  auto_isolate            = false
-  bpdu_guard              = false
-  bridge                  = "bridge"
-  broadcast_flood         = true
-  disabled                = false
-  edge                    = "auto"
-  fast_leave              = false
-  frame_types             = "admit-all"
-  horizon                 = "none"
-  hw                      = true
-  ingress_filtering       = true
-  interface               = "ether2"
+  auto_isolate      = false
+  bpdu_guard        = false
+  bridge            = "bridge"
+  broadcast_flood   = true
+  disabled          = false
+  edge              = "auto"
+  fast_leave        = false
+  frame_types       = "admit-all"
+  horizon           = "none"
+  hw                = true
+  ingress_filtering = true
+  interface         = "ether2"
+  # The one write this change makes. The entry was created by hand during the repair, so RouterOS reports
+  # this as `auto` (the provider reads that as unset) while every sibling carries 10. Expressing `auto`
+  # is not possible -- the attribute takes a number -- so the config asserts 10, making the port uniform
+  # with its 22 siblings. Inert with STP off, which is how this bridge runs.
   internal_path_cost      = 10
   learn                   = "auto"
   multicast_router        = "temporary-query"

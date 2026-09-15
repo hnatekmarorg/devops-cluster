@@ -53,12 +53,16 @@ locals {
   # Fixed addresses for the hosts the agent's own path depends on. MACs measured from the live
   # lease table (2026-09-14). These are the reason a device can move segments without anything
   # that talks to it needing to learn a new number — only a new subnet.
+  # `class` indexes the DHCP server resource rather than naming it as a string: a literal name
+  # creates no dependency edge, so the leases were attempted before their server existed and
+  # RouterOS answered "input does not match any value of server". A reference makes Terraform
+  # order them, which is the only thing that was wrong with them.
   dhcp_reservations = {
-    "spark1"    = { mac = "30:C5:99:3E:37:65", address = "172.16.30.136", server = "dhcp-lab" }
-    "spark2"    = { mac = "30:C5:99:3E:3F:DE", address = "172.16.30.137", server = "dhcp-lab" }
-    "spark3"    = { mac = "30:C5:99:3F:25:2E", address = "172.16.30.112", server = "dhcp-lab" }
-    "spark4"    = { mac = "30:C5:99:3F:A3:8B", address = "172.16.30.110", server = "dhcp-lab" }
-    "inference" = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", server = "dhcp-lab" }
+    "spark1"    = { mac = "30:C5:99:3E:37:65", address = "172.16.30.136", class = "lab" }
+    "spark2"    = { mac = "30:C5:99:3E:3F:DE", address = "172.16.30.137", class = "lab" }
+    "spark3"    = { mac = "30:C5:99:3F:25:2E", address = "172.16.30.112", class = "lab" }
+    "spark4"    = { mac = "30:C5:99:3F:A3:8B", address = "172.16.30.110", class = "lab" }
+    "inference" = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
   }
 }
 
@@ -77,8 +81,13 @@ resource "routeros_ip_dhcp_server" "class" {
   interface    = each.value.interface
   address_pool = routeros_ip_pool.class[each.key].name
   lease_time   = "10m" # matches the compat scope: fast propagation in both directions
-  disabled     = false
-  comment      = "${local.managed_by} (${var.router_name}) — ${each.key}"
+
+  # The device's own default, declared rather than omitted: the provider reads it back and plans
+  # `-> null` when the config is silent, i.e. it would *clear* a setting the device wants set.
+  # Same lesson as `vrf` — adopting an object means declaring what it already has.
+  dynamic_lease_identifiers = "client-mac,client-id"
+  disabled                  = false
+  comment                   = "${local.managed_by} (${var.router_name}) — ${each.key}"
 }
 
 resource "routeros_ip_dhcp_server_network" "class" {
@@ -97,6 +106,6 @@ resource "routeros_ip_dhcp_server_lease" "reserved" {
 
   address     = each.value.address
   mac_address = each.value.mac
-  server      = each.value.server
+  server      = routeros_ip_dhcp_server.class[each.value.class].name
   comment     = "${local.managed_by} — fixed identity: the Hermes host reaches this by IP"
 }

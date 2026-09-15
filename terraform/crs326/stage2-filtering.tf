@@ -106,11 +106,27 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
 # lands in compat via the port's pvid 1 — and it means a guest that is tagged into the class is carried
 # instead of dropped. This is what lets balteus's guests move one at a time, which matters because the same
 # port carries the vault's storage path and this agent's own NFS mount.
+# Adopted, not created: the push that added this row lost its runner mid-apply (the CI runner sits
+# behind the port the switch change was interrupting), so the row is live and absent from the state.
+# Without this the next apply fails with "vlan already added".
+import {
+  to = routeros_interface_bridge_vlan.srv_trunk
+  id = "*9"
+}
+
 resource "routeros_interface_bridge_vlan" "srv_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["40"]
   tagged   = ["ether18", "ether2"]
   comment  = "srv — transport only; the router terminates it, balteus's guests live in it"
+}
+
+# Adopted, not created: the push that added this row lost its runner mid-apply (the CI runner sits
+# behind the port the switch change was interrupting), so the row is live and absent from the state.
+# Without this the next apply fails with "vlan already added".
+import {
+  to = routeros_interface_bridge_vlan.vpn_trunk
+  id = "*8"
 }
 
 resource "routeros_interface_bridge_vlan" "vpn_trunk" {

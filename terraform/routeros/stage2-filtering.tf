@@ -115,11 +115,27 @@ resource "routeros_interface_bridge_vlan" "lab_trunk" {
 # nothing like enough to carry them — measured 2026-09-15, when the switch's VLAN table showed no row for
 # either. They are what balteus's guests in those classes need to reach their gateway, so they arrive with
 # the trunk that makes those classes usable.
+# Adopted, not created: the push that added this row lost its runner mid-apply (the CI runner sits
+# behind the port the switch change was interrupting), so the row is live and absent from the state.
+# Without this the next apply fails with "vlan already added".
+import {
+  to = routeros_interface_bridge_vlan.srv_trunk
+  id = "*A"
+}
+
 resource "routeros_interface_bridge_vlan" "srv_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["40"]
   tagged   = ["ether4"]
   comment  = "srv — transport to the switch and balteus's guests; L3 is vlan40-srv here"
+}
+
+# Adopted, not created: the push that added this row lost its runner mid-apply (the CI runner sits
+# behind the port the switch change was interrupting), so the row is live and absent from the state.
+# Without this the next apply fails with "vlan already added".
+import {
+  to = routeros_interface_bridge_vlan.vpn_trunk
+  id = "*B"
 }
 
 resource "routeros_interface_bridge_vlan" "vpn_trunk" {

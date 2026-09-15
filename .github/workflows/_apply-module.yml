@@ -1,0 +1,157 @@
+# The apply steps for ONE device, written once. Called by tf-apply.yml from a static job per device.
+#
+# Why not a matrix: `environment:` cannot take a matrix value — GitHub rejects
+# `environment: ${{ matrix.environment }}` outright ("Unrecognized named-value: 'matrix'"). The
+# environment is what scopes a device's *write* credential, so a per-device approval gate means a
+# job per device, and a job per device means the steps live here, once.
+#
+# Inputs are three explicit strings rather than a module name to be looked up: the endpoint and the
+# state key are per device, and a wrong pair would apply one device's configuration to another.
+name: apply one module
+
+on:
+  workflow_call:
+    inputs:
+      module:
+        description: 'module directory under terraform/ (routeros, crs326)'
+        required: true
+        type: string
+      host:
+        description: 'RouterOS API endpoint for this device (api://host:8728)'
+        required: true
+        type: string
+      state_key:
+        description: 'state object key in the bucket — unique per device, never shared'
+        required: true
+        type: string
+      note:
+        description: 'why this apply is being run (recorded in the run summary)'
+        required: false
+        type: string
+        default: ''
+    # Explicitly declared, and mapped by the caller from its own context — the caller is the job
+    # that declares the environment, so that is where an environment-scoped secret resolves.
+    secrets:
+      ROS_WRITE_USERNAME:
+        required: false
+      ROS_WRITE_PASSWORD:
+        required: false
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  # The runner pod egresses through a proxy; LAN traffic must bypass it or the call to the router
+  # gets proxied and fails.
+  NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
+  ROS_HOSTURL: ${{ inputs.host }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT || 'https://console-minio.hnatekmar.xyz' }}
+  TF_STATE_KEY: ${{ inputs.state_key }}
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'europe' }}
+  ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
+  ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  plan-apply:
+    name: plan · apply
+    runs-on: gha-runner-scale-set-hnatekmarorg
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # tofu_wrapper: false — the action's default wrapper is a Node script and this runner image
+      # has no `node` on PATH (only the runner's bundled copy), so the wrapper dies with
+      # "/usr/bin/env: 'node': No such file or directory".
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.12.6
+          tofu_wrapper: false
+
+      - name: Arming switch + preflight (write credential)
+        id: preflight
+        working-directory: terraform/${{ inputs.module }}
+        env:
+          ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
+        run: |
+          if [ "$ROUTEROS_CI_ENABLED" != "true" ]; then
+            {
+              echo "### RouterOS CI is not armed — nothing was applied"
+              echo
+              echo "Repository variable \`ROUTEROS_CI_ENABLED\` is not \`true\`. It is the switch that"
+              echo "turns merging \`terraform/**\` into a device change."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::ROUTEROS_CI_ENABLED != true — apply skipped by design."
+            echo "armed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Armed: a missing credential is now a real failure, not a skip.
+          ../../scripts/tofu-ci.sh --role=write check
+          echo "armed=true" >> "$GITHUB_OUTPUT"
+
+      - name: init · plan · apply
+        if: steps.preflight.outputs.armed == 'true'
+        working-directory: terraform/${{ inputs.module }}
+        run: |
+          set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
+          ../../scripts/tofu-ci.sh --role=write init -input=false
+          ../../scripts/tofu-ci.sh --role=write plan \
+            -input=false -no-color -lock-timeout=5m -out=apply.tfplan | tee apply-plan.txt
+          ../../scripts/tofu-ci.sh --role=write apply -input=false -no-color apply.tfplan | tee apply.txt
+
+      - name: Record what changed
+        if: steps.preflight.outputs.armed == 'true'
+        working-directory: terraform/${{ inputs.module }}
+        run: |
+          {
+            echo "### ${{ inputs.module }} apply — $(date -u +%FT%TZ)"
+            echo
+            echo "Commit: \`${GITHUB_SHA}\` · run: \`${GITHUB_RUN_ID}\`"
+            if [ -n "${{ inputs.note }}" ]; then echo "Note: ${{ inputs.note }}"; fi
+            echo
+            echo '<details><summary>plan</summary>'
+            echo
+            echo '```'
+            tail -60 apply-plan.txt
+            echo '```'
+            echo
+            echo '</details>'
+            echo
+            echo '<details><summary>apply</summary>'
+            echo
+            echo '```'
+            tail -60 apply.txt
+            echo '```'
+            echo
+            echo '</details>'
+            echo
+            echo '<details><summary>outputs (post-apply state)</summary>'
+            echo
+            echo '```'
+            ../../scripts/tofu-ci.sh output
+            echo '```'
+            echo
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the plan for the record
+        if: steps.preflight.outputs.armed == 'true'
+        # A record-keeping upload must never fail a run that already changed the device: it went red
+        # after a successful apply twice (a credential this job deliberately lacks, then ECONNRESET
+        # mid-upload through the runner's proxy — likelier the bigger the plan).
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.module }}-apply-${{ github.run_id }}
+          path: |
+            terraform/${{ inputs.module }}/apply-plan.txt
+            terraform/${{ inputs.module }}/apply.txt
+          retention-days: 30

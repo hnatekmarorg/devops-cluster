@@ -30,7 +30,9 @@ locals {
   #   172.16.64.0/20    64 –  79.255   iot     host space 172.16.70.0/24
   #   172.16.96.0/20    96 – 111.255   vpn     host space 172.16.96.0/24  (zone, not a VLAN)
   #   172.16.100.0/24                  compat  the flat LAN — drains last, deliberately
-  #                                             outside the blocks so it can disappear cleanly
+  #                                             outside the *host spaces* so it can disappear cleanly,
+  #                                             though it does sit inside the vpn /20 — which is why
+  #                                             `vpn-nets` enumerates that block minus this one
   #   172.16.20.0/24 / 172.16.50.0/24          retired classes (trusted, guest): numbers stay
   #                                             unused rather than recycled
   #
@@ -70,9 +72,15 @@ locals {
   # Blocks, not host subnets: a rule should not need editing because a host moved within its
   # own class. Retired classes (trusted, guest) are not listed — nothing will ever be in them.
   address_lists = {
-    "lan-nets"       = ["172.16.100.0/24"]
-    "mgmt-nets"      = ["172.16.0.0/20"]
-    "vpn-nets"       = ["172.16.96.0/20", "172.16.112.0/20"]
+    "lan-nets"  = ["172.16.100.0/24"]
+    "mgmt-nets" = ["172.16.0.0/20"]
+    # The vpn block *minus* the compat block, and that exclusion is load-bearing: compat
+    # (172.16.100.0/24) sits INSIDE the vpn /20, so a list that spans the whole block makes two class
+    # rows claim the same addresses — and then a class's verdict depends on rule order, not on policy.
+    # Measured, 2026-09-15: with the list as a plain /20, the enforced `lab → vpn` drop silently swallowed
+    # every lab → compat flow (a lab host could not reach the vault, the NAS, or anything else in compat),
+    # because 172.16.100.x matched `vpn-nets` first. The pieces below are the /20 without 100.0/24.
+    "vpn-nets"       = ["172.16.96.0/22", "172.16.101.0/24", "172.16.102.0/23", "172.16.104.0/21", "172.16.112.0/20"]
     "lab-nets"       = ["172.16.16.0/20"]
     "srv-nets"       = ["172.16.32.0/19"]
     "iot-nets"       = ["172.16.64.0/20"]

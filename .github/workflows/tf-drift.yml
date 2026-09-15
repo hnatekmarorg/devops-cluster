@@ -89,7 +89,7 @@ jobs:
 
       - name: Arming switch + preflight (read credential)
         id: preflight
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         env:
           ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
         run: |
@@ -104,7 +104,7 @@ jobs:
       - name: init + is there a baseline to watch yet?
         id: baseline
         if: steps.preflight.outputs.armed == 'true'
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: |
           ../../scripts/tofu-ci.sh --role=read init -input=false
           # Until stage 1 has been applied once, `tofu plan` is non-empty by
@@ -124,7 +124,7 @@ jobs:
       - name: plan -detailed-exitcode
         id: drift
         if: steps.preflight.outputs.armed == 'true' && steps.baseline.outputs.baseline == 'true'
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: |
           set +e
           ../../scripts/tofu-ci.sh --role=read plan \

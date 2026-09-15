@@ -100,7 +100,7 @@ jobs:
           tofu_wrapper: false
 
       - name: Format check
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: ../../scripts/tofu-ci.sh fmt -check -recursive .
 
       # Everything below needs the bootstrap (RouterOS users + state store). The
@@ -109,13 +109,14 @@ jobs:
       - name: Preflight — are the CI prerequisites in place?
         id: preflight
         continue-on-error: true
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: ../../scripts/tofu-ci.sh --role=read check
 
       - name: init · validate · plan
         if: steps.preflight.outcome == 'success'
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: |
+          set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
           ../../scripts/tofu-ci.sh --role=read init -input=false
           ../../scripts/tofu-ci.sh validate
           ../../scripts/tofu-ci.sh --role=read plan \

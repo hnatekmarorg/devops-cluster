@@ -102,7 +102,7 @@ jobs:
 
       - name: Arming switch + preflight (write credential)
         id: preflight
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         env:
           ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
         run: |
@@ -126,8 +126,9 @@ jobs:
 
       - name: init · plan · apply
         if: steps.preflight.outputs.armed == 'true'
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: |
+          set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
           ../../scripts/tofu-ci.sh --role=write init -input=false
           ../../scripts/tofu-ci.sh --role=write plan \
             -input=false -no-color -lock-timeout=5m -out=apply.tfplan | tee apply-plan.txt
@@ -135,7 +136,7 @@ jobs:
 
       - name: Record what changed
         if: steps.preflight.outputs.armed == 'true'
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: |
           {
             echo "### RouterOS apply — $(date -u +%FT%TZ)"

@@ -1,10 +1,14 @@
 # actionlint configuration (https://github.com/rhysd/actionlint).
 #
-# The workflows run on the estate's self-hosted, on-prem ARC scale set — a custom
-# label actionlint cannot know. Declaring it here keeps `actionlint` useful as a
-# pre-merge check of the CI configuration itself:
+# The workflows run on self-hosted runners whose labels actionlint cannot know — the
+# estate's on-prem ARC scale set, and the dedicated mgmt-class runner that the
+# device-touching workflows moved to (see docs/ci-runner.md). Declaring them here keeps
+# `actionlint` useful as a pre-merge check of the CI configuration itself:
 #
 #   actionlint -color .github/workflows/*.yml
 self-hosted-runner:
   labels:
-    - gha-runner-scale-set-hnatekmarorg
+    - gha-runner-scale-set-hnatekmarorg   # ARC scale set (k8s cluster) — workloads and the unfired workflows
+    - mgmt                                # the dedicated runner's class
+    - tofu                                # on the dedicated runner: it is what applies the network IaC
+    - dind                                # renovate's own scale set

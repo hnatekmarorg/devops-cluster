@@ -21,6 +21,8 @@ description: >
 #   ROS_WRITE_USERNAME / ROS_WRITE_PASSWORD         the device's write identity
 #   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY       state backend credential
 #   TF_STATE_BUCKET / TF_STATE_ENDPOINT / TF_STATE_REGION, TF_IN_AUTOMATION, TF_INPUT, NO_PROXY
+#   ROUTEROS_CI_ENABLED                             the arming switch, read here from `vars` by the
+#                                                   workflow — a composite action has no `vars` context
 
 inputs:
   module:
@@ -52,8 +54,9 @@ runs:
       id: preflight
       shell: bash
       working-directory: terraform/${{ inputs.module }}
-      env:
-        ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
+      # No step-level switch here: `vars` is NOT an available context inside a composite action
+      # ("Unrecognized named-value: 'vars'", measured), so ROUTEROS_CI_ENABLED is set by the calling
+      # workflow's env and simply read below.
       run: |
         if [ "$ROUTEROS_CI_ENABLED" != "true" ]; then
           {

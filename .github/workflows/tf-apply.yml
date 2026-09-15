@@ -39,6 +39,9 @@ permissions:
 env:
   TF_IN_AUTOMATION: 'true'
   TF_INPUT: 'false'
+  # The arming switch is read from `vars` here, at workflow level, because a composite action has no
+  # `vars` context ("Unrecognized named-value: 'vars'", measured) — it is passed down as plain env.
+  ROUTEROS_CI_ENABLED: ${{ vars.ROUTEROS_CI_ENABLED || 'false' }}
   # The runner pod egresses through a proxy; LAN traffic must bypass it or the call to the device gets
   # proxied and fails. Uppercase only — Go's httpproxy checks NO_PROXY first, and both spellings are
   # one key to GitHub's env.

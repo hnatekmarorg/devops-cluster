@@ -142,7 +142,7 @@ resource "routeros_interface_bridge" "bridge" {
   priority            = "0x8000"
   protocol_mode       = "rstp"
   transmit_hold_count = 6
-  vlan_filtering      = false
+  vlan_filtering      = true
 }
 
 # the PVE host's bond — becomes a **trunk** carrying every class when per-VM tags land
@@ -666,7 +666,7 @@ resource "routeros_interface_bridge_port" "ether3" {
   disabled                = false
   edge                    = "auto"
   fast_leave              = false
-  frame_types             = "admit-all"
+  frame_types             = "admit-only-untagged-and-priority-tagged"
   horizon                 = "none"
   hw                      = true
   ingress_filtering       = true
@@ -679,7 +679,7 @@ resource "routeros_interface_bridge_port" "ether3" {
   path_cost               = "10"
   point_to_point          = "auto"
   priority                = "0x80"
-  pvid                    = 1
+  pvid                    = 10
   restricted_role         = false
   restricted_tcn          = false
   tag_stacking            = false

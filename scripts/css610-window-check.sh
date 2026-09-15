@@ -43,7 +43,7 @@ echo
 echo "-- the fixed points (must never change) --"
 ping1 172.16.100.1   "router (compat 172.16.100.1)"
 ping1 172.16.100.2   "main switch (compat .2)"
-ping1 172.16.100.113 "spine CRS804 (compat .113)"
+ping1 172.16.10.201  "spine CRS804 (mgmt .201 — compat .113 retired 2026-09-15)"
 ping1 172.16.100.117 "CSS610 itself (compat .117)"
 ping1 172.16.10.1    "router (mgmt .10.1)"
 ping1 172.16.10.2    "main switch (mgmt .10.2)"

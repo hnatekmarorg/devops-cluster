@@ -784,15 +784,19 @@ resource "routeros_interface_bridge_port" "ether6" {
 
 # balteus' IPMI (`.46`, `3c:ec:ef:73:09:9d`) — out-of-band plane
 resource "routeros_interface_bridge_port" "ether7" {
-  auto_isolate            = false
-  bpdu_guard              = false
-  bridge                  = "bridge"
-  broadcast_flood         = true
-  comment                 = "defconf"
+  auto_isolate    = false
+  bpdu_guard      = false
+  bridge          = "bridge"
+  broadcast_flood = true
+  # The out-of-band plane's access port: balteus' IPMI/BMC (`3C:EC:EF:73:09:9D`, address `.46` in
+  # whichever segment it lives in). Untagged VLAN 10 and nothing else, exactly like the escape port
+  # `ether3` — the BMC cannot tag, so it must not be reachable in compat and must not inject another
+  # segment's traffic. Until 2026-09-15 it was an ordinary compat port (`pvid = 1`, `admit-all`).
+  comment                 = "IPMI access port — untagged VLAN 10 only"
   disabled                = false
   edge                    = "auto"
   fast_leave              = false
-  frame_types             = "admit-all"
+  frame_types             = "admit-only-untagged-and-priority-tagged"
   horizon                 = "none"
   hw                      = true
   ingress_filtering       = true
@@ -805,7 +809,7 @@ resource "routeros_interface_bridge_port" "ether7" {
   path_cost               = "10"
   point_to_point          = "auto"
   priority                = "0x80"
-  pvid                    = 1
+  pvid                    = 10
   restricted_role         = false
   restricted_tcn          = false
   tag_stacking            = false

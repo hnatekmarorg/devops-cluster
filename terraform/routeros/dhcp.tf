@@ -50,19 +50,30 @@ locals {
     }
   }
 
-  # Fixed addresses for the hosts the agent's own path depends on. MACs measured from the live
-  # lease table (2026-09-14). These are the reason a device can move segments without anything
-  # that talks to it needing to learn a new number — only a new subnet.
+  # Fixed addresses for the hosts the estate's own paths depend on — including the out-of-band plane.
+  # MACs measured from the live tables. These are the reason a device can move segments without
+  # anything that talks to it needing to learn a new number — only a new subnet.
+  #
+  # `balteus-ipmi` keeps its `.46` suffix across segments, like the Sparks keep theirs: the BMC is
+  # configured with a static address (measured 2026-09-15 — it has no lease and `.46` sits outside
+  # the unmanaged compat pool), so this reservation is the *documented claim* on `172.16.10.46` in
+  # mgmt and the address it takes if it is ever switched to DHCP. `ether7` is its access port.
+  #
   # `class` indexes the DHCP server resource rather than naming it as a string: a literal name
   # creates no dependency edge, so the leases were attempted before their server existed and
   # RouterOS answered "input does not match any value of server". A reference makes Terraform
   # order them, which is the only thing that was wrong with them.
   dhcp_reservations = {
-    "spark1"    = { mac = "30:C5:99:3E:37:65", address = "172.16.30.136", class = "lab" }
-    "spark2"    = { mac = "30:C5:99:3E:3F:DE", address = "172.16.30.137", class = "lab" }
-    "spark3"    = { mac = "30:C5:99:3F:25:2E", address = "172.16.30.112", class = "lab" }
-    "spark4"    = { mac = "30:C5:99:3F:A3:8B", address = "172.16.30.110", class = "lab" }
-    "inference" = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
+    "spark1"       = { mac = "30:C5:99:3E:37:65", address = "172.16.30.136", class = "lab" }
+    "spark2"       = { mac = "30:C5:99:3E:3F:DE", address = "172.16.30.137", class = "lab" }
+    "spark3"       = { mac = "30:C5:99:3F:25:2E", address = "172.16.30.112", class = "lab" }
+    "spark4"       = { mac = "30:C5:99:3F:A3:8B", address = "172.16.30.110", class = "lab" }
+    "inference"    = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
+    "balteus-ipmi" = { mac = "3C:EC:EF:73:09:9D", address = "172.16.10.46", class = "mgmt" }
+    # Infrastructure on a pool lease is a fragility: the spine's management address must not depend
+    # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
+    # than being moved again for suffix symmetry — one address change per device is enough.
+    "crs804" = { mac = "D0:EA:11:02:70:5A", address = "172.16.10.201", class = "mgmt" }
   }
 }
 

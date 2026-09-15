@@ -74,6 +74,11 @@ locals {
     # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
     # than being moved again for suffix symmetry — one address change per device is enough.
     "crs804" = { mac = "D0:EA:11:02:70:5A", address = "172.16.10.201", class = "mgmt" }
+    # The TV-isolation gateway (lgtv-gw) moves segments by cable — compat → mgmt → iot — so it is
+    # deliberately a DHCP client, and this reservation is what keeps its `.125` identity in each class
+    # without a reconfiguration per move. It lives in mgmt today; the iot equivalent lands with the iot
+    # scope (and the VLAN-70 carriage that scope needs).
+    "probe" = { mac = "00:E0:4C:2A:2E:C6", address = "172.16.10.125", class = "mgmt" }
   }
 }
 

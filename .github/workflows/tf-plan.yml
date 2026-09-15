@@ -69,6 +69,24 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: gha-runner-scale-set-hnatekmarorg
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: routeros
+            host: api://172.16.100.1:8728
+            state_key: routeros/rb5009.tfstate
+            environment: routeros-production
+          - module: crs326
+            host: api://172.16.100.2:8728
+            state_key: crs326/crs326.tfstate
+            environment: crs326-production
+    # Per-module overrides of the workflow-level env: one device per matrix entry, one state file
+    # each, and (for apply) one environment each — which is what makes a per-device approval gate
+    # possible: approving the router's apply says nothing about the switch's.
+    env:
+      ROS_HOSTURL: ${{ matrix.host }}
+      TF_STATE_KEY: ${{ matrix.state_key }}
     steps:
       - uses: actions/checkout@v4
 
@@ -82,7 +100,7 @@ jobs:
           tofu_wrapper: false
 
       - name: Format check
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: ../../scripts/tofu-ci.sh fmt -check -recursive .
 
       # Everything below needs the bootstrap (RouterOS users + state store). The
@@ -91,13 +109,14 @@ jobs:
       - name: Preflight — are the CI prerequisites in place?
         id: preflight
         continue-on-error: true
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: ../../scripts/tofu-ci.sh --role=read check
 
       - name: init · validate · plan
         if: steps.preflight.outcome == 'success'
-        working-directory: terraform/routeros
+        working-directory: terraform/${{ matrix.module }}
         run: |
+          set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
           ../../scripts/tofu-ci.sh --role=read init -input=false
           ../../scripts/tofu-ci.sh validate
           ../../scripts/tofu-ci.sh --role=read plan \
@@ -107,11 +126,12 @@ jobs:
         if: always() && github.event_name == 'pull_request' && steps.preflight.outcome == 'success'
         uses: actions/github-script@v7
         env:
-          PLAN_PATH: terraform/routeros/plan.txt
+          PLAN_PATH: terraform/${{ matrix.module }}/plan.txt
+          MODULE: ${{ matrix.module }}
         with:
           script: |
             const fs = require('fs');
-            const marker = '<!-- tf-plan-routeros -->';
+            const marker = `<!-- tf-plan-${process.env.MODULE} -->`;
             let plan = '';
             try { plan = fs.readFileSync(process.env.PLAN_PATH, 'utf8'); }
             catch (e) { plan = '(plan output not found — see the job log)'; }
@@ -133,7 +153,7 @@ jobs:
             }
             const body = [
               marker,
-              '### RouterOS plan (read-only)',
+              `### ${process.env.MODULE} plan (read-only)`,
               '',
               '<details><summary>tofu plan</summary>',
               '',

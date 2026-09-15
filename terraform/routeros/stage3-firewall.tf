@@ -101,7 +101,6 @@ resource "routeros_ip_firewall_filter" "iot_deny" {
 # prefix — measured rather than guessed, and one accept rule away.
 resource "routeros_ip_firewall_filter" "iot_router_deny" {
   chain            = "input"
-  place_before     = routeros_ip_firewall_filter.iot_router_dhcp.id
   action           = "drop"
   log              = true
   src_address_list = "iot-nets"
@@ -109,11 +108,17 @@ resource "routeros_ip_firewall_filter" "iot_router_deny" {
   comment          = "matrix phase 2 (enforced, logged): iot reaches the router only for DHCP and ICMP"
 }
 
-# Ordered *before* the drop above: without this, DHCP from the whole segment would be the first casualty
-# of the catch-all, and the ordering of two rules created in the same apply is not something to leave to
-# chance. `place_before` anchored to a Terraform-managed rule is the provider's supported way to say it.
+# The DHCP accept, placed **before** the catch-all on purpose: the input chain's fall-through accept no
+# longer applies once a catch-all drop exists, and two rules created in one apply have no order between
+# them unless it is stated. `place_before` anchored to a Terraform-managed rule is the provider's
+# supported way to say it.
+#
+# The anchor sits on *this* rule and not on the older one deliberately: `place_before` forces a
+# replacement, so putting it on `iot_router_deny` would destroy and re-create a live drop rule — a
+# momentary gap in enforcement plus a noisy plan — where anchoring the brand-new rule costs nothing.
 resource "routeros_ip_firewall_filter" "iot_router_dhcp" {
   chain            = "input"
+  place_before     = routeros_ip_firewall_filter.iot_router_deny.id
   action           = "accept"
   protocol         = "udp"
   src_address_list = "iot-nets"

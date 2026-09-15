@@ -17,10 +17,6 @@ import {
   id = "*1B"
 }
 import {
-  to = routeros_interface_bonding.balteus
-  id = "*1C"
-}
-import {
   to = routeros_interface_bonding.bukefalos
   id = "*1E"
 }
@@ -113,13 +109,15 @@ import {
   id = "*19"
 }
 import {
-  # the host's LAN port; renamed in the same change that moved it from the bond to `ether2`
-  to = routeros_interface_bridge_port.balteus_lan
-  id = "*1A"
-}
-import {
-  to = routeros_interface_bridge_port.bukefalos
-  id = "*1B"
+  # the host's LAN port on `ether2`, adopted at the id the device actually holds: dissolving the bond
+  # took the old entry (`*1A`) with it, so the live entry is `*1C`.
+  #
+  # The address is deliberately one the state has never held. An import block whose target is already in
+  # the state is *skipped* ("already managed"), and the refresh then drops the stale entry as vanished --
+  # leaving a `create` planned for a port that exists, which RouterOS refuses, so the plan would never
+  # come back empty. Both halves of that are measured, not guessed.
+  to = routeros_interface_bridge_port.pve_lan
+  id = "*1C"
 }
 
 # the flat bridge: every port pvid=1, `vlan-filtering` off, no VLAN entries. Adopted as-is so the filtering step is a one-attribute diff.
@@ -146,35 +144,13 @@ resource "routeros_interface_bridge" "bridge" {
   vlan_filtering      = true
 }
 
-# The PVE host's LAN bond — **dissolved**. The host now presents a bare `eno1`, because a
-# single-member 802.3ad bond aggregated nothing while making this side *expect* LACP: the moment the
-# host stopped negotiating, the link would stop passing that VLAN. `ether2` is released here and
-# becomes the host's plain port below.
+# The PVE host's LAN bond is gone: dissolved host-side and deleted on the device, so nothing recreates
+# a husk here. Its second member is now `ether2`, carrying the host's LAN directly (see the port below).
 #
-# This bond survives as a parked single-member on a dark `ether1` — deliberately. Releasing the slave
-# is an in-place change, whereas deleting the bond and attaching a port in the same apply cannot be
-# ordered (Terraform would be free to attach `ether2` while it is still a slave, and RouterOS refuses
-# that). A follow-up removes this husk once the link is stable.
-resource "routeros_interface_bonding" "balteus" {
-  arp                  = "enabled"
-  arp_interval         = "100ms"
-  arp_ip_targets       = ""
-  arp_timeout          = "auto"
-  disabled             = false
-  down_delay           = "0ms"
-  lacp_mode            = "active"
-  lacp_rate            = "30secs"
-  link_monitoring      = "mii"
-  mii_interval         = "100ms"
-  min_links            = 0
-  mode                 = "802.3ad"
-  mtu                  = 1500
-  name                 = "balteus"
-  primary              = "none"
-  slaves               = ["ether1"]
-  transmit_hash_policy = "layer-3-and-4"
-  up_delay             = "0ms"
-}
+# CEILING WORTH KNOWING: the CI runner runs on a guest *behind this port*. An apply that interrupts
+# `ether2` therefore kills its own runner mid-flight — which is exactly how the first attempt at this
+# change died, leaving the device correct and the state stale. Per-guest tags never touch this link.
+
 
 # idle bond, reserved for the second server
 resource "routeros_interface_bonding" "bukefalos" {
@@ -198,62 +174,25 @@ resource "routeros_interface_bonding" "bukefalos" {
   up_delay             = "0ms"
 }
 
-# the PVE host's bond — becomes a **trunk** carrying every class when per-VM tags land
-moved {
-  from = routeros_interface_bridge_port.balteus
-  to   = routeros_interface_bridge_port.balteus_lan
-}
-
 # The PVE host's LAN port — a bare `ether2` since the LACP bond was dissolved. Untagged in compat
 # (pvid 1, unchanged) and tagged for every class, which is what lets guests move one at a time.
-# `depends_on` is the whole ordering mechanism: the slave must be released above before this port can
-# attach to `ether2`, or RouterOS refuses with "interface is slave of bond".
-resource "routeros_interface_bridge_port" "balteus_lan" {
-  auto_isolate            = false
-  bpdu_guard              = false
-  bridge                  = "bridge"
-  broadcast_flood         = true
-  disabled                = false
-  edge                    = "auto"
-  fast_leave              = false
-  frame_types             = "admit-all"
-  horizon                 = "none"
-  hw                      = true
-  ingress_filtering       = true
-  interface               = "ether2"
-  internal_path_cost      = 10
-  learn                   = "auto"
-  multicast_router        = "temporary-query"
-  mvrp_applicant_state    = "normal-participant"
-  mvrp_registrar_state    = "normal"
-  path_cost               = "10"
-  point_to_point          = "auto"
-  priority                = "0x80"
-  pvid                    = 1
-  restricted_role         = false
-  restricted_tcn          = false
-  tag_stacking            = false
-  trusted                 = false
-  unknown_multicast_flood = true
-  unknown_unicast_flood   = true
-
-  depends_on = [routeros_interface_bonding.balteus]
-}
-
-# idle bond, reserved for the second server
-resource "routeros_interface_bridge_port" "bukefalos" {
-  auto_isolate            = false
-  bpdu_guard              = false
-  bridge                  = "bridge"
-  broadcast_flood         = true
-  disabled                = false
-  edge                    = "auto"
-  fast_leave              = false
-  frame_types             = "admit-all"
-  horizon                 = "none"
-  hw                      = true
-  ingress_filtering       = true
-  interface               = "bukefalos"
+resource "routeros_interface_bridge_port" "pve_lan" {
+  auto_isolate      = false
+  bpdu_guard        = false
+  bridge            = "bridge"
+  broadcast_flood   = true
+  disabled          = false
+  edge              = "auto"
+  fast_leave        = false
+  frame_types       = "admit-all"
+  horizon           = "none"
+  hw                = true
+  ingress_filtering = true
+  interface         = "ether2"
+  # The one write this change makes. The entry was created by hand during the repair, so RouterOS reports
+  # this as `auto` (the provider reads that as unset) while every sibling carries 10. Expressing `auto`
+  # is not possible -- the attribute takes a number -- so the config asserts 10, making the port uniform
+  # with its 22 siblings. Inert with STP off, which is how this bridge runs.
   internal_path_cost      = 10
   learn                   = "auto"
   multicast_router        = "temporary-query"
@@ -270,6 +209,9 @@ resource "routeros_interface_bridge_port" "bukefalos" {
   unknown_multicast_flood = true
   unknown_unicast_flood   = true
 }
+
+# The idle bond has no bridge port on the device — it was removed with the other dead ports, and this
+# resource went with it. The bond itself stays: it is the second server's reservation.
 
 resource "routeros_interface_bridge_port" "ether10" {
   auto_isolate            = false

@@ -50,10 +50,10 @@ resource "routeros_interface_bridge_vlan" "compat" {
   # `ether7` is absent for the same reason `ether3` is: it is no longer a compat port. It became the
   # out-of-band plane's access port (balteus IPMI, `.46`) — an untagged member of VLAN 10 only.
   untagged = ["balteus", "bukefalos", "ether4", "ether6", "ether8", "ether9",
-    "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether16", "ether17",
+    "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether17",
     "ether18", "ether19", "ether20", "ether21", "ether22", "sfp-sfpplus1", "sfp-sfpplus2",
   "bridge"]
-  comment = "compat — everything not yet migrated; does not include ether3, ether5 or ether7"
+  comment = "compat — everything not yet migrated; does not include ether3, ether7 or ether16"
 }
 
 resource "routeros_interface_bridge_vlan" "mgmt" {
@@ -107,11 +107,11 @@ resource "routeros_interface_bridge_vlan" "iot_trunk" {
   # `ether4` is deliberately absent — that is the CSS610 uplink and no iot device sits behind it; the
   # segment's devices are reached through `ether16`, and a class only lists the ports that carry it.
   #
-  # `ether16` joins the untagged list in the same change that sets its `pvid` to 70 — never before:
-  # an untagged membership on a compat port would push VLAN 70 frames out of it *untagged*, straight
-  # into the compat segment's L2. Until then it stays a compat port and the dumb switch's devices
-  # (Deco, TV, gaming PC, and the probe today) keep working untouched.
+  # The port membership and the port's `pvid` travel together, which is why this is one row: `ether16`
+  # is an UNTAGGED member and its `pvid` is 70 (see crs326/bridge.tf). Tagging it instead would leave
+  # the segment's devices — a dumb switch, a Deco, a TV, a gaming PC, none of which can tag — receiving
+  # VLAN 70 frames they cannot read, and would leave the probe sitting in compat.
   tagged   = ["ether18"]
-  untagged = ["ether5"]
-  comment  = "iot — tagged to the router on ether18; ether5 is the probe's lane (ether16 joins at its flip)"
+  untagged = ["ether16"]
+  comment  = "iot — tagged to the router on ether18; ether16 is the untagged access port to the devices"
 }

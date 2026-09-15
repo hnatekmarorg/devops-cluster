@@ -46,6 +46,21 @@ locals {
     "stories-hermes.srv.hnatekmar.dev"     = "172.16.100.188"
     "sister-hermes.srv.hnatekmar.dev"      = "172.16.100.203"
 
+    # The box at `.30` — the estate's **reverse proxy**, and more behind it. Measured on the host: Caddy
+    # terminates TLS on 80/443 and is published to the WAN by dstnat; authentik + postgres + redis run
+    # behind it as the identity provider; and `lmproxy` behind it routes this agent's model traffic to the
+    # inference backends — which is why a request for `proxy.personal-hermes.hnatekmar.dev` lands on the
+    # LLM router. It also holds a storage-fabric address (`192.168.88.64`), which answers the open
+    # question of who else lives on that L2. Both names point at the same host deliberately: `proxy` is
+    # its hostname, `edge` is the role.
+    #
+    # Class note: a reverse proxy facing the internet is the DMZ tier, while the identity store and the
+    # model router behind it are keepers — so this one host plays both roles. Because it *is* a reverse
+    # proxy, its backends can live elsewhere, so splitting them (proxy in lab, keepers in srv) is a
+    # rearrangement rather than a rebuild.
+    "proxy.srv.hnatekmar.dev" = "172.16.100.30"
+    "edge.srv.hnatekmar.dev"  = "172.16.100.30"
+
     # lab — the DMZ-shaped workload zone; the Sparks and the inference host live here already
     "inference.lab.hnatekmar.dev" = "172.16.30.189"
     "spark1.lab.hnatekmar.dev"    = "172.16.30.136"

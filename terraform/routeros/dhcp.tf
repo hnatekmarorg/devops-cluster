@@ -95,6 +95,10 @@ locals {
     "personal-hermes"    = { mac = "BC:24:11:AA:F1:B6", address = "172.16.40.180", class = "srv" }
     "stories-hermes"     = { mac = "BC:24:11:95:D1:9A", address = "172.16.40.188", class = "srv" }
     "sister-hermes"      = { mac = "BC:24:11:58:A8:1E", address = "172.16.40.203", class = "srv" }
+    # The edge/identity/lmproxy host. `.100.30` is configured *statically on the box*, so this
+    # reservation is the documented claim on the address (the shape the BMC's `.46` has) and only takes
+    # effect if the box is switched to DHCP. Suffix preserved: `.40.30`.
+    "proxy" = { mac = "BC:24:11:75:DD:2B", address = "172.16.40.30", class = "srv" }
     # Infrastructure on a pool lease is a fragility: the spine's management address must not depend
     # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
     # than being moved again for suffix symmetry — one address change per device is enough.

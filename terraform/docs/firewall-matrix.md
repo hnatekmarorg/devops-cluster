@@ -71,7 +71,10 @@ depend on, against the live router, read-only:
    (connection-state / nat-state / ipsec / address / port / protocol) is exactly the shadow the invariant
    forbids.
 
-Exit 0 holds, 1 violated, 2 could not measure. It belongs in the plan workflow (the job already has read
+Exit 0 holds, 1 violated, 2 could not measure.
+The endgame is *adopted* state: once the router's whole chain — and its NAT — is declared in Terraform,
+placement becomes reviewable rather than asserted, and this check retires into a smoke test. Until then
+it is the only thing standing between the table above and a rule nobody meant to add. It belongs in the plan workflow (the job already has read
 credentials) and in whatever cadence reads the deny logs — the two together are the measure-then-enforce
 loop: this one says the policy *can* work, the report says what it would cost.
 

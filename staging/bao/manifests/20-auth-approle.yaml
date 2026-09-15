@@ -1,0 +1,16 @@
+---
+# Mount the approle auth backend (staging instance starts empty, so nothing
+# pre-exists — this is also why staging is worth doing: production already has it).
+apiVersion: auth.vault.upbound.io/v1alpha1
+kind: Backend
+metadata:
+  name: approle
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  providerConfigRef:
+    name: bao-staging
+  forProvider:
+    type: approle
+    path: approle

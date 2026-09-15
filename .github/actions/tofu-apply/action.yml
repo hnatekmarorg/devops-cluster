@@ -34,11 +34,15 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
+    # NOTE: the calling job must run `actions/checkout` BEFORE this action. GitHub loads a local
+    # action's files from the workspace to resolve it, and the workspace is empty until checkout has
+    # run — so a checkout *inside* the composite can never execute: the step fails with
+    # "Can't find 'action.yml' ... Did you forget to run actions/checkout before running your local
+    # action?" (measured).
 
-      # tofu_wrapper: false — the action's default wrapper is a Node script and this runner image has
-      # no `node` on PATH (only the runner's bundled copy), so the wrapper dies with
-      # "/usr/bin/env: 'node': No such file or directory".
+    # tofu_wrapper: false — the action's default wrapper is a Node script and this runner image has
+    # no `node` on PATH (only the runner's bundled copy), so the wrapper dies with
+    # "/usr/bin/env: 'node': No such file or directory".
     - uses: opentofu/setup-opentofu@v1
       with:
         tofu_version: 1.12.6

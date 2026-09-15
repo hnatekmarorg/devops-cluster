@@ -72,6 +72,9 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
+      # Checkout stays in the job, not in the composite: GitHub resolves a local action by reading its
+      # files from the workspace, which does not exist until checkout has run.
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/tofu-apply
         with:
           module: routeros
@@ -92,6 +95,8 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
+      # Checkout stays in the job, not in the composite (see the routeros job above).
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/tofu-apply
         with:
           module: crs326

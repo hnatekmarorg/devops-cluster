@@ -1,0 +1,104 @@
+suite: test cluster-base chart
+templates:
+  - templates/crossplane/crossplane.yaml
+  - templates/nginx/nginx.yaml
+  - templates/sops/sops.yaml
+  - templates/storage/nfs/nfs-provisioner.yaml
+tests:
+  - it: should render crossplane Application
+    template: templates/crossplane/crossplane.yaml
+    set:
+      onprem: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Application
+      - isAPIVersion:
+          of: argoproj.io/v1alpha1
+      - equal:
+          path: metadata.name
+          value: crossplane
+      - equal:
+          path: metadata.namespace
+          value: argocd
+      - equal:
+          path: spec.sources[0].chart
+          value: crossplane
+      - equal:
+          path: spec.sources[0].repoURL
+          value: https://charts.crossplane.io/stable
+      - equal:
+          path: spec.destination.namespace
+          value: crossplane-system
+
+  - it: should render nginx Application
+    template: templates/nginx/nginx.yaml
+    set:
+      onprem: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Application
+      - equal:
+          path: metadata.name
+          value: nginx
+      - equal:
+          path: metadata.namespace
+          value: argocd
+      - equal:
+          path: spec.sources[0].chart
+          value: ingress-nginx
+      - equal:
+          path: spec.sources[0].repoURL
+          value: https://kubernetes.github.io/ingress-nginx
+      - equal:
+          path: spec.destination.namespace
+          value: nginx
+      - equal:
+          path: spec.sources[0].helm.valuesObject.controller.allowSnippetAnnotations
+          value: true
+
+  - it: should render sops Application
+    template: templates/sops/sops.yaml
+    set:
+      onprem: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Application
+      - equal:
+          path: metadata.name
+          value: sops
+      - equal:
+          path: metadata.namespace
+          value: argocd
+      - equal:
+          path: spec.sources[0].chart
+          value: sops-secrets-operator
+      - equal:
+          path: spec.sources[0].repoURL
+          value: https://isindir.github.io/sops-secrets-operator/
+
+  - it: should render nfs when onprem is true
+    template: templates/storage/nfs/nfs-provisioner.yaml
+    set:
+      onprem: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Application
+      - equal:
+          path: metadata.name
+          value: nfs-async
+
+  - it: should not render nfs when onprem is false
+    template: templates/storage/nfs/nfs-provisioner.yaml
+    set:
+      onprem: false
+    asserts:
+      - hasDocuments:
+          count: 0

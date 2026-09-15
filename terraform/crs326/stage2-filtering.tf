@@ -47,11 +47,13 @@ resource "routeros_ip_address" "mgmt" {
 resource "routeros_interface_bridge_vlan" "compat" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["1"]
-  untagged = ["balteus", "bukefalos", "ether4", "ether5", "ether6", "ether7", "ether8", "ether9",
+  # `ether7` is absent for the same reason `ether3` is: it is no longer a compat port. It became the
+  # out-of-band plane's access port (balteus IPMI, `.46`) — an untagged member of VLAN 10 only.
+  untagged = ["balteus", "bukefalos", "ether4", "ether5", "ether6", "ether8", "ether9",
     "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether16", "ether17",
     "ether18", "ether19", "ether20", "ether21", "ether22", "sfp-sfpplus1", "sfp-sfpplus2",
   "bridge"]
-  comment = "compat — everything not yet migrated; does not include ether3 (the escape port)"
+  comment = "compat — everything not yet migrated; does not include ether3 or ether7"
 }
 
 resource "routeros_interface_bridge_vlan" "mgmt" {
@@ -63,11 +65,12 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
   # plan). A dynamic row is not a precedent; the system creates those.
   #
   # Tagged on both uplinks: `ether18` toward the router (so this switch and the router share one mgmt
-  # segment) and `ether4` toward the CSS610 (so charon, on that box, can live in mgmt). `ether3` stays
-  # the untagged escape port, and every port keeps its compat pvid 1 — nothing moves here.
+  # segment) and `ether4` toward the CSS610 (so charon, on that box, can live in mgmt). Untagged for
+  # the two access ports that belong to the out-of-band/management plane: `ether3` (the escape hatch)
+  # and `ether7` (balteus IPMI). Every other port keeps its compat pvid 1.
   tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4"]
-  untagged = ["ether3"]
-  comment  = "mgmt — the escape port's segment; tagged on both uplinks"
+  untagged = ["ether3", "ether7"]
+  comment  = "mgmt — the escape hatch, the IPMI's access port, tagged on both uplinks"
 }
 
 # ---------------------------------------------------------------------------

@@ -39,6 +39,48 @@ retiring the old Matchbox/Sidero bootstrap cluster. Sidero's controller wants it
 (`SIDERO_CONTROLLER_MANAGER_API_ENDPOINT`, `…_SIDEROLINK_ENDPOINT`) — see
 `bootstrap/argocd/devops/initialize_sidero_metal.sh` for the values in use today.
 
+### Pin the versions, inside CAPMOX's declared support
+
+Measured 2026-09-16: left to itself, `clusterctl install` picks the **latest** of each provider — it chose
+CAPI core **v1.14.2** with CAPMOX **v0.9.0**, while CAPMOX's own support matrix tops out at CAPI
+**v1.11/v1.12**. Two minors outside declared support is a poor way to run an experiment: a failure then
+cannot be attributed to the Talos pairing, which is the only thing this spike is actually testing. What was
+installed instead:
+
+```bash
+clusterctl init \
+  --core cluster-api:v1.12.11 \
+  --bootstrap talos \
+  --control-plane talos \
+  --infrastructure proxmox:v0.9.1 \
+  --ipam in-cluster
+```
+
+| provider | version | note |
+|---|---|---|
+| cluster-api (core) | `v1.12.11` | CAPMOX's declared maximum |
+| infrastructure-proxmox | `v0.9.1` | current release (2026-09-08) |
+| bootstrap-talos / control-plane-talos | `v0.6.12` / `v0.5.13` | released 2026-04-27 — maintained, if slow |
+| ipam-in-cluster | `v1.1.1` | |
+| cert-manager | `v1.21.1` | installed by clusterctl |
+
+### If you ever have to re-initialize
+
+`clusterctl delete --all` reported success and removed nothing here, and the namespaces then sat
+`Terminating`. Two things to know, both learned the hard way:
+
+- **Delete the CRDs *and* the webhook configurations, or nothing will work afterwards.** The provider
+  webhooks are configured `failurePolicy: Fail`; once their services are gone, every matching API request
+  blocks — including the one that would delete them. Six stale webhook configurations had to go before the
+  re-init would run at all.
+- A namespace stuck `Terminating` with *"All content successfully deleted, may be waiting on
+  finalization"* is cleared with a raw finalize call:
+
+  ```bash
+  kubectl get ns <ns> -o json | jq '.spec.finalizers=[]' | \
+    kubectl replace --raw /api/v1/namespaces/<ns>/finalize -f -
+  ```
+
 ## 2. Proxmox credentials — out of band, never in the repo
 
 On the Proxmox side (least privilege is documented in CAPMOX's `advanced-setups.md`):

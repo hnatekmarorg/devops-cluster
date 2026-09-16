@@ -67,6 +67,10 @@ jobs:
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository
+    # STAYS ON ARC for now: this workflow touches the RB5009, and the mgmt runner cannot complete a
+    # RouterOS API login against it (`could not login: EOF`, and the router logs no attempt at all).
+    # The same runner logs in to the CRS326 fine, so it is device-specific and unsolved — see
+    # terraform/docs/ci-runner.md. Move this line when the fault is understood.
     runs-on: gha-runner-scale-set-hnatekmarorg
 
     strategy:

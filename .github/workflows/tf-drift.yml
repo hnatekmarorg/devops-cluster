@@ -23,7 +23,9 @@ permissions:
 
 concurrency:
   group: tf-drift-routeros
-  cancel-in-progress: false
+  # Same reasoning as `tf-plan`: a drift check is read-only, the runner is single-slot, and a superseded
+  # check is worth nothing to anyone. It also means this job cannot leave a lock behind for the morning.
+  cancel-in-progress: true
 
 env:
   TF_IN_AUTOMATION: "true"
@@ -61,6 +63,9 @@ jobs:
     # logs nothing*. Resolved 2026-09-16 — the allow-list lives in `terraform/routeros/services.tf` now,
     # so it cannot hide on the device again. See terraform/docs/ci-runner.md § "Resolved".
     runs-on: [self-hosted, mgmt, tofu]
+    # Bounded like the plan job: `tofu` has no client-side timeout, and a wedged call would hold the
+    # runner's only slot until someone noticed by hand.
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
@@ -133,7 +138,7 @@ jobs:
         run: |
           set +e
           ../../scripts/tofu-ci.sh --role=read plan \
-            -input=false -no-color -lock-timeout=5m -detailed-exitcode -out=drift.tfplan \
+            -input=false -no-color -lock=false -detailed-exitcode -out=drift.tfplan \
             > drift.txt 2>&1
           code=$?
           set -e

@@ -61,6 +61,9 @@ jobs:
     # in `terraform/routeros/services.tf` so it cannot hide on the device again. See
     # terraform/docs/ci-runner.md § "Resolved".
     runs-on: [self-hosted, mgmt, tofu]
+    # Bounded: an apply is a writer and must not be cancelled, but it also must not be able to occupy the
+    # runner's only slot forever if the device stops answering mid-apply.
+    timeout-minutes: 20
     # The environment scopes the write identity and enforces "protected branches only", i.e. this can
     # only be deployed from `main` — reviewed code. It no longer adds an approval click: the review and
     # the posted plan on the PR are the authorization.

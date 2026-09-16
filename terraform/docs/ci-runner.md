@@ -105,3 +105,59 @@ the answer was one `print detail` away, on an object the earlier pass had read f
   (one line each). That is the whole rollback.
 - `cockpit.socket` is **enabled** on the box (that is the listener on `:9090`). A runner needs nothing
   inbound, so disabling it is reasonable if the box is not administered through it.
+
+## When a job hangs, and what it leaves behind
+
+Measured 2026-09-16, and the reason this section exists: a routeros plan stopped producing output at 14:56
+and stayed that way for **42 minutes** — no CPU, no error, no log line, no alert — while holding the runner's
+**only** slot, so four later runs queued behind it. The host was healthy (disk 32%, clock synced, container
+up), the queue just stopped moving. Nothing anywhere said "stuck".
+
+Finding it, on the box:
+
+```bash
+podman exec github-runner ps -eo pid,etimes,time,pcpu,stat,cmd --sort=-etimes | head
+podman logs --tail 50 github-runner        # the job's own output — silence is the symptom
+```
+
+The stuck process was `tofu plan` at 0% CPU with the provider alive and **no open socket to the router** —
+its only established connection was to MinIO (the state endpoint). The shape to remember: *tofu has no
+client-side timeout*, so it will wait forever on a stale connection, and a single-slot runner turns that into
+a whole-CI outage.
+
+The three bounds that now exist, and why they fit together:
+
+| what | where | why |
+|---|---|---|
+| `timeout-minutes` on every device job (15 plan, 20 drift/apply) | the four workflows | turns "wedged forever" into "failed job", which alerts, which is the point |
+| `-lock=false` for **plan and drift** | `tf-plan.yml`, `tf-drift.yml` | read-only, and S3 object writes are atomic — a plan sees the old or the new state, never a torn one. Applies keep locking, because serialising writers is what a lock is for |
+| `cancel-in-progress: true` for **plan and drift** only | same two files | a superseded read-only run holding a single-slot runner protects nothing. Applies keep `false`: never cancel a writer |
+
+Those last two are one decision, not two: a plan that takes no lock is also a plan that can be cancelled
+safely, and a cancelled *set* of superseded plans is what kept the queue from stacking today.
+
+### Clearing a stale lock
+
+An **apply** that dies mid-flight leaves its lock behind. The way out is
+**Actions → `tf-unlock (a stale state lock)`** — module plus the lock ID from the error message:
+
+```
+Error: Error acquiring the state lock
+  operation error S3: PutObject … StatusCode: 412 … PreconditionFailed
+Lock Info:
+  ID:        b4e5b25f-…
+  Path:      tofu-state/routeros/rb5009.tfstate
+  Who:       runner@…
+  Created:   2026-09-16 14:56:02 +0000 UTC
+```
+
+`412 PreconditionFailed` is how the S3 backend reports *"the lock object exists"* — it is not a MinIO fault,
+and the lock is not corrupted. That job runs with the read identity and the state credentials, so it cannot
+change anything on a device. The equivalent without CI credentials: delete `<key>.tflock` (for the router,
+`routeros/rb5009.tfstate.tflock`) from the `tofu-state` bucket in the MinIO console.
+
+### Still missing, deliberately
+
+Nothing tells anyone that a job is stuck. Everything above bounds the damage; none of it *reports*. A ping
+that fires only when a real device login succeeds — so it covers "runner gone" and "runner healthy but every
+job failing" as one signal — is the remaining piece.

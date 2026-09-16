@@ -22,10 +22,14 @@ permissions:
   contents: read
   pull-requests: write
 
-# One plan per branch; never cancel a plan that may be holding the state lock.
+# One plan per branch. Superseded plans are cancelled (see below) — safe now that plans do not lock.
 concurrency:
   group: tf-plan-${{ github.ref }}
-  cancel-in-progress: false
+  # A plan is read-only, and the runner runs **one job at a time**: a superseded plan holding that slot
+  # protects nothing, it just queues every later plan behind a commit nobody is reviewing any more. On
+  # 2026-09-16 four superseded runs stacked behind one hung job. Cancelling is correct here — and because
+  # a plan no longer takes a state lock (see the plan step), cancelling one cannot leave a lock behind.
+  cancel-in-progress: true
 
 env:
   TF_IN_AUTOMATION: "true"
@@ -73,6 +77,10 @@ jobs:
     # logs nothing*. Resolved 2026-09-16 — the allow-list lives in `terraform/routeros/services.tf` now,
     # so it cannot hide on the device again. See terraform/docs/ci-runner.md § "Resolved".
     runs-on: [self-hosted, mgmt, tofu]
+    # `tofu` has no client-side timeout, so a wedged provider or state call holds this runner's single
+    # slot forever. Measured 2026-09-16: a routeros plan sat like that for 42 minutes — no output, no CPU,
+    # no error, no alert — and every other job queued behind it. The bound turns that into a failed job.
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
@@ -124,8 +132,13 @@ jobs:
           set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
           ../../scripts/tofu-ci.sh --role=read init -input=false
           ../../scripts/tofu-ci.sh validate
+          # `-lock=false`: a plan only reads state, and S3 object writes are atomic, so a plan sees either
+          # the old or the new state — never a torn one. What locking bought us here was the failure mode
+          # this change removes: an aborted plan leaves its lock object behind, and every later plan then
+          # dies after five minutes with `412 PreconditionFailed` ("Error acquiring the state lock") until
+          # someone clears it by hand. Applies still lock, which is where serialising writers matters.
           ../../scripts/tofu-ci.sh --role=read plan \
-            -input=false -no-color -lock-timeout=5m -out=plan.tfplan | tee plan.txt
+            -input=false -no-color -lock=false -out=plan.tfplan | tee plan.txt
 
       - name: Post the plan on the PR
         if: always() && github.event_name == 'pull_request' && steps.preflight.outcome == 'success'

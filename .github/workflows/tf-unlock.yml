@@ -1,0 +1,85 @@
+# Clear a stale state lock by hand, from CI, with the credentials the state requires.
+#
+# Why this exists (measured 2026-09-16): a routeros plan wedged for 42 minutes while holding the runner's
+# only slot, so four later runs queued behind it. Killing it was the right call to unblock the queue — but a
+# killed `tofu` cannot remove the lock object it wrote, so every later routeros plan then died after five
+# minutes with `Error acquiring the state lock … 412 PreconditionFailed` until someone cleared it. Clearing
+# it needs the state credentials, which live in CI and nowhere else, so the way out belongs in CI too.
+#
+# `tf-plan` and `tf-drift` no longer take a lock at all (see `tf-plan.yml`), so what remains is the
+# apply-side case: a writer that dies mid-flight leaves a lock behind, and `-force` is then the documented
+# answer. It removes the lock *without* touching the state, and the summary says so.
+#
+# Run it from the Actions tab: pick the module, paste the lock ID from the failing run's message.
+name: tf-unlock (a stale state lock)
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Which state to unlock'
+        required: true
+        type: choice
+        options: [routeros, crs326]
+        default: routeros
+      lock_id:
+        description: 'Lock ID from the error ("Lock Info: ID: …")'
+        required: true
+        type: string
+      note:
+        description: 'Why this lock is stale (recorded in the run summary)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT }}
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION }}
+  # State credentials: repository-scoped, because the state is not a device.
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  # The read identity, repository-scoped like the plan job's: `init` resolves credentials, and the unlock
+  # itself never talks to the device. Deliberately *not* the write pair — this job cannot change anything
+  # on a device even by accident.
+  ROS_READ_USERNAME: ${{ secrets.ROS_READ_USERNAME }}
+  ROS_READ_PASSWORD: ${{ secrets.ROS_READ_PASSWORD }}
+  ROS_HOSTURL: ${{ github.event.inputs.module == 'routeros' && 'api://172.16.100.1:8728' || 'api://172.16.100.2:8728' }}
+  TF_STATE_KEY: ${{ github.event.inputs.module == 'routeros' && 'routeros/rb5009.tfstate' || 'crs326/crs326.tfstate' }}
+  NO_PROXY: "localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local"
+
+jobs:
+  unlock:
+    name: force-unlock · ${{ github.event.inputs.module }}
+    runs-on: [self-hosted, mgmt, tofu]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record what is being unlocked
+        run: |
+          {
+            echo "### Stale lock cleared"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| module | \`${{ github.event.inputs.module }}\` |"
+            echo "| state | \`${TF_STATE_KEY}\` |"
+            echo "| lock id | \`${{ github.event.inputs.lock_id }}\` |"
+            echo "| note | ${{ github.event.inputs.note }} |"
+            echo ""
+            echo "\`force-unlock\` removes the lock object only — the state itself is not touched, and the"
+            echo "device is not contacted."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: init (state backend only)
+        working-directory: terraform/${{ github.event.inputs.module }}
+        run: ../../scripts/tofu-ci.sh --role=read init -input=false
+
+      - name: force-unlock
+        working-directory: terraform/${{ github.event.inputs.module }}
+        run: ../../scripts/tofu-ci.sh force-unlock -force "${{ github.event.inputs.lock_id }}"

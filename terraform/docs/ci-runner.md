@@ -51,38 +51,49 @@ diagnoses; it is written down so it costs none next time.
 runners permission, or org admin for the org scope). A fine-grained PAT with *Runners: Read and write*
 would allow minting as needed — worth doing if the runner is ever rebuilt.
 
-## Known fault: the routeros API login from this runner (unsolved)
+## Resolved 2026-09-16: the routeros API login from this runner
 
-`tf-plan.yml`, `tf-apply-routeros.yml` and `tf-drift.yml` therefore **stay on ARC** for now.
-`tf-apply-crs326.yml` — proven — runs here.
+The fault that split the device workflows across two runners is fixed, and **every workflow that touches
+a device now runs here** — plan, drift and both applies.
 
-`tofu plan` against the RB5009 fails on this runner with:
+`tofu plan` against the RB5009 used to fail here with:
 
 ```
 Error: could not login: EOF; close %!w(<nil>)
 ```
 
-What has been measured, so the next attempt starts from evidence rather than from scratch:
+**What it was.** The router's `api` service carried
+`available-from=172.16.100.0/24,172.16.101.0/24` — the compat subnet, plus the vestigial work subnet
+that has carried no link since that experiment (`docs/network-wiring.md`). RouterOS completes the TCP
+handshake and then closes the connection for a source outside that list, and **writes nothing to the
+log**. The runner sits in mgmt (`172.16.10.202`), outside the list; the ARC runners were in compat
+(`172.16.100.146`), inside it — which is why the same workflow, credential and destination worked on ARC
+and not here. The CRS326 carries no such filter, which is what made it read as device-specific.
 
-- the runner's **host** reaches `172.16.100.1:8728` and `172.16.10.1:8728` — ICMP and TCP both fine;
-- a **container on the same image**, default podman NAT, connects to both — so not NAT;
-- pointing the workflow at the router's **mgmt** address (`api://172.16.10.1:8728`) changes nothing — so
-  not the class, and not the destination address;
-- the router's users (`admin`, `agent-ro`, `iac`) and services all read `address=(any)` — identical to the
-  CRS326's, and the claim in `tf-plan.yml` that the API is "address-bound to the LAN" is **stale**;
-- **the CRS326 accepts the same login from the same runner**: its log shows
-  `user agent-ro logged in from 172.16.10.202 via api` at exactly the job times;
-- **the RB5009 logs no attempt at all** from `172.16.10.202` — neither success nor failure — and no
-  firewall drop for that address. The log ring is large enough that a refusal would still be visible, so
-  the router is genuinely never seeing the login;
-- the same workflow **succeeds on ARC** (which logs in as `agent-ro` from `172.16.100.146`), so the
-  credential is valid and the variable is the **source address**.
+**Why it stayed invisible for a day.** The setting lived only on the device: nothing in this repository
+knew it existed, so no plan showed it and no review could catch it — it broke the moment the runner left
+the subnets the filter named. It is now declared in **`terraform/routeros/services.tf`** (mirrored for the
+switch in `terraform/crs326/services.tf`), so the next move shows up as a diff instead of as a mystery.
 
-So: the router accepts the TCP connection, closes it during the login, and records nothing. The leading
-candidates are a `log=no` drop on that path (`defconf: drop invalid` is the only silent one) or something
-about how the API service handles a non-compat source on this device. Next diagnostic, read-only: snapshot
-the counters of the router's input rules, attempt the login from the runner, re-read — the delta names the
-rule. The ARC runners are unaffected, so this is not urgent.
+**How it was found** — kept because it is the shape of "the device is fine, the client is fine, and the
+two cannot talk":
+
+- the runner's host reached `8728` at TCP level on both the compat and the mgmt address, and a container
+  on the same image did too — so not NAT, not reachability, not the destination address;
+- the router's users (`admin`, `agent-ro`, `iac`) all read `address=""`, and the *services* were believed
+  to read `address=(any)` — that reading is what hid the answer; the allow-list was in `available-from`
+  on the service itself;
+- the CRS326 accepted the identical login from the same runner and logged it
+  (`user agent-ro logged in from 172.16.10.202 via api`), while the RB5009 logged nothing at all;
+- the input chain was exonerated by counters (`/ip firewall filter print stats where chain=input` before
+  and after an attempt: no delta, no drop for that source);
+- the decisive step was a one-line read on the router — `/ip service print detail where name="api"` —
+  plus a bogus login from a mgmt host, which reproduced the reset instantly (`ConnectionResetError`,
+  where the CRS326 answers the same probe with `!trap invalid user name or password`).
+
+The lesson worth keeping: **a setting the control path depends on has to live in the repository.**
+"Device-specific, unsolved, not urgent" described the symptom correctly and was the wrong place to rest —
+the answer was one `print detail` away, on an object the earlier pass had read from the wrong side.
 
 ## Recovering it
 

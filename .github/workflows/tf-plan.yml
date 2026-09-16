@@ -67,10 +67,11 @@ jobs:
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository
-    # STAYS ON ARC for now: this workflow touches the RB5009, and the mgmt runner cannot complete a
-    # RouterOS API login against it (`could not login: EOF`, and the router logs no attempt at all).
-    # The same runner logs in to the CRS326 fine, so it is device-specific and unsolved — see
-    # terraform/docs/ci-runner.md. Move this line when the fault is understood.
+    # Runs on the mgmt runner. It used to sit on ARC because this runner could not log in to the RB5009
+    # (`could not login: EOF`): the router's `api` service carried `available-from` set to the compat
+    # subnets, and RouterOS closes the connection during the login for a source outside that list *and
+    # logs nothing*. Resolved 2026-09-16 — the allow-list lives in `terraform/routeros/services.tf` now,
+    # so it cannot hide on the device again. See terraform/docs/ci-runner.md § "Resolved".
     runs-on: [self-hosted, mgmt, tofu]
 
     strategy:

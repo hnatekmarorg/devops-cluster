@@ -25,7 +25,7 @@ order, so nothing is left half-alive:
    inert and saves a re-download.
 
 4. **The repo** — this is a spike PR, so **closing it unmerged is a legitimate outcome**. If it merged,
-   delete `spike/capmox-talos/` and revert the `k3s.srv.hnatekmar.dev` record in the same PR (the router apply
+   delete `spike/capmox-talos/` and revert the `adonai.srv.hnatekmar.dev` record in the same PR (the router apply
    runs on merge, so the revert lands the same way the record did).
 
 5. **Record the outcome where the next person looks.** The four measurements, H1's answer, H2's answer, the

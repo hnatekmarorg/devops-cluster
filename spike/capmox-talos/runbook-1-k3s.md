@@ -1,46 +1,61 @@
-# Runbook 1 — the k3s management VM in `srv`
+# Runbook 1 — `adonai`: the k3s management VM in `srv`
 
-Runs on balteus / Proxmox. Yours to execute: the agent has no access to balteus, by design.
+**State: provisioned, verified, and its address claimed.** Nothing in this runbook is outstanding — go to
+runbook 2.
 
-## 1. The VM
+## As built
 
 | | |
 |---|---|
-| class | **srv** (`tag=40`) — your own migration runbook puts the cluster nodes in `srv`; `mgmt` is the admin plane, not a workload plane |
-| bridge | `vmbr0` — measured today as already VLAN-aware (`vlan_filtering 1`, `vlan_default_pvid 1`) |
-| address | `172.16.40.150` (proposed) — outside both srv DHCP pool ranges (`.20–.99`, `.200–.250`) and clear of every reservation |
-| size | 2 cores / 4 GB / 20 GB is plenty: this cluster runs controllers, not workloads |
-| DNS | `k3s.srv.hnatekmar.dev` — added by this PR as a literal; a *reservation* is the documented claim on the address and needs the VM's MAC, so it comes later |
+| name | **`adonai`** — `adonai.srv.hnatekmar.dev` |
+| VMID / host | `144` on balteus |
+| class | **srv** (`tag=40`) — where your own migration runbook puts the cluster nodes |
+| address | `172.16.40.24` — **reserved** (MAC `bc:24:11:97:1e:1c`); it landed here from the srv pool and keeps it, so nothing ever has to learn a new number |
+| OS | Fedora Linux 44 (Server Edition) |
+| k3s | `v1.36.4+k3s1`, **stock install** — so Traefik is the ingress controller and ServiceLB holds 80/443 |
+| node name | `adonai` (registered as `localhost.localdomain` until the hostname was set; the stale node object was deleted) |
+| API | `6443` open to `172.16.0.0/20`; cert SANs include `adonai` and `adonai.srv.hnatekmar.dev` |
 
-```bash
-# on the VM, after install
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
-  --disable=traefik \
-  --write-kubeconfig-mode=0644 \
-  --tls-san=k3s.srv.hnatekmar.dev \
-  --node-ip=172.16.40.150" sh -
+## What was changed to get here
+
+```yaml
+# /etc/rancher/k3s/config.yaml
+tls-san:
+  - adonai.srv.hnatekmar.dev
+node-name: adonai
 ```
 
-Why those flags:
-
-- `--disable=traefik` — k3s ships Traefik as its default ingress controller. The estate's ingress decision is
-  still open (consistency argues for ingress-nginx, which the devops cluster runs), and leaving Traefik in
-  would silently create a second ingress controller. An empty cluster keeps the question visible.
-- `--tls-san` — the API cert covers the name, not just the address, so `KUBECONFIG` entries can use the name.
-- `--write-kubeconfig-mode=0644` — so you do not fight permissions while `clusterctl` works.
-
-## 2. Verify
-
 ```bash
-kubectl get nodes -o wide                          # Ready, INTERNAL-IP 172.16.40.150
-dig +short k3s.srv.hnatekmar.dev @172.16.10.1      # 172.16.40.150 — resolved by the router
-ssh k3s.srv.hnatekmar.dev true                     # name-based access from charon/laptop
-curl -sk https://k3s.srv.hnatekmar.dev:6443/version  # API answering on the name
+hostnamectl set-hostname adonai
+firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=172.16.0.0/20 port port=6443 protocol=tcp accept'
+firewall-cmd --reload
+systemctl restart k3s
 ```
 
-## 3. What this step alone proves
+`node-name` is set explicitly rather than relying on the hostname: the first boot had already registered a
+node called `localhost.localdomain`, and a cluster whose API is reached by name should not have a node by a
+different one.
 
-That a management host can live in a class VLAN, be reached **by name** from the admin plane, and that
-internal resolution works for a host that is not in `mgmt` — the same property the rest of the carve now
-has. If step 2 fails on the name but works on the address, that is a DNS finding worth recording before
-anything CAPMOX-shaped is blamed on the network.
+## Verified (2026-09-16)
+
+- **The Fedora traps did not bite.** SELinux `Enforcing` with `k3s-selinux` installed and the policy module
+  loaded, zero AVC denials; and the firewalld/CNI canary **passes** — a pod resolves
+  `kubernetes.default.svc.cluster.local`, so flannel traffic is not being eaten while Traefik's 80/443 stays
+  open. `cni0`/`flannel.1` are not in a trusted zone and did not need to be.
+- Resolver is `172.16.40.1` — the router, i.e. internal names resolve here as they do everywhere else.
+- Registry access works (a `busybox:1.36` pull took 3.2s). Worth knowing before the spike pulls CAPI and
+  provider images.
+- Name-based API access verified from the mgmt host against the cluster CA:
+  `curl --cacert server-ca.crt --resolve adonai.srv.hnatekmar.dev:6443:172.16.40.24 https://adonai.srv.hnatekmar.dev:6443/version`
+  returns `401 Unauthorized` — TLS validated for the name, credentials simply not sent.
+
+**Canary note for the next person:** `nslookup kubernetes.default` returns `NXDOMAIN`, and that is correct —
+that name does not exist. Ask for `kubernetes.default.svc.cluster.local`. The first version of this runbook
+used the short form and produced a false alarm.
+
+## Still a decision, not a task
+
+k3s installed with defaults means **Traefik is the ingress controller on this node**. Leave it while this is
+a spike. When the estate's ingress decision lands, disabling it is `disable: [traefik]` in the same
+`config.yaml` plus a restart, and then ingress-nginx goes in (the devops cluster's choice — one ingress
+controller per estate, not two).

@@ -105,6 +105,12 @@ locals {
     "kubernetes-sandbox" = { mac = "BC:24:11:34:A3:9C", address = "172.16.40.111", class = "srv" }
     "stories-hermes"     = { mac = "BC:24:11:95:D1:9A", address = "172.16.40.188", class = "srv" }
     "sister-hermes"      = { mac = "BC:24:11:58:A8:1E", address = "172.16.40.203", class = "srv" }
+    # `adonai` — the k3s management host for the CAPMOX spike (`spike/capmox-talos`), VMID 144 on balteus.
+    # It landed on `.24` from the srv pool and keeps it: suffix preservation is meaningless for a new host,
+    # but "nothing has to learn a new number" applies the same way — and a reservation excludes the address
+    # from dynamic assignment wherever it sits, which is the whole point of claiming it (a pool lease is ten
+    # minutes long).
+    "adonai" = { mac = "BC:24:11:97:1E:1C", address = "172.16.40.24", class = "srv" }
     # The edge/identity/lmproxy host. `.100.30` is configured *statically on the box*, so this
     # reservation is the documented claim on the address (the shape the BMC's `.46` has) and only takes
     # effect if the box is switched to DHCP. Suffix preserved: `.40.30`.

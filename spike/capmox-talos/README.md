@@ -70,6 +70,6 @@ pool already carries its annotations.
 ## Repo artifacts in this PR
 
 - `spike/capmox-talos/**` — the runbooks and two manifests.
-- `terraform/routeros/dns.tf` — one record, `k3s.srv.hnatekmar.dev`, so the management VM has a name and
+- `terraform/routeros/dns.tf` — one record, `adonai.srv.hnatekmar.dev`, so the management VM has a name and
   nothing references it by address. **Merging this applies it** (the router apply runs on merge, on the mgmt
   runner).

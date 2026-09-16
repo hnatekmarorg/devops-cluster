@@ -44,6 +44,9 @@ jobs:
     # credentials, so it lives in mgmt and nothing initiates into it. Revert this one line to
     # `gha-runner-scale-set-hnatekmarorg` to fall back to the ARC runners on the k8s cluster.
     runs-on: [self-hosted, mgmt, tofu]
+    # Bounded like the router apply: a writer is never cancelled, but it must not hold the runner's only
+    # slot forever either.
+    timeout-minutes: 20
     # Scopes the write identity; deploys from `main` only (protected-branches policy on the environment).
     environment: crs326-production
     concurrency:

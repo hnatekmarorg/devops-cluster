@@ -55,10 +55,11 @@ env:
 jobs:
   drift:
     name: nightly plan
-    # Runs on the dedicated mgmt-class runner (the ZimaBoard): it holds the device write
-    # credentials, so it lives in mgmt and nothing initiates into it. Revert this one line to
-    # `gha-runner-scale-set-hnatekmarorg` to fall back to the ARC runners on the k8s cluster.
-    runs-on: [self-hosted, mgmt, tofu]
+    # STAYS ON ARC for now: this workflow touches the RB5009, and the mgmt runner cannot complete a
+    # RouterOS API login against it (`could not login: EOF`, and the router logs no attempt at all).
+    # The same runner logs in to the CRS326 fine, so it is device-specific and unsolved — see
+    # terraform/docs/ci-runner.md. Move this line when the fault is understood.
+    runs-on: gha-runner-scale-set-hnatekmarorg
 
     strategy:
       fail-fast: false

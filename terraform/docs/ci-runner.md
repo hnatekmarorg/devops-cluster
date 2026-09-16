@@ -51,6 +51,39 @@ diagnoses; it is written down so it costs none next time.
 runners permission, or org admin for the org scope). A fine-grained PAT with *Runners: Read and write*
 would allow minting as needed — worth doing if the runner is ever rebuilt.
 
+## Known fault: the routeros API login from this runner (unsolved)
+
+`tf-plan.yml`, `tf-apply-routeros.yml` and `tf-drift.yml` therefore **stay on ARC** for now.
+`tf-apply-crs326.yml` — proven — runs here.
+
+`tofu plan` against the RB5009 fails on this runner with:
+
+```
+Error: could not login: EOF; close %!w(<nil>)
+```
+
+What has been measured, so the next attempt starts from evidence rather than from scratch:
+
+- the runner's **host** reaches `172.16.100.1:8728` and `172.16.10.1:8728` — ICMP and TCP both fine;
+- a **container on the same image**, default podman NAT, connects to both — so not NAT;
+- pointing the workflow at the router's **mgmt** address (`api://172.16.10.1:8728`) changes nothing — so
+  not the class, and not the destination address;
+- the router's users (`admin`, `agent-ro`, `iac`) and services all read `address=(any)` — identical to the
+  CRS326's, and the claim in `tf-plan.yml` that the API is "address-bound to the LAN" is **stale**;
+- **the CRS326 accepts the same login from the same runner**: its log shows
+  `user agent-ro logged in from 172.16.10.202 via api` at exactly the job times;
+- **the RB5009 logs no attempt at all** from `172.16.10.202` — neither success nor failure — and no
+  firewall drop for that address. The log ring is large enough that a refusal would still be visible, so
+  the router is genuinely never seeing the login;
+- the same workflow **succeeds on ARC** (which logs in as `agent-ro` from `172.16.100.146`), so the
+  credential is valid and the variable is the **source address**.
+
+So: the router accepts the TCP connection, closes it during the login, and records nothing. The leading
+candidates are a `log=no` drop on that path (`defconf: drop invalid` is the only silent one) or something
+about how the API service handles a non-compat source on this device. Next diagnostic, read-only: snapshot
+the counters of the router's input rules, attempt the login from the runner, re-read — the delta names the
+rule. The ARC runners are unaffected, so this is not urgent.
+
 ## Recovering it
 
 - **Container restarted** — nothing to do; restart policy is `always`.

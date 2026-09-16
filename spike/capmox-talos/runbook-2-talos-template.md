@@ -37,26 +37,53 @@ qm create 9000 --name talos-nocloud-template --memory 2048 --cores 2 \
   --net0 virtio,bridge=vmbr0 \
   --scsihw virtio-scsi-single --ostype l26 \
   --serial0 socket --vga serial0
-
-qm importdisk 9000 nocloud-amd64.raw local-lvm
-qm set 9000 --scsi0 local-lvm:vm-9000-disk-0 --boot order=scsi0
+qm set 9000 --citype nocloud                        # Talos' platform reads NoCloud — state it, don't inherit it
+qm importdisk 9000 nocloud-amd64.raw <storage>      # in this estate the import landed on `iscsi`
+qm set 9000 --scsi0 <storage>:vm-9000-disk-0 --boot order=scsi0
 qm set 9000 --ide2 local-lvm:cloudinit --agent enabled=1
 qm template 9000
 ```
 
+- **`<storage>` is whatever you actually imported onto**, and the `--scsi0` line must name *that* storage's
+  volume. Written from the docs, this file said `local-lvm`; on the first real run the import landed on
+  `iscsi` and the `--scsi0` line was skipped — which left the image in `unused0` with `boot: order=net0`.
+  A clone would then have booted into the network, Talos would never have started, and CAPMOX would have
+  been blamed for a template problem. The verification in step 3 is what catches it.
 - The **cloud-init drive** (`--ide2 …:cloudinit`) is the bootstrap channel: CAPMOX writes into it, Talos'
   `nocloud` platform reads from it. Without it, H1 cannot work — this is the one line that matters.
-- `--agent enabled=1` plus the guest-agent extension is what lets CAPMOX read the VM's address back.
-- Storage: adjust `local-lvm` to whatever you use for VM disks.
+- `--citype nocloud` is PVE's default for Linux ostypes, but H1 depends on it *exactly*, so it is stated
+  rather than inherited.
+- `--agent enabled=1` only reports anything if the image carries the `siderolabs/qemu-guest-agent`
+  extension from step 1 — that is how CAPMOX reads the VM's address back.
 - **Do not set the VLAN on the template** — the class tag belongs on the *clone* (`vlan: 40` in the machine
   template), so one template can serve every class.
 - Record the VMID here and in the manifest: **`templateID: 9000`**.
 
-## 3. Verify
+## 3. Verify — attached, not merely imported
 
 ```bash
-qm config 9000 | sed -n '1,25p'   # expect: template: 1, scsi0, ide2 cloudinit, agent, serial0
+qm config 9000 | grep -E "^(boot|scsi0|ide2|agent|citype|unused|template)"
 ```
+
+Expect `scsi0: <storage>:vm-9000-disk-0`, `boot: order=scsi0`, `citype: nocloud`, `agent: enabled=1`,
+`template: 1` — and **no `unused0` line**. `unused0` is the entire failure mode: the disk is present but not
+attached to the VM.
+
+### As built, 2026-09-16
+
+| | |
+|---|---|
+| VMID / node | `9000` on `balteus` |
+| disk | `iscsi:vm-9000-disk-0`, 4248M — the nocloud image, imported onto `iscsi` |
+| boot | `order=scsi0` |
+| cloud-init | `ide2: local-lvm:vm-9000-cloudinit,media=cdrom` with `citype: nocloud` |
+| console | `serial0: socket`, `vga: serial0` |
+| agent | `enabled=1` |
+
+After the first clone, check that the clone got its **own** `smbios1` UUID —
+`qm config <clone-id> | grep smbios1`. The template carries a fixed one, and two machines sharing an
+identity is the kind of thing that surfaces later as a confusing providerID/address problem rather than as
+itself.
 
 Once a cluster exists, a cloned control-plane VM should boot `talos-nocloud`, fetch its config from the
 NoCloud drive and join. If it boots and then waits forever, that is H1 failing — go to runbook 3 §4 and

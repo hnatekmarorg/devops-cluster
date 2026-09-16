@@ -60,8 +60,11 @@ spec:
     host: 172.16.40.160
     port: 6443
   ipv4Config:
+    # The endpoint's address must NOT appear here: CAPMOX validates it explicitly — "addresses may not
+    # contain the endpoint IP" — and it is right to. `.160` belongs to the control plane, claimed by
+    # `spike-cp` alone, so the endpoints can never collide.
     addresses:
-      - 172.16.40.160-172.16.40.175
+      - 172.16.40.161-172.16.40.175
     prefix: 19
     gateway: 172.16.40.1
   dnsServers:
@@ -79,13 +82,18 @@ spec:
   replicas: 1
   version: v1.37.0 # Kubernetes — Talos v1.14.1's default target
   infrastructureTemplate:
-    apiGroup: infrastructure.cluster.x-k8s.io
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
     kind: ProxmoxMachineTemplate
     name: spike-cp
+  # The *installed* control-plane provider (v0.5.13) wants `generateType` and `talosVersion` **inside**
+  # `controlplane`; the estate's own specs predate that and put them alongside, which strict decoding
+  # rejects outright ("unknown field \"spec.controlPlaneConfig.generateType\""). Fetched from the CRD
+  # rather than guessed: `controlplane` and `init` each take configPatches, data, generateType, hostname,
+  # strategicPatches, talosVersion.
   controlPlaneConfig:
-    generateType: controlplane
-    talosVersion: v1.14.1
     controlplane:
+      generateType: controlplane
+      talosVersion: v1.14.1
       configPatches:
         - op: add
           path: /cluster/apiServer/certSANs

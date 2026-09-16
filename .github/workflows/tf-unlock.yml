@@ -60,6 +60,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Same pin and the same `tofu_wrapper: false` as the plan and apply jobs: this runner image has no
+      # `node` on PATH (only the runner's bundled copy), so the wrapper dies with
+      # "/usr/bin/env: 'node': No such file or directory". Without this step the job dies even earlier —
+      # `exec: tofu: not found` — which is exactly how the first dispatch of this workflow failed.
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.12.6
+          tofu_wrapper: false
+
       - name: Record what is being unlocked
         run: |
           {

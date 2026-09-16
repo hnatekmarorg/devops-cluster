@@ -10,9 +10,9 @@
 #
 # Naming: one sub-zone per class (mgmt / srv / lab / iot / vpn), so a hostname states the plane a host
 # belongs to — the same information its address carries (`172.16.30.x` is lab). Machines are
-# `<host>.<class>`; services are `<service>.srv`. A record states the class a host is *intended* for:
-# while the estate migrates, the address may still be the old one, and only the address changes when the
-# host moves — which is the entire point of naming them.
+# `<host>.<class>`; services are `<service>.srv`. A record states the class a host is *intended* for;
+# **its address is its DHCP reservation's** (`dhcp.tf`), so the name follows the host when it moves and
+# nothing that references the name has to change.
 #
 # Records are not access control. Everything here resolves; the firewall matrix decides who may reach what.
 # `iot` is deliberately absent: it keeps public DNS, so that class cannot resolve internal names at all.
@@ -25,27 +25,34 @@ resource "routeros_ip_dns" "resolver" {
 }
 
 locals {
-  # The estate's inventory, as names. `minio` is the Terraform state backend: using this name instead of
-  # the public one is what removes the WAN hairpin every plan and apply currently takes (docs/dns.md).
+  # The estate's inventory, as names. **DHCP owns the addresses**: a host that has a reservation in
+  # `dhcp.tf` reads its address from `local.dhcp_reservations` here, so an address is stated in one
+  # place and the name cannot drift from the lease. Only hosts with no reservation — statically
+  # addressed infrastructure, and aliases — keep a literal.
+  #
+  # `minio` is the Terraform state backend: using this name instead of the public one is what removes
+  # the WAN hairpin every plan and apply currently takes (docs/dns.md).
   dns_records = {
     # mgmt — the plane that administers
     "router.mgmt.hnatekmar.dev"      = "172.16.10.1"
     "crs326.mgmt.hnatekmar.dev"      = "172.16.10.2"
-    "crs804.mgmt.hnatekmar.dev"      = "172.16.10.201"
-    "bmc-balteus.mgmt.hnatekmar.dev" = "172.16.10.46"
     "charon.mgmt.hnatekmar.dev"      = "172.16.10.200"
-    "runner.mgmt.hnatekmar.dev"      = "172.16.10.140"
+    "crs804.mgmt.hnatekmar.dev"      = local.dhcp_reservations["crs804"].address
+    "bmc-balteus.mgmt.hnatekmar.dev" = local.dhcp_reservations["balteus-ipmi"].address
+    "runner.mgmt.hnatekmar.dev"      = local.dhcp_reservations["runner"].address
+    # The operator host (vault, WebUI, admin box) — re-classed to mgmt, so its name states that class.
+    "personal-hermes.mgmt.hnatekmar.dev" = local.dhcp_reservations["personal-hermes"].address
 
-    # srv — the keepers. Addresses are still compat-side where the host has not moved yet.
-    "truenas.srv.hnatekmar.dev"            = "172.16.100.148"
-    "minio.srv.hnatekmar.dev"              = "172.16.100.148"
-    "gitea.srv.hnatekmar.dev"              = "172.16.100.124"
-    "github-dind.srv.hnatekmar.dev"        = "172.16.100.145"
-    "coder.srv.hnatekmar.dev"              = "172.16.100.210"
-    "kubernetes-sandbox.srv.hnatekmar.dev" = "172.16.100.111"
-    "personal-hermes.srv.hnatekmar.dev"    = "172.16.100.180"
-    "stories-hermes.srv.hnatekmar.dev"     = "172.16.100.188"
-    "sister-hermes.srv.hnatekmar.dev"      = "172.16.100.203"
+    # srv — the keepers. They have moved into their class, and the reservation now owns the number, so
+    # each record follows the lease instead of restating it.
+    "truenas.srv.hnatekmar.dev"            = local.dhcp_reservations["truenas"].address
+    "minio.srv.hnatekmar.dev"              = local.dhcp_reservations["truenas"].address
+    "gitea.srv.hnatekmar.dev"              = local.dhcp_reservations["gitea"].address
+    "github-dind.srv.hnatekmar.dev"        = local.dhcp_reservations["github-dind"].address
+    "coder.srv.hnatekmar.dev"              = local.dhcp_reservations["coder"].address
+    "kubernetes-sandbox.srv.hnatekmar.dev" = local.dhcp_reservations["kubernetes-sandbox"].address
+    "stories-hermes.srv.hnatekmar.dev"     = local.dhcp_reservations["stories-hermes"].address
+    "sister-hermes.srv.hnatekmar.dev"      = local.dhcp_reservations["sister-hermes"].address
 
     # The box at `.30` — the estate's **reverse proxy**, and more behind it. Measured on the host: Caddy
     # terminates TLS on 80/443 and is published to the WAN by dstnat; authentik + postgres + redis run
@@ -59,15 +66,16 @@ locals {
     # model router behind it are keepers — so this one host plays both roles. Because it *is* a reverse
     # proxy, its backends can live elsewhere, so splitting them (proxy in lab, keepers in srv) is a
     # rearrangement rather than a rebuild.
-    "proxy.srv.hnatekmar.dev" = "172.16.100.30"
-    "edge.srv.hnatekmar.dev"  = "172.16.100.30"
+    "proxy.srv.hnatekmar.dev" = local.dhcp_reservations["proxy"].address
+    "edge.srv.hnatekmar.dev"  = local.dhcp_reservations["proxy"].address
 
-    # lab — the DMZ-shaped workload zone; the Sparks and the inference host live here already
-    "inference.lab.hnatekmar.dev" = "172.16.30.189"
-    "spark1.lab.hnatekmar.dev"    = "172.16.30.136"
-    "spark2.lab.hnatekmar.dev"    = "172.16.30.137"
-    "spark3.lab.hnatekmar.dev"    = "172.16.30.112"
-    "spark4.lab.hnatekmar.dev"    = "172.16.30.110"
+    # lab — the DMZ-shaped workload zone; the Sparks and the inference host live here already, and
+    # their reservations are the addresses the inference path is written against.
+    "inference.lab.hnatekmar.dev" = local.dhcp_reservations["inference"].address
+    "spark1.lab.hnatekmar.dev"    = local.dhcp_reservations["spark1"].address
+    "spark2.lab.hnatekmar.dev"    = local.dhcp_reservations["spark2"].address
+    "spark3.lab.hnatekmar.dev"    = local.dhcp_reservations["spark3"].address
+    "spark4.lab.hnatekmar.dev"    = local.dhcp_reservations["spark4"].address
   }
 }
 

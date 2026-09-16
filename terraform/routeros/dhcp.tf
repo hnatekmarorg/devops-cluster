@@ -89,6 +89,11 @@ locals {
     # because it holds the device write credentials (Q27/Q29).
     "runner" = { mac = "00:E0:4C:2A:36:AC", address = "172.16.10.140", class = "mgmt" }
 
+    # Re-classed to mgmt on 2026-09-16: an operator host — it holds the vault and the estate's WebUI,
+    # and it administers other hosts — sitting on a mgmt access port (measured: tagged there, it took a
+    # mgmt pool address). Suffix preserved, the way the Sparks and the BMC keep theirs: `.10.180`.
+    "personal-hermes" = { mac = "BC:24:11:AA:F1:B6", address = "172.16.10.180", class = "mgmt" }
+
     # srv: the keepers. Each keeps its compat suffix, so a guest that is tagged into srv comes up at the
     # address its record already names — zero address changes, and nothing that references it by IP has
     # to change either. Suffix preservation outranks the `.100-.199` band here: a reservation excludes
@@ -98,7 +103,6 @@ locals {
     "github-dind"        = { mac = "BC:24:11:09:29:12", address = "172.16.40.145", class = "srv" }
     "coder"              = { mac = "BC:24:11:15:09:81", address = "172.16.40.210", class = "srv" }
     "kubernetes-sandbox" = { mac = "BC:24:11:34:A3:9C", address = "172.16.40.111", class = "srv" }
-    "personal-hermes"    = { mac = "BC:24:11:AA:F1:B6", address = "172.16.40.180", class = "srv" }
     "stories-hermes"     = { mac = "BC:24:11:95:D1:9A", address = "172.16.40.188", class = "srv" }
     "sister-hermes"      = { mac = "BC:24:11:58:A8:1E", address = "172.16.40.203", class = "srv" }
     # The edge/identity/lmproxy host. `.100.30` is configured *statically on the box*, so this

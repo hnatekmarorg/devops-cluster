@@ -40,6 +40,8 @@ locals {
     "crs804.mgmt.hnatekmar.dev"      = local.dhcp_reservations["crs804"].address
     "bmc-balteus.mgmt.hnatekmar.dev" = local.dhcp_reservations["balteus-ipmi"].address
     "runner.mgmt.hnatekmar.dev"      = local.dhcp_reservations["runner"].address
+    # The operator host (vault, WebUI, admin box) — re-classed to mgmt, so its name states that class.
+    "personal-hermes.mgmt.hnatekmar.dev" = local.dhcp_reservations["personal-hermes"].address
 
     # srv — the keepers. They have moved into their class, and the reservation now owns the number, so
     # each record follows the lease instead of restating it.
@@ -49,7 +51,6 @@ locals {
     "github-dind.srv.hnatekmar.dev"        = local.dhcp_reservations["github-dind"].address
     "coder.srv.hnatekmar.dev"              = local.dhcp_reservations["coder"].address
     "kubernetes-sandbox.srv.hnatekmar.dev" = local.dhcp_reservations["kubernetes-sandbox"].address
-    "personal-hermes.srv.hnatekmar.dev"    = local.dhcp_reservations["personal-hermes"].address
     "stories-hermes.srv.hnatekmar.dev"     = local.dhcp_reservations["stories-hermes"].address
     "sister-hermes.srv.hnatekmar.dev"      = local.dhcp_reservations["sister-hermes"].address
 

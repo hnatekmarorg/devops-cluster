@@ -54,6 +54,11 @@ locals {
     "stories-hermes.srv.hnatekmar.dev"     = local.dhcp_reservations["stories-hermes"].address
     "sister-hermes.srv.hnatekmar.dev"      = local.dhcp_reservations["sister-hermes"].address
 
+    # `adonai` — the k3s management host the CAPMOX spike runs on (`spike/capmox-talos`), VMID 144 on
+    # balteus. The record follows its reservation, like every other host that has one, so the name and the
+    # claim on the address cannot drift apart.
+    "adonai.srv.hnatekmar.dev" = local.dhcp_reservations["adonai"].address
+
     # The box at `.30` — the estate's **reverse proxy**, and more behind it. Measured on the host: Caddy
     # terminates TLS on 80/443 and is published to the WAN by dstnat; authentik + postgres + redis run
     # behind it as the identity provider; and `lmproxy` behind it routes this agent's model traffic to the

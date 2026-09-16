@@ -1,0 +1,20 @@
+# H2's instrument: the pool CAPMOX allocates node addresses from *if it can*.
+#
+# A /28 slice of srv — deliberately outside both srv DHCP pool ranges (`172.16.40.20–.99` and
+# `.200–.250`) and clear of every reservation in `terraform/routeros/dhcp.tf` (`.30 .111 .124 .145 .148
+# .180 .188 .203 .210`). If the nodes end up holding addresses from here, CAPMOX owns cluster addressing;
+# if they instead take leases from the srv scope, CAPMOX's nocloud network-config support is not there yet
+# and the router's reservation stays the owner. Either outcome is the answer H2 is asking for.
+apiVersion: ipam.cluster.x-k8s.io/v1alpha2
+kind: GlobalInClusterIPPool
+metadata:
+  name: spike-srv
+  annotations:
+    # CAPMOX reads this to keep the pool's gateway out of the way of the real one (see its
+    # `cluster-template-multiple-vlans.yaml`, where the secondary device uses exactly this pattern).
+    ipam.capmox.cluster.x-k8s.io/gateway-metric: "200"
+spec:
+  addresses:
+    - 172.16.40.160-172.16.40.175
+  prefix: 19
+  gateway: 172.16.40.1

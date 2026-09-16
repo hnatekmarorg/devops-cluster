@@ -1,0 +1,209 @@
+# The spike cluster: one Talos control plane and one worker, both Proxmox VMs in `srv`, provisioned by
+# CAPMOX from the k3s management cluster.
+#
+# Shape notes, because this file mixes three providers' APIs on purpose:
+#   * `Cluster` / `MachineDeployment` are CAPI `v1beta2`, matching CAPMOX's own tested templates. The
+#     estate's existing specs are `v1beta1`; both are served, so this does not disturb them.
+#   * `ProxmoxCluster` / `ProxmoxMachineTemplate` are CAPMOX `infrastructure.cluster.x-k8s.io/v1alpha2`.
+#   * `TalosControlPlane` / `TalosConfigTemplate` are the Sidero Talos providers at `v1alpha3` — the same
+#     CRDs `bootstrap/argocd/devops/` uses today, which is the point: only the *medium* changes, not the
+#     cluster spec's vocabulary.
+#
+# Placeholders you must set before applying: `sourceNode`, `templateID`, disk storage, the image-factory
+# schematic in both `install/image` patches, and the Talos/Kubernetes versions.
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: spike
+  namespace: default
+  labels:
+    cluster.x-k8s.io/cluster-name: spike
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks: [10.244.0.0/16]
+    services:
+      cidrBlocks: [10.96.0.0/12]
+  infrastructureRef:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: ProxmoxCluster
+    name: spike
+  controlPlaneRef:
+    apiGroup: controlplane.cluster.x-k8s.io
+    kind: TalosControlPlane
+    name: spike-cp
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: ProxmoxCluster
+metadata:
+  name: spike
+  namespace: default
+  labels:
+    cluster.x-k8s.io/cluster-name: spike
+spec:
+  # Single control plane, so its own address *is* the endpoint. A real cluster wants kube-vip (as CAPMOX's
+  # kubeadm flavor configures) or Talos' own VIP in the machine config, both of which need a stable address
+  # outside the node range — deliberately not this spike's problem.
+  controlPlaneEndpoint:
+    host: 172.16.40.160
+    port: 6443
+  # Default addressing for devices that do not reference a pool. The pool below is what actually answers
+  # H2 — this block is the cluster-wide fallback and must match it.
+  ipv4Config:
+    addresses:
+      - 172.16.40.160-172.16.40.175
+    prefix: 19
+    gateway: 172.16.40.1
+  dnsServers:
+    - 172.16.40.1 # the router, i.e. the estate's internal resolver — not 8.8.8.8
+  allowedNodes: [] # empty = any Proxmox node; for the spike that is balteus
+  credentialsRef:
+    name: spike-proxmox-credentials # created out of band; never in this repo
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+kind: TalosControlPlane
+metadata:
+  name: spike-cp
+  namespace: default
+spec:
+  replicas: 1
+  version: v1.33.0 # Kubernetes version — must be one the pinned Talos supports
+  infrastructureTemplate:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: ProxmoxMachineTemplate
+    name: spike-cp
+  controlPlaneConfig:
+    generateType: controlplane
+    talosVersion: v1.12.1 # Talos version — see runbook 2; the estate's specs currently disagree
+    controlplane:
+      configPatches:
+        - op: replace
+          path: /machine/install/image
+          value: factory.talos.dev/nocloud-installer/<schematic-id>:v1.12.1
+        - op: replace
+          path: /machine/install/disk
+          value: /dev/sda
+        - op: add
+          path: /cluster/apiServer/certSANs
+          value:
+            - spike.srv.hnatekmar.dev
+        # H2's fallback in advance: if CAPMOX's cloud-init network-config in nocloud format is not there
+        # yet (issue #51), Talos still needs an interface. `physical: true` selects the NIC whatever the
+        # guest happens to name it. If a static address does arrive via cloud-init, that config wins and
+        # this patch is inert.
+        - op: add
+          path: /machine/network/interfaces
+          value:
+            - deviceSelector:
+                physical: true
+              dhcp: true
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+kind: TalosConfigTemplate
+metadata:
+  name: spike-workers
+  namespace: default
+spec:
+  template:
+    spec:
+      generateType: join
+      # NOTE: the estate's own worker template carries `talosVersion: v1.34.1`, which is a *Kubernetes*
+      # version in a Talos field. Corrected here — the same value as the control plane's talosVersion.
+      talosVersion: v1.12.1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: ProxmoxMachineTemplate
+metadata:
+  name: spike-cp
+  namespace: default
+  labels:
+    cluster.x-k8s.io/cluster-name: spike
+spec:
+  template:
+    spec:
+      sourceNode: balteus # the Proxmox node to clone on
+      templateID: 9000 # the Talos nocloud template from runbook 2
+      format: qcow2
+      full: true # full clone: linked clones would share the template's disk
+      numSockets: 1
+      numCores: 2
+      memoryMiB: 4096
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: 20
+      network:
+        networkDevices:
+          - name: net0
+            bridge: vmbr0 # VLAN-aware, measured
+            vlan: 40 # srv — the tag is what puts the node in its class from birth
+            model: virtio
+            ipPoolRef:
+              - apiGroup: ipam.cluster.x-k8s.io
+                kind: GlobalInClusterIPPool
+                name: spike-srv
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: ProxmoxMachineTemplate
+metadata:
+  name: spike-workers
+  namespace: default
+  labels:
+    cluster.x-k8s.io/cluster-name: spike
+spec:
+  template:
+    spec:
+      sourceNode: balteus
+      templateID: 9000
+      format: qcow2
+      full: true
+      numSockets: 1
+      numCores: 2
+      memoryMiB: 4096
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: 20
+      network:
+        networkDevices:
+          - name: net0
+            bridge: vmbr0
+            vlan: 40
+            model: virtio
+            ipPoolRef:
+              - apiGroup: ipam.cluster.x-k8s.io
+                kind: GlobalInClusterIPPool
+                name: spike-srv
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: MachineDeployment
+metadata:
+  name: spike-workers
+  namespace: default
+  labels:
+    cluster.x-k8s.io/cluster-name: spike
+spec:
+  clusterName: spike
+  replicas: 1
+  # CAPI v1beta2 no longer couples the selector to the template labels; this mirrors CAPMOX's tested
+  # template. The estate's v1beta1 specs still set both, which is why they look different.
+  selector:
+    matchLabels: {}
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: spike
+        node/type: cpu # the estate's own scheduling label (devops/argocd/nvidia/values.yaml reads it)
+    spec:
+      clusterName: spike
+      version: v1.33.0
+      bootstrap:
+        configRef:
+          apiGroup: bootstrap.cluster.x-k8s.io
+          kind: TalosConfigTemplate
+          name: spike-workers
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: ProxmoxMachineTemplate
+        name: spike-workers

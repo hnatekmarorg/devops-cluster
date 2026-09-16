@@ -13,9 +13,9 @@ name: tf-plan (routeros)
 on:
   pull_request:
     paths:
-      - 'terraform/**'
-      - '.github/workflows/tf-*.yml'
-      - 'scripts/tofu-ci.sh'
+      - "terraform/**"
+      - ".github/workflows/tf-*.yml"
+      - "scripts/tofu-ci.sh"
   workflow_dispatch:
 
 permissions:
@@ -28,14 +28,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TF_IN_AUTOMATION: 'true'
-  TF_INPUT: 'false'
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
   # The runner pod reaches the internet through a proxy (ARC `proxy` values in
   # Hnatekmar/bootstrap-kubernetes); the forced-replace filter would send the
   # LAN call to the router through it and break the plan. Only the uppercase
   # form is set: the provider is Go, and Go's httpproxy checks NO_PROXY first
   # (declaring both forms makes them the same key to GitHub's env handling).
-  NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
+  NO_PROXY: "localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local"
   ROS_HOSTURL: ${{ vars.ROS_HOSTURL || 'api://172.16.100.1:8728' }}
   TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
   # Measured, not assumed: `http://minio.minio.svc.cluster.local:9000` does NOT
@@ -71,7 +71,7 @@ jobs:
     # RouterOS API login against it (`could not login: EOF`, and the router logs no attempt at all).
     # The same runner logs in to the CRS326 fine, so it is device-specific and unsolved — see
     # terraform/docs/ci-runner.md. Move this line when the fault is understood.
-    runs-on: gha-runner-scale-set-hnatekmarorg
+    runs-on: [self-hosted, mgmt, tofu]
 
     strategy:
       fail-fast: false

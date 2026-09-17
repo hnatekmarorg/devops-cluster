@@ -188,6 +188,93 @@ resource "routeros_ip_firewall_filter" "lab_measure" {
   comment          = "matrix phase 1 (log-only): measuring lab -> ${each.key} before its row is enforced"
 }
 
+## ------------------------------------------------------- lab → the router itself
+
+# The forward rules above decide lab's reach to every *other* class; traffic addressed to the router is a
+# different chain and was still unpoliced. Every class can reach the router by default — the `LAN`
+# interface list holds all six class VLANs and the input chain's rule is `drop all not coming from LAN` —
+# so the matrix's forward rows never apply to the router itself. iot got its default-deny first; lab is the
+# same gap, measured rather than assumed.
+#
+# Measured from spark1 (a lab host), 2026-09-17, read-only, against its own gateway `172.16.30.1`:
+#
+#   22 (ssh) 53 (dns) 2000 (btest) 8080 (www) 8291 (winbox) 8728 (api) 8729 (api-ssl)  — OPEN
+#   80 / 443 — nothing listening
+#
+# So `story-writer` — the first migrated guest, and any box whose whole purpose is running other people's
+# code — can open the router's WinBox and API today. That is the same shape iot had before its deny, and
+# the same default-deny is the fix. It is also the last open piece of this row: `lab → mgmt/iot/vpn` cover
+# the forward chain only.
+#
+# **What lab needs from the router is not a copy of what iot needed**, and the difference is stated in the
+# repo rather than guessed here:
+#
+#   * DHCP (udp 67/68) — the segment's addresses come from the router's `dhcp-lab`. Same reason as iot,
+#     and explicit for the same reason: a catch-all drop makes the input chain's fall-through accept stop
+#     applying, so a segment's plumbing has to be named.
+#   * DNS (udp **and** tcp 53) — the lab scope hands out `dns-server=172.16.30.1` (`dhcp.tf`), i.e. every
+#     lab host is *told* to resolve through the router, and that resolver is what makes the class
+#     sub-zones (`spark1.lab.hnatekmar.dev`) mean anything (`dns.tf`). Copying iot's rule verbatim would
+#     have taken internal name resolution away from the whole class: iot keeps *public* DNS by design
+#     (`8.8.8.8` in its scope) and is deliberately absent from the estate's zones, while lab's names are
+#     served here. Measured from spark1, 2026-09-17: `spark1.lab.hnatekmar.dev` and a srv name both answer
+#     against `172.16.30.1` over UDP **and** TCP. TCP is allowed because a resolver falls back to TCP when
+#     an answer is truncated — allowing only UDP fails on exactly the large answers, and nothing about the
+#     rule's shape would say so afterwards.
+#   * ICMP — not listed: defconf's `accept ICMP` sits above this rule, so ping and PMTUD keep working.
+#   * NTP — deliberately **not** allowed, and measured the same way iot's was: spark1 syncs from
+#     `ntp.ubuntu.com`, not from the router. If a lab host ever does want the router's clock, the drop is
+#     logged under this prefix and it is one accept rule away.
+#
+# Placement: the accepts must sit **above** the catch-all, and two rules created in one apply have no order
+# between them unless it is stated — so each accept anchors with `place_before` on the deny. The anchor
+# sits on the **new** rule on purpose: `place_before` forces a replacement, so anchoring on a live rule
+# would destroy and re-create it — a momentary gap in enforcement plus a noisy plan — where anchoring the
+# brand-new rule costs nothing.
+resource "routeros_ip_firewall_filter" "lab_router_deny" {
+  chain            = "input"
+  action           = "drop"
+  log              = true
+  src_address_list = "lab-nets"
+  log_prefix       = "MTX-LAB>ROUTER "
+  comment          = "matrix phase 2 (enforced, logged): lab reaches the router only for DHCP, DNS and ICMP"
+}
+
+# Two DNS rules rather than one `protocol = "udp,tcp"`: a protocol *list* is something this repo has never
+# measured on the device, and a plan cannot see it (the provider passes the string through). Two rules cost
+# one more line and assert nothing unverified.
+resource "routeros_ip_firewall_filter" "lab_router_dhcp" {
+  chain            = "input"
+  place_before     = routeros_ip_firewall_filter.lab_router_deny.id
+  action           = "accept"
+  protocol         = "udp"
+  src_address_list = "lab-nets"
+  dst_port         = "67,68"
+  comment          = "lab keeps the one router service a segment cannot live without (DHCP)"
+}
+
+resource "routeros_ip_firewall_filter" "lab_router_dns_udp" {
+  chain            = "input"
+  place_before     = routeros_ip_firewall_filter.lab_router_deny.id
+  action           = "accept"
+  protocol         = "udp"
+  src_address_list = "lab-nets"
+  dst_port         = "53"
+  comment          = "lab resolves through this router (its DHCP scope says so) — udp"
+}
+
+resource "routeros_ip_firewall_filter" "lab_router_dns_tcp" {
+  chain            = "input"
+  place_before     = routeros_ip_firewall_filter.lab_router_deny.id
+  action           = "accept"
+  protocol         = "tcp"
+  src_address_list = "lab-nets"
+  dst_port         = "53"
+  comment          = "lab resolves through this router (its DHCP scope says so) — tcp, for truncated answers"
+}
+
 # Not in this phase, deliberately: the service-boundary rows port by port (`lab → srv` enforcement), and
 # the compat row's deletion. Each is its own reviewable step — the order is the matrix's own: iot, then
-# lab, then srv, then mgmt, compat last.
+# lab, then srv, then mgmt, compat last. The `lab → srv` log rule above is still the instrument for its
+# own step: its counter is live (24 packets at the time of writing) and its destinations/ports are what
+# turn that row into an accept-list.

@@ -54,6 +54,16 @@ locals {
     "stories-hermes.srv.hnatekmar.dev"     = local.dhcp_reservations["stories-hermes"].address
     "sister-hermes.srv.hnatekmar.dev"      = local.dhcp_reservations["sister-hermes"].address
 
+    # The dev cluster. Node names keep the class suffix: the firewall matrix and the diagrams read off the
+    # name, so `dev-cp1.srv` states its own VLAN and nobody has to look it up.
+    # `dev-k8s` is the *alias* cluster configs and kubeconfigs point at instead of a node: today it
+    # resolves to the single control plane, and when there are three (or a service VIP from the reserved
+    # `172.16.48.0/20`) it moves there without touching a single cluster — the same late binding the
+    # public wildcard uses. A second cluster repeats the shape with its own alias.
+    "dev-cp1.srv.hnatekmar.dev" = local.dhcp_reservations["dev-cp1"].address
+    "dev-w1.srv.hnatekmar.dev"  = local.dhcp_reservations["dev-w1"].address
+    "dev-k8s.srv.hnatekmar.dev" = local.dhcp_reservations["dev-cp1"].address
+
     # `adonai` — the k3s management host the CAPMOX spike runs on (`spike/capmox-talos`), VMID 144 on
     # balteus. The record follows its reservation, like every other host that has one, so the name and the
     # claim on the address cannot drift apart.

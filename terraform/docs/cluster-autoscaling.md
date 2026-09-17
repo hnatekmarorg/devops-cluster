@@ -132,5 +132,9 @@ helm upgrade --install proxmox-ccm oci://ghcr.io/sergelogvinov/charts/proxmox-cl
 - **Orphans happen when claims are force-deleted while a provider is unhealthy.** It stops the VMs and
   never removes them. For a leak detector, alert on a VM whose ID is beyond the pool's base VMID with no
   live NodeClaim naming it.
+- **PSA is `restricted` in the dev cluster's `default` namespace.** A throwaway test pod needs a
+  `securityContext` (no privilege escalation, drop ALL capabilities, `runAsNonRoot`, `RuntimeDefault`
+  seccomp) or it is created with a violation warning — and would be rejected outright in a namespace that
+  *enforces* rather than warns. Karpenter's own controllers are unaffected; this bites test workloads only.
 - **Pin the vault's snapshots and the template's versions together** if a restore target exists: a snapshot
   from a newer instance will not load into an older one.

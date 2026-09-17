@@ -1,0 +1,61 @@
+{{- if and .Values.onprem .Values.karpenter.enabled }}
+# Which PVE template to clone. Unmanaged ⇒ the provider searches every Proxmox node for this NAME.
+apiVersion: karpenter.proxmox.sinextra.dev/v1alpha1
+kind: ProxmoxUnmanagedTemplate
+metadata:
+  name: {{ .Values.karpenter.templateName }}
+spec:
+  region: {{ .Values.karpenter.region }}
+  templateName: {{ .Values.karpenter.templateName }}
+---
+# Where and how: region, disk (which also selects the zones), and how the machine config is delivered.
+apiVersion: karpenter.proxmox.sinextra.dev/v1alpha1
+kind: ProxmoxNodeClass
+metadata:
+  name: {{ .Values.karpenter.templateName }}
+spec:
+  region: {{ .Values.karpenter.region }}
+  instanceTemplateRef:
+    kind: ProxmoxUnmanagedTemplate
+    name: {{ .Values.karpenter.templateName }}
+  bootDevice:
+    size: {{ .Values.karpenter.bootDevice.size }}
+    storage: {{ .Values.karpenter.bootDevice.storage }}
+  metadataOptions:
+    type: cdrom
+    templatesRef:
+      name: {{ .Values.karpenter.joinSecret.name }}
+      namespace: {{ .Values.karpenter.joinSecret.namespace }}
+  placementStrategy:
+    zoneBalance: Balanced
+  tags:
+    - karpenter
+---
+# What may be provisioned. No family requirement ⇒ Karpenter sizes each node to fit the pending pods,
+# which is what you want on-prem: no over-provisioning.
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: {{ .Values.karpenter.templateName }}
+spec:
+  template:
+    spec:
+      nodeClassRef:
+        group: karpenter.proxmox.sinextra.dev
+        kind: ProxmoxNodeClass
+        name: {{ .Values.karpenter.templateName }}
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: karpenter.proxmox.sinextra.dev/instance-family
+          operator: In
+          values: {{ .Values.karpenter.instanceFamilies | toJson }}
+      expireAfter: Never
+  limits:
+    cpu: {{ .Values.karpenter.limits.cpu | quote }}
+    memory: {{ .Values.karpenter.limits.memory }}
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 1m
+{{- end }}

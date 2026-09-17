@@ -78,7 +78,24 @@ attached to the VM.
 | boot | `order=scsi0` |
 | cloud-init | `ide2: local-lvm:vm-9000-cloudinit,media=cdrom` with `citype: nocloud` |
 | console | `serial0: socket`, `vga: serial0` |
-| agent | `enabled=1` |
+| agent | enabled |
+| **cpu** | **`x86-64-v2-AES`** (or `host`) — **never leave this unset** |
+
+**The CPU type is the silent killer.** Proxmox's default is `kvm64`, which predates the **x86-64-v2**
+microarchitecture level **Talos requires** (Sidero's own Proxmox guide says so explicitly). Leave `cpu`
+unset on the template and every clone dies in early boot with a SIGILL panic and, because Talos ships
+`panic=30`, **reboots forever**. The 2026-09-17 signature, measured on two such clones, is worth
+recognising because the VM looks healthy from the outside:
+
+```
+status=running, uptime=55m, netin=212 bytes, netout=0 bytes, diskread=41.7 GB (disk is 4.2 GB)
+```
+
+Zero bytes out plus ~ten full reads of the disk = a boot loop that never reached the network. Prefer
+**`x86-64-v2-AES`** over `host` on the template: it is the common denominator across the estate's CPUs
+(Naples EPYC 7601 is v2, Rome 7642 is v3), so a clone stays bootable if it ever lands on a different host —
+which is exactly what on-demand and Karpenter-provisioned nodes will do. `host` is fine for a VM that will
+never move.
 
 After the first clone, check that the clone got its **own** `smbios1` UUID —
 `qm config <clone-id> | grep smbios1`. The template carries a fixed one, and two machines sharing an

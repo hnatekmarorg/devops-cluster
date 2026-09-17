@@ -53,10 +53,33 @@ that template shares the same master key, so the vault was rebuilt rather than a
 
 ## Credentials
 
-`bao operator init` wrote `/root/openbao-init-<stamp>.json` (0600) — since removed; the unseal key and root
-token are SOPS-encrypted in `hnatekmarorg/orign` (`bootstrap/secrets/enc.openbao.yaml`), encrypted to the
-estate's age recipient. **The private age key is not in any repo and must not be.** With 1 share /
+`bao operator init` wrote `/root/openbao-init-<stamp>.json` (0600). The unseal key and root token are
+SOPS-encrypted in `hnatekmarorg/orign` (`bootstrap/secrets/enc.openbao.yaml`) using a **repo-scoped age
+key** — not the estate-wide one — so a leak of either key cannot open the other's secrets. The recipient
+is declared in that repo's `.sops.yaml`; the private half is **not in any repo**. With 1 share /
 1 threshold the risk is *loss*, so keep more than one offline copy.
+
+### Incident: 2026-09-17, the shares leaked into a session transcript
+
+A verification step compared the plaintext against the decrypted file with `diff <(plaintext) <(decrypted)`
+while masking only `age1…` recipients. The comparison legitimately mismatched (sops re-serialises YAML
+values *unquoted*), and `diff` then printed the **plaintext side**: the unseal key and root token in clear.
+
+Blast radius was small — the vault is loopback-only, unreachable from the network, and held nothing — but the
+material was burned. Because the vault was empty, the fix was cheaper than a rebuild: **re-initialise**
+(fresh raft state, fresh shares, fresh root token), then rebuild the KV mount, snapshot policy and snapshot
+token. Old state was preserved as `data.leaked-<stamp>`, verified, then destroyed; superseded init files
+shredded.
+
+**The rule that follows, and it is not optional:**
+
+> Never `diff`, `cat`, or otherwise render a file whose content is secret material. Verify by
+> **hash or count** — `sha256sum` of each value, `cmp -s`, or a normalised document hash — and never by
+> comparing content you might then have to look at.
+
+Per-key hashing is the right tool: it proves equality, localises a mismatch to a field name, and prints no
+values. That is how this incident was actually resolved.
+
 
 ## Restart procedure (important)
 

@@ -115,6 +115,13 @@ locals {
     # reservation is the documented claim on the address (the shape the BMC's `.46` has) and only takes
     # effect if the box is switched to DHCP. Suffix preserved: `.40.30`.
     "proxy" = { mac = "BC:24:11:75:DD:2B", address = "172.16.40.30", class = "srv" }
+    # The dev cluster's nodes (2026-09-16). Clones of template `9000`, so the MACs are ours to pick and
+    # are set on the clone — and the reservation then *is* the address assignment: Talos comes up in
+    # maintenance mode and DHCPs straight onto `.100`/`.101`, with no static network config in the
+    # machine config and nothing to keep in sync by hand. Both sit in srv's free band: outside the DHCP
+    # pools (`.20-.99`, `.200-.250`) and clear of every reservation above.
+    "dev-cp1" = { mac = "BC:24:11:0D:00:10", address = "172.16.40.100", class = "srv" }
+    "dev-w1"  = { mac = "BC:24:11:0D:00:11", address = "172.16.40.101", class = "srv" }
     # Infrastructure on a pool lease is a fragility: the spine's management address must not depend
     # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
     # than being moved again for suffix symmetry — one address change per device is enough.

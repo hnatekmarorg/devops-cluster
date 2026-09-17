@@ -122,6 +122,12 @@ locals {
     # pools (`.20-.99`, `.200-.250`) and clear of every reservation above.
     "dev-cp1" = { mac = "BC:24:11:0D:00:10", address = "172.16.40.100", class = "srv" }
     "dev-w1"  = { mac = "BC:24:11:0D:00:11", address = "172.16.40.101", class = "srv" }
+    # The on-prem OpenBao (PoC: LXC 120 on balteus, 2026-09-17). srv because that is where its consumers
+    # are — and the tightest reason is `kubernetes` auth: the vault calls TokenReview on the *cluster's*
+    # API server, so intra-class keeps that a LAN call in both directions. It came up on the pool lease
+    # `.33`; claiming it here is what makes the vault's own name resolve to it (a pool lease is ten
+    # minutes long, so a lease-only address is a name that can move).
+    "openbao" = { mac = "BC:24:11:3F:75:F2", address = "172.16.40.33", class = "srv" }
     # Infrastructure on a pool lease is a fragility: the spine's management address must not depend
     # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
     # than being moved again for suffix symmetry — one address change per device is enough.

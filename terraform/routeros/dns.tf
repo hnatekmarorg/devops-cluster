@@ -63,6 +63,10 @@ locals {
     "dev-cp1.srv.hnatekmar.dev" = local.dhcp_reservations["dev-cp1"].address
     "dev-w1.srv.hnatekmar.dev"  = local.dhcp_reservations["dev-w1"].address
     "dev-k8s.srv.hnatekmar.dev" = local.dhcp_reservations["dev-cp1"].address
+    # The on-prem vault. Two labels under the apex on purpose: `*.hnatekmar.dev` matches exactly one, so
+    # this name resolves on the LAN and nowhere else — which is the correct blast radius for it, since
+    # only in-estate consumers (ESO with `kubernetes` auth, hosts with approle) and the operator use it.
+    "bao.srv.hnatekmar.dev" = local.dhcp_reservations["openbao"].address
 
     # `adonai` — the k3s management host the CAPMOX spike runs on (`spike/capmox-talos`), VMID 144 on
     # balteus. The record follows its reservation, like every other host that has one, so the name and the

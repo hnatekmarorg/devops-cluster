@@ -17,14 +17,28 @@ set -euo pipefail
 
 CLUSTER="${1:?usage: BAO_TOKEN=... wire-vault.sh <cluster>   e.g. wire-vault.sh dev}"
 ROOT="terraform/clusters/${CLUSTER}"
-[ -d "$ROOT" ] || { echo "no such cluster root: $ROOT" >&2; exit 1; }
+# The cluster root is only needed to derive a kubeconfig when the caller has none. With KUBECONFIG set,
+# this script is runnable from anywhere — including the runner, which has no repository checkout at all
+# (CI jobs run in an ephemeral container).
+if [ -z "${KUBECONFIG:-}" ] && [ ! -d "$ROOT" ]; then
+  echo "no cluster root $ROOT and no KUBECONFIG: pass one, or run from the repository root" >&2
+  exit 1
+fi
 
 # The token: BAO_TOKEN wins, otherwise /etc/bao_token — which is where the runner keeps it, so CI does
 # not need the secret in its environment. Never as an argument: a token in argv is visible in the
 # process list.
+# EXPORTED. Without it the value is a shell variable, the bao CLI never sees it, and every call fails
+# with a 403 that looks exactly like an insufficient policy.
 if [ -z "${BAO_TOKEN:-}" ] && [ -r /etc/bao_token ]; then
   BAO_TOKEN="$(tr -d '\n' < /etc/bao_token)"
 fi
+if [ -z "${BAO_TOKEN:-}" ]; then
+  echo "no vault token: set BAO_TOKEN or place one in /etc/bao_token" >&2
+  exit 1
+fi
+export BAO_TOKEN
+export BAO_ADDR="${BAO_ADDR:-https://bao.srv.hnatekmar.dev}"
 : "${BAO_TOKEN:?no vault token: set BAO_TOKEN, or place the token in /etc/bao_token (mode 0600)}"
 
 # Flag a token file others can read rather than quietly using it.
@@ -48,7 +62,14 @@ say() { printf '\n== %s\n' "$*"; }
 say "cluster kubeconfig (for the CA and to mint a reviewer token)"
 KUBECONFIG_FILE="$(mktemp)"
 trap 'rm -f "$KUBECONFIG_FILE"' EXIT
-( cd "$ROOT" && tofu output -raw kubeconfig ) > "$KUBECONFIG_FILE"
+# Honour a kubeconfig the caller supplies. In CI the state is initialised and the caller may already
+# have one; the runner has no repository checkout at all, so the tofu fallback cannot work there.
+if [ -n "${KUBECONFIG:-}" ] && [ -f "${KUBECONFIG}" ]; then
+  cp "$KUBECONFIG" "$KUBECONFIG_FILE"
+  echo "  using KUBECONFIG from the environment"
+else
+  ( cd "$ROOT" && tofu output -raw kubeconfig ) > "$KUBECONFIG_FILE"
+fi
 chmod 600 "$KUBECONFIG_FILE"
 export KUBECONFIG="$KUBECONFIG_FILE"
 
@@ -89,8 +110,17 @@ done
 echo "  reviewer token: ${#JWT} bytes (never printed)"
 
 say "vault: auth mount $MOUNT"
-BAO_ADDR="$BAO_ADDR" bao auth list 2>/dev/null | grep -q "^${MOUNT}/" || \
-  BAO_ADDR="$BAO_ADDR" bao auth enable -path="$MOUNT" kubernetes >/dev/null 2>&1 || true
+# The listing is indented, so anchor loosely — "^\${MOUNT}/" never matches and the enable would run
+# every time. And do NOT swallow the failure: a 403 on a mount that does not exist looks identical to
+# a token without permission, which cost two rounds of policy debugging.
+if ! BAO_ADDR="$BAO_ADDR" bao auth list 2>/dev/null | grep -qE "^[[:space:]]*${MOUNT}/"; then
+  if ! BAO_ADDR="$BAO_ADDR" bao auth enable -path="$MOUNT" kubernetes; then
+    echo "failed to enable auth/${MOUNT} — see the error above" >&2
+    exit 1
+  fi
+else
+  echo "  auth/${MOUNT} already enabled"
+fi
 
 say "vault: point $MOUNT at this cluster"
 # The JWT goes in via a temp file, not argv: a token in argv is visible in the process list.

@@ -44,6 +44,27 @@ data "talos_machine_configuration" "join" {
   machine_secrets    = talos_machine_secrets.this.machine_secrets
   talos_version      = var.talos_version
   kubernetes_version = var.kubernetes_version
+
+  # THE POINT OF THIS DATA SOURCE. Patches applied by talos_machine_configuration_apply are APPLY-TIME,
+  # so a clone never sees them: the raw generated config ships without a declared network interface
+  # (mandatory on nocloud — the guest otherwise boots with no address at all, logging only
+  # `network is unreachable`), without time servers, and with the METAL installer, which is the wrong
+  # platform for a VM. A Karpenter clone carrying that config boots, cannot resolve DNS, cannot reach NTP,
+  # never starts kubelet and never joins.
+  #
+  # Passing the patches here bakes them into the generated config instead, so the output IS a working
+  # join config. Everything per-node is deliberately excluded: no hostname-override, no certSANs, no
+  # scheduling flag.
+  config_patches = concat(
+    compact([
+      local.patch_network,
+      local.patch_time,
+      local.patch_install,
+      local.patch_install_trigger,
+      local.patch_kubelet_join,
+    ]),
+    var.extra_patches,
+  )
 }
 
 data "talos_client_configuration" "this" {

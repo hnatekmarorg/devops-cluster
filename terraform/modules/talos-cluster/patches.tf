@@ -65,11 +65,32 @@ locals {
   # The document that actually triggers the install on the nocloud platform. The stock config has it;
   # removing it (to escape the clock problem, as we once did) silently returns the node to the RAM-backed
   # ephemeral filesystem.
+  #
+  # THE SHAPE IS NOT FLAT. Talos v1.14's UnattendedInstallConfigV1Alpha1 is
+  #
+  #   installer:    { image }
+  #   provisioning: { diskSelector: { match }, wipe }
+  #   reboot
+  #
+  # and diskSelector/wipe at the TOP level are rejected outright:
+  #
+  #   error decoding document v1alpha1/UnattendedInstallConfig/ (line 67): unknown keys found during
+  #   decoding: diskSelector: match: disk.dev_path == "/dev/sda"  wipe: false
+  #
+  # A decode failure fails the WHOLE config load ("failed to load config via platform nocloud"), so a node
+  # carrying the flat form never reaches the cluster at all — it sits in maintenance mode. Measured on a
+  # Karpenter clone; the same patch would break any factory-built node.
   patch_install_trigger = yamlencode({
-    apiVersion   = "v1alpha1"
-    kind         = "UnattendedInstallConfig"
-    diskSelector = { match = "disk.dev_path == \"${var.install_disk}\"" }
-    wipe         = false
+    apiVersion = "v1alpha1"
+    kind       = "UnattendedInstallConfig"
+    installer = {
+      image = local.install_image
+    }
+    provisioning = {
+      diskSelector = { match = "disk.dev_path == \"${var.install_disk}\"" }
+      wipe         = false
+    }
+    reboot = false
   })
 
   # BY KIND. KubeletConfig is a document in this Talos format, so a legacy machine.kubelet patch fails with
@@ -93,6 +114,15 @@ locals {
 
   patch_scheduling = yamlencode({
     cluster = { allowSchedulingOnControlPlanes = var.allow_scheduling_on_control_planes }
+  })
+
+  # For the join config: same kubelet flags, but WITHOUT hostname-override. Every clone would otherwise
+  # register under one name. cloud-provider=external must still be here — the CCM needs the kubelet to
+  # publish provided-node-ip and mark the node for initialisation.
+  patch_kubelet_join = yamlencode({
+    apiVersion = "v1alpha1"
+    kind       = "KubeletConfig"
+    extraArgs  = var.kubelet_extra_args
   })
 
   # PER NODE: the kubelet patch carries that node's hostname-override, so these can no longer be two

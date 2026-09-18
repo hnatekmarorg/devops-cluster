@@ -59,8 +59,7 @@ data "talos_machine_configuration" "join" {
     compact([
       local.patch_network,
       local.patch_time,
-      local.patch_install,
-      local.patch_install_trigger,
+      local.patch_unattended_install,
       local.patch_kubelet_join,
     ]),
     var.extra_patches,

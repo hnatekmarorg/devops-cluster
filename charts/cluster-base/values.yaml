@@ -22,3 +22,32 @@ certManager:
     storeServer: https://bao.srv.hnatekmar.dev     # home clusters; hetzner uses bao.hnatekmar.xyz
     vaultPath: hermes/data/cloudflare-api
     vaultRole: ""
+# The autoscaling idiom — see terraform/docs/cluster-autoscaling.md.
+# Proxmox-specific, so gated on `onprem` above.
+karpenter:
+  enabled: true
+  # Must match the `region` in the Proxmox credentials config used by BOTH provider and CCM.
+  region: balteus
+  # The PVE template clones come from. It must carry the class VLAN tag and cpu=x86-64-v2-AES,
+  # and live on a single storage — see the doc, these three are not optional.
+  templateName: talos-nocloud-template
+  bootDevice:
+    size: 30G
+    storage: iscsi          # this storage also decides the zones: wrong one ⇒ TemplatesNotFound
+  # Karpenter's grid: c1=1:2 t1=1:3 s1=1:4 m1=1:8 x1=1:16, N ∈ {1,2,4,8,16}.
+  # The instance type IS the node size (m1.4VCPU-32GB → 4 cores / 32GiB).
+  instanceFamilies: ["c1", "t1", "s1"]
+  limits:
+    cpu: "8"
+    memory: 32Gi
+  # Secret holding the join config under key `user-data`, as produced by the cluster factory.
+  joinSecret:
+    name: karpenter-talos-join
+    namespace: kube-system
+  # Proxmox credentials (url/insecure/token_id/token_secret/region under key config.yaml).
+  credentialsSecret: karpenter-provider-proxmox
+  ccm:
+    enabled: true
+    # For a PoC this reuses the provider's credential. Give the CCM its own read-only token
+    # (VM.Audit, Sys.Audit, VM.GuestAgent.Audit) when it matters.
+    existingConfigSecret: karpenter-provider-proxmox

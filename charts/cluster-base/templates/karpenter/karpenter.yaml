@@ -1,0 +1,27 @@
+{{- if and .Values.onprem .Values.karpenter.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: karpenter
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: oci://ghcr.io/sergelogvinov/charts
+      chart: karpenter-provider-proxmox
+      targetRevision: "0.1.0"      # pin: confirm against the chart's releases
+      helm:
+        releaseName: karpenter
+        valuesObject:
+          settings:
+            existingConfigSecret: {{ .Values.karpenter.credentialsSecret }}
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+{{- end }}

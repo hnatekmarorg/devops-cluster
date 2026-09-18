@@ -9,10 +9,21 @@
 #   cluster.allowSchedulingOnControlPlanes — merge normally.
 #   So: patch the two above as DOCUMENTS (by kind), everything else as plain fields.
 #
-# Note what is deliberately ABSENT: no hostname patch. The stock config carries
-# `HostnameConfig: {auto: stable}`, and on the nocloud platform that resolves to the VM's name via the
-# instance-id — so naming the VM correctly is enough, and patching the hostname as well only invites the
-# legacy/document collision above.
+# THE NODE NAME IS LOAD-BEARING, and it is not the OS hostname.
+#   The CCM's getInstanceInfo ends with
+#     if !strings.HasPrefix(info.Name, node.Name) { return nil, cloudprovider.InstanceNotFound }
+#   where info.Name is the PROXMOX VM name and node.Name is the name the kubelet registered. A rejected
+#   instance means no providerID is ever set and node.cloudprovider.kubernetes.io/uninitialized is never
+#   cleared, so nothing schedules. Measured on dev: VMs dev-cp1/dev-w1, nodes talos-47c-k0r/talos-oub-c7q.
+#
+#   The OS hostname CANNOT carry this here. The stock config ships `HostnameConfig: {auto: stable}`, and
+#   `auto` conflicts with `hostname` ("'auto' and 'hostname' cannot be set at the same time"), so a patch
+#   cannot set one — a strategic merge cannot drop the field either. Worse, `auto: stable` is NOT the VM
+#   name: it is a stable hash.
+#
+#   So the node NAME comes from the kubelet instead: --hostname-override sets what kubelet registers,
+#   independent of the OS hostname, and it is per node (see patch_kubelet below). This is also why the
+#   factory cannot leave naming to `auto: stable` and hope.
 
 locals {
   install_image = coalesce(var.install_image, "factory.talos.dev/nocloud-installer/${var.talos_schematic_id}:${var.talos_version}")
@@ -54,20 +65,48 @@ locals {
   # The document that actually triggers the install on the nocloud platform. The stock config has it;
   # removing it (to escape the clock problem, as we once did) silently returns the node to the RAM-backed
   # ephemeral filesystem.
+  #
+  # THE SHAPE IS NOT FLAT. Talos v1.14's UnattendedInstallConfigV1Alpha1 is
+  #
+  #   installer:    { image }
+  #   provisioning: { diskSelector: { match }, wipe }
+  #   reboot
+  #
+  # and diskSelector/wipe at the TOP level are rejected outright:
+  #
+  #   error decoding document v1alpha1/UnattendedInstallConfig/ (line 67): unknown keys found during
+  #   decoding: diskSelector: match: disk.dev_path == "/dev/sda"  wipe: false
+  #
+  # A decode failure fails the WHOLE config load ("failed to load config via platform nocloud"), so a node
+  # carrying the flat form never reaches the cluster at all — it sits in maintenance mode. Measured on a
+  # Karpenter clone; the same patch would break any factory-built node.
   patch_install_trigger = yamlencode({
-    apiVersion   = "v1alpha1"
-    kind         = "UnattendedInstallConfig"
-    diskSelector = { match = "disk.dev_path == \"${var.install_disk}\"" }
-    wipe         = false
+    apiVersion = "v1alpha1"
+    kind       = "UnattendedInstallConfig"
+    installer = {
+      image = local.install_image
+    }
+    provisioning = {
+      diskSelector = { match = "disk.dev_path == \"${var.install_disk}\"" }
+      wipe         = false
+    }
+    reboot = false
   })
 
   # BY KIND. KubeletConfig is a document in this Talos format, so a legacy machine.kubelet patch fails with
   # `kubelet config is already set in v1alpha1 config`.
-  patch_kubelet = length(var.kubelet_extra_args) > 0 ? yamlencode({
-    apiVersion = "v1alpha1"
-    kind       = "KubeletConfig"
-    extraArgs  = var.kubelet_extra_args
-  }) : null
+  #
+  # PER NODE, because of hostname-override: the name this kubelet registers MUST be a prefix of the VM
+  # name (see the header). The VM is created from var.nodes[].name, so that name is what the node must
+  # report. Setting it here rather than as an OS hostname is deliberate — see the header for why a
+  # HostnameConfig patch cannot be used.
+  patch_kubelet = {
+    for n in var.nodes : n.name => yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "KubeletConfig"
+      extraArgs  = merge(var.kubelet_extra_args, { "hostname-override" = n.name })
+    })
+  }
 
   patch_cert_sans = length(var.cert_sans) > 0 ? yamlencode({
     machine = { certSANs = var.cert_sans }
@@ -77,30 +116,31 @@ locals {
     cluster = { allowSchedulingOnControlPlanes = var.allow_scheduling_on_control_planes }
   })
 
-  # control-plane vs worker: only the CP carries certSANs and the scheduling flag
-  patches_controlplane = concat(
-    compact([
-      local.patch_network,
-      local.patch_time,
-      local.patch_install,
-      local.patch_install_trigger,
-      local.patch_kubelet,
-      local.patch_cert_sans,
-      local.patch_scheduling,
-    ]),
-    var.extra_patches,
-  )
+  # For the join config: same kubelet flags, but WITHOUT hostname-override. Every clone would otherwise
+  # register under one name. cloud-provider=external must still be here — the CCM needs the kubelet to
+  # publish provided-node-ip and mark the node for initialisation.
+  patch_kubelet_join = yamlencode({
+    apiVersion = "v1alpha1"
+    kind       = "KubeletConfig"
+    extraArgs  = var.kubelet_extra_args
+  })
 
-  patches_worker = concat(
-    compact([
-      local.patch_network,
-      local.patch_time,
-      local.patch_install,
-      local.patch_install_trigger,
-      local.patch_kubelet,
-    ]),
-    var.extra_patches,
-  )
+  # PER NODE: the kubelet patch carries that node's hostname-override, so these can no longer be two
+  # shared lists. control-plane vs worker still differs: only the CP carries certSANs and the scheduling flag.
+  patches = {
+    for n in var.nodes : n.name => concat(
+      compact([
+        local.patch_network,
+        local.patch_time,
+        local.patch_install,
+        local.patch_install_trigger,
+        local.patch_kubelet[n.name],
+        n.role == "controlplane" ? local.patch_cert_sans : null,
+        n.role == "controlplane" ? local.patch_scheduling : null,
+      ]),
+      var.extra_patches,
+    )
+  }
 
   controlplanes = [for n in var.nodes : n if n.role == "controlplane"]
   workers       = [for n in var.nodes : n if n.role == "worker"]

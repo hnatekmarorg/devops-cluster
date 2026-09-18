@@ -1,0 +1,25 @@
+{{- if .Values.onprem }}
+# The ingress-nginx Helm repository, registered with ArgoCD.
+#
+# The OCI registration (repository-oci.yaml) does NOT cover this, and the failure is silent in the same
+# way: ArgoCD resolves `oci://` sources through enableOCI, while an `https://` source is an ordinary Helm
+# repo that needs its own registration. With only the OCI repo registered, the nginx Application is
+# declared by cluster-base and never created — cluster-base sits OutOfSync on exactly one resource,
+# `Application/nginx`, with no other symptom.
+#
+# Measured: `kubectl -n argocd get application nginx` -> NotFound, while cluster-base's resource list
+# showed `Application/nginx OutOfSync`. Registered below, the Application appears and syncs.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-ingress-nginx
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+stringData:
+  name: ingress-nginx
+  type: helm
+  url: https://kubernetes.github.io/ingress-nginx
+{{- end }}

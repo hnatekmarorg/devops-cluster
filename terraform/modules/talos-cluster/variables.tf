@@ -143,12 +143,24 @@ variable "apply_timeout" {
 
 variable "time_servers" {
   description = <<-EOT
-    NTP servers. Talos defaults to time.cloudflare.com, which these VLANs cannot reach — the visible
-    symptom is `time query error ... network is unreachable` and, because TLS needs a sane clock,
-    every later step failing for unrelated-looking reasons. Point it at the router.
+    NTP servers. Point these at a source that ANSWERS — measured 2026-09-18, udp/123 is unanswered on
+    every router address (.1 of each segment), so "point it at the router" is the trap: the earlier
+    version of this text said exactly that, and a control-plane reboot then sat for twelve minutes at
+
+      etcd    Waiting  "Waiting for time sync"
+      kubelet Waiting  "Waiting for time sync"
+
+    with the k8s API refusing connections — which reads as a broken cluster, not a clock. Talos GATES
+    etcd and kubelet on the clock, so an unreachable server is not a warning, it is an outage.
+
+    Note the DHCP option-42 advertisement points at the router too (see the routeros root, where
+    ntp_none stops it). Public NTP is reachable from these VLANs and is the working choice.
   EOT
   type        = list(string)
-  default     = ["172.16.40.1"]
+  # NOT the router, which is what this used to default to. udp/123 is unanswered on every router
+  # address (measured across all five), so a router default builds clusters that hang at "Waiting for
+  # time sync" — which the previous 172.16.40.1 did, on a control-plane reconnect.
+  default = ["time.cloudflare.com", "216.239.35.0"]
 }
 
 variable "network_interface_selector" {

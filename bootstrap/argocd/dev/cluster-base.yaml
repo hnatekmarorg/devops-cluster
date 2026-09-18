@@ -38,7 +38,8 @@ spec:
         # Cloudflare credential via ESO, NOT sops. The SOPS route exists for the cluster that hosts the
         # reverse proxy — it cannot source its cert-issuing token from the vault it fronts. Every other
         # cluster reads it from the vault, which is also what gives it revocation and audit.
-        # The chart defaults to sops, so a cluster that wants ESO has to say so.
+        # ESO is now the chart default; what stays per-cluster is everything below — the auth mount,
+        # the store and the role.
         # The chart's keys are certManager.eso.*, NOT eso.* — the store template is gated on
         # certManager.eso.enabled AND certManager.eso.storeServer, so the wrong nesting meant the
         # ClusterSecretStore never rendered at all. Silent: no error, just a component that

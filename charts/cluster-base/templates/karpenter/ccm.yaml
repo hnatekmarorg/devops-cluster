@@ -17,7 +17,13 @@ spec:
   sources:
     - repoURL: oci://ghcr.io/sergelogvinov/charts
       chart: proxmox-cloud-controller-manager
-      targetRevision: "0.2.0"      # pin: confirm against the chart's releases
+      # Chart 0.2.30 ships CCM v0.15.0. The old pin (0.2.0 -> CCM v0.4.0) resolved Nodes by VM NAME
+      # and nothing else: v0.4.0 has no FindVMByUUID, no providerID-from-node, no annotation path.
+      # That is the node-naming problem — Talos names itself talos-xxxx-xxx while the VM is dev-cp1,
+      # so providerID is never set, the uninitialized taint is never cleared and nothing schedules.
+      # v0.15.0 matches on the SMBIOS UUID, which already matches the VM exactly, so no renaming is
+      # needed for either static or Karpenter-provisioned nodes.
+      targetRevision: "0.2.30"
       helm:
         releaseName: proxmox-ccm
         valuesObject:

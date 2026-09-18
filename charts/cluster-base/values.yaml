@@ -62,3 +62,10 @@ clusterAccess:
   # must match it, hence sso:k8s-dev-admin. Not cosmetic: without a prefix a Keycloak role named
   # system:masters would land verbatim in the token and be honoured as cluster-admin.
   subjectPrefix: "sso:"
+
+storage:
+  # The NFS subdir provisioner points at the NAS on the storage LAN (192.168.88.25), which clusters on
+  # other classes cannot reach — it would sit ContainerCreating and time out. Storage is its own pass;
+  # enable this once the NAS is reachable from the cluster's class.
+  nfs:
+    enabled: false

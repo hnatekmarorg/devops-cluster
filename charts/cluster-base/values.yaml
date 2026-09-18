@@ -24,7 +24,10 @@ certManager:
     mountPath: ""
     storeName: local
     storeServer: https://bao.srv.hnatekmar.dev     # home clusters; hetzner uses bao.hnatekmar.xyz
-    vaultPath: hermes/data/cloudflare-api
+    vaultPath: hermes/data/cloudflare-api   # the KV MOUNT (ClusterSecretStore path)
+    # The path INSIDE the mount. Must fall under this cluster's prefix — the vault policy grants
+    # secret/<cluster>/* only. Empty derives <clusterName>/cloudflare.
+    vaultKey: ""
     vaultRole: ""
 # The autoscaling idiom — see terraform/docs/cluster-autoscaling.md.
 # Proxmox-specific, so gated on `onprem` above.

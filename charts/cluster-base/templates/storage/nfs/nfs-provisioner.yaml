@@ -1,4 +1,10 @@
-{{ if .Values.onprem }}
+{{/*
+Off by default: the provisioner points at the NAS on the storage LAN, which these clusters cannot
+reach, so it sits ContainerCreating until it times out. Storage is a separate pass — flip
+storage.nfs.enabled once the NAS is reachable from this class, rather than commenting this file out
+and losing the reason.
+*/}}
+{{- if and .Values.onprem .Values.storage.nfs.enabled }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

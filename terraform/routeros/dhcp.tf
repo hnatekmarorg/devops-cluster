@@ -164,6 +164,17 @@ resource "routeros_ip_dhcp_server" "class" {
   comment                   = "${local.managed_by} (${var.router_name}) — ${each.key}"
 }
 
+# One thing this block has to say out loud, because the device's *silence* is not "off": leaving
+# `ntp-server` empty does not stop the router from handing out a time source. The empty field means "pass
+# the NTP servers configured on the router", gated by `ntp-none` on this same object, whose default is
+# `no` — so a client on any of these four segments is handed DHCP option 42 = the segment's own `.1`,
+# i.e. the router. It is not a time server: `/system ntp server` reads `enabled=false` (the box runs the
+# NTP *client*), and udp/123 is unanswered on all five of its addresses (measured 2026-09-18). A client
+# that honours option 42 therefore trades a working default for one that never answers — Talos on dev-w1
+# retried `172.16.40.1:123` indefinitely instead of falling back to its `time.cloudflare.com` default.
+# The classes keep public time, which is what the enforced iot/lab input denies already assume
+# (`stage3-firewall.tf`), so this stops the advertisement instead of making it real. Note `ntp-none` is
+# not reported by `print` while it sits at its default, which is why no inventory ever showed it.
 resource "routeros_ip_dhcp_server_network" "class" {
   for_each = local.dhcp_scopes
 
@@ -173,7 +184,9 @@ resource "routeros_ip_dhcp_server_network" "class" {
   # dependency on the router is explicit. `iot` keeps public DNS deliberately: that class must not be able
   # to resolve an internal name, which makes resolution itself a class boundary. See docs/dns.md.
   dns_server = each.key == "iot" ? ["8.8.8.8"] : [each.value.gateway]
-  comment    = "${local.managed_by} (${var.router_name}) — ${each.key}"
+  # Explicit, not implied: no option 42 from these scopes.
+  ntp_none = true
+  comment  = "${local.managed_by} (${var.router_name}) — ${each.key}"
 }
 
 # Static leases: the addresses the agent's inference path is written against. Declared here so

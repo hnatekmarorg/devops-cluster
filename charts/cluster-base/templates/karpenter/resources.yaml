@@ -23,7 +23,11 @@ spec:
     storage: {{ .Values.karpenter.bootDevice.storage }}
   metadataOptions:
     type: cdrom
-    templatesRef:
+    # `secretRef`, not `templatesRef`. The installed CRD declares only {secretRef, type} and the field
+    # was written against a remembered schema rather than the CRD — the sync failed with
+    # ".spec.metadataOptions.templatesRef: field not declared in schema" and blocked every later wave,
+    # which is why ESO and the ClusterSecretStore never appeared.
+    secretRef:
       name: {{ .Values.karpenter.joinSecret.name }}
       namespace: {{ .Values.karpenter.joinSecret.namespace }}
   placementStrategy:

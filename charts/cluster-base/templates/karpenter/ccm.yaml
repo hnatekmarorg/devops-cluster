@@ -15,7 +15,10 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: oci://ghcr.io/sergelogvinov/charts
+    # NO oci:// scheme. ArgoCD resolves the wrapper package from the registered repository
+    # (templates/argocd/repository-oci.yaml, enableOCI=true); with the scheme present it computes
+    # ghcr.io/v2/sergelogvinov/charts and GHCR answers 403 for the token request.
+    - repoURL: ghcr.io/sergelogvinov/charts
       chart: proxmox-cloud-controller-manager
       # Chart 0.2.30 ships CCM v0.15.0. The old pin (0.2.0 -> CCM v0.4.0) resolved Nodes by VM NAME
       # and nothing else: v0.4.0 has no FindVMByUUID, no providerID-from-node, no annotation path.

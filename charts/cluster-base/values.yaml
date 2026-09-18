@@ -18,6 +18,10 @@ certManager:
   #   eso  → ExternalSecret below, reading from the vault in this cluster's site
   eso:
     enabled: false                  # true when secretSource is eso
+    # The vault auth mount for THIS cluster: must match auth/kubernetes-<clusterName> as enabled by
+    # scripts/wire-vault.sh. Not shareable — the mount holds one CA and one reviewer token, and a
+    # rebuilt cluster has a new CA.
+    mountPath: ""
     storeName: local
     storeServer: https://bao.srv.hnatekmar.dev     # home clusters; hetzner uses bao.hnatekmar.xyz
     vaultPath: hermes/data/cloudflare-api

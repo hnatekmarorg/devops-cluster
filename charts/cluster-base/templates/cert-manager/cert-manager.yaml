@@ -1,0 +1,48 @@
+{{- if .Values.certManager.enabled }}
+# sync-wave -1: ingresses in this chart (and everything after it) reference this issuer, so it must land
+# first. Without it a Certificate sits in IssuerNotFound and the error names the issuer, not the cause.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  sources:
+    - chart: cert-manager
+      repoURL: https://charts.jetstack.io
+      targetRevision: 1.18.0
+      helm:
+        releaseName: cert-manager
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-cloudflare
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  acme:
+    email: {{ .Values.certManager.email }}
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: cloudflare-issuer-key
+    solvers:
+      - dns01:
+          cloudflare:
+            email: {{ .Values.certManager.email }}
+            apiTokenSecretRef:
+              name: {{ .Values.certManager.cloudflare.secretName }}
+              key: {{ .Values.certManager.cloudflare.secretKey }}
+{{- end }}

@@ -18,6 +18,10 @@ certManager:
   #   eso  → ExternalSecret below, reading from the vault in this cluster's site
   eso:
     enabled: false                  # true when secretSource is eso
+    # The vault auth mount for THIS cluster: must match auth/kubernetes-<clusterName> as enabled by
+    # scripts/wire-vault.sh. Not shareable — the mount holds one CA and one reviewer token, and a
+    # rebuilt cluster has a new CA.
+    mountPath: ""
     storeName: local
     storeServer: https://bao.srv.hnatekmar.dev     # home clusters; hetzner uses bao.hnatekmar.xyz
     vaultPath: hermes/data/cloudflare-api
@@ -62,3 +66,10 @@ clusterAccess:
   # must match it, hence sso:k8s-dev-admin. Not cosmetic: without a prefix a Keycloak role named
   # system:masters would land verbatim in the token and be honoured as cluster-admin.
   subjectPrefix: "sso:"
+
+storage:
+  # The NFS subdir provisioner points at the NAS on the storage LAN (192.168.88.25), which clusters on
+  # other classes cannot reach — it would sit ContainerCreating and time out. Storage is its own pass;
+  # enable this once the NAS is reachable from the cluster's class.
+  nfs:
+    enabled: false

@@ -1,5 +1,27 @@
 # If it is onprem cluster chart deploys additional things such as storage solutions
 onprem: true
+# TLS issuance for cluster ingresses. The credential's SOURCE depends on the cluster's role:
+#   - the cluster that terminates public traffic (the bootstrap / "reverse proxy" cluster) must use
+#     `sops`: it cannot fetch a cert-issuing token from the vault it itself hosts.
+#   - every other cluster uses `eso`, pointing at the vault in its own site.
+# The created Secret's NAME and KEY are identical either way, so the ClusterIssuer never changes.
+certManager:
+  enabled: true
+  email: m.hnatma@gmail.com
+  cloudflare:
+    secretSource: sops              # sops | eso
+    secretName: cloudflare-api-token-secret
+    secretKey: api-token
+  # The secretName above must already exist, created one of two ways:
+  #   sops → a SopsSecret in this cluster's own config tree (per-repo ciphertext), e.g.
+  #          devops/argocd/secrets/enc.cloudflare.yaml, decrypted by the sops-secrets-operator
+  #   eso  → ExternalSecret below, reading from the vault in this cluster's site
+  eso:
+    enabled: false                  # true when secretSource is eso
+    storeName: local
+    storeServer: https://bao.srv.hnatekmar.dev     # home clusters; hetzner uses bao.hnatekmar.xyz
+    vaultPath: hermes/data/cloudflare-api
+    vaultRole: ""
 # The autoscaling idiom — see terraform/docs/cluster-autoscaling.md.
 # Proxmox-specific, so gated on `onprem` above.
 karpenter:

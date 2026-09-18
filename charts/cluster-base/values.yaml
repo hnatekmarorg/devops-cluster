@@ -2,14 +2,15 @@
 onprem: true
 # TLS issuance for cluster ingresses. The credential's SOURCE depends on the cluster's role:
 #   - the cluster that terminates public traffic (the bootstrap / "reverse proxy" cluster) must use
-#     `sops`: it cannot fetch a cert-issuing token from the vault it itself hosts.
-#   - every other cluster uses `eso`, pointing at the vault in its own site.
+#     `sops`: it cannot fetch a cert-issuing token from the vault it itself hosts. It opts into the
+#     operator with `sops.enabled: true` (below) and sets `cloudflare.secretSource: sops`.
+#   - every other cluster uses the default `eso`, pointing at the vault in its own site.
 # The created Secret's NAME and KEY are identical either way, so the ClusterIssuer never changes.
 certManager:
   enabled: true
   email: m.hnatma@gmail.com
   cloudflare:
-    secretSource: sops              # sops | eso
+    secretSource: eso               # sops | eso
     secretName: cloudflare-api-token-secret
     secretKey: api-token
   # The secretName above must already exist, created one of two ways:
@@ -17,7 +18,7 @@ certManager:
   #          devops/argocd/secrets/enc.cloudflare.yaml, decrypted by the sops-secrets-operator
   #   eso  → ExternalSecret below, reading from the vault in this cluster's site
   eso:
-    enabled: false                  # true when secretSource is eso
+    enabled: true                   # true when secretSource is eso (the default)
     # The vault auth mount for THIS cluster: must match auth/kubernetes-<clusterName> as enabled by
     # scripts/wire-vault.sh. Not shareable — the mount holds one CA and one reviewer token, and a
     # rebuilt cluster has a new CA.
@@ -29,6 +30,14 @@ certManager:
     # secret/<cluster>/* only. Empty derives <clusterName>/cloudflare.
     vaultKey: ""
     vaultRole: ""
+
+# The sops-secrets-operator, which decrypts SopsSecrets in-cluster (per-repo ciphertext, see
+# https://github.com/isindir/sops-secrets-operator). Off by default: the default credential route is
+# ESO above. The reverse-proxy cluster — which cannot read the vault it hosts — enables this and
+# switches certManager.cloudflare.secretSource back to sops.
+sops:
+  enabled: false
+
 # The autoscaling idiom — see terraform/docs/cluster-autoscaling.md.
 # Proxmox-specific, so gated on `onprem` above.
 karpenter:

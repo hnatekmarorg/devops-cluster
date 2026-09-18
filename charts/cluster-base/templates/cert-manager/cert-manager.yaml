@@ -16,6 +16,18 @@ spec:
       targetRevision: 1.18.0
       helm:
         releaseName: cert-manager
+        valuesObject:
+          # WITHOUT THIS THE CHART INSTALLS NO CRDs. cert-manager 1.18 defaults both `crds.enabled` and
+          # the deprecated `installCRDs` to false, and the chart ships no crds/ directory — so nothing
+          # installs them, the ClusterIssuer below can never apply, and cluster-base stays Degraded with
+          # `no matches for kind "ClusterIssuer" in version "cert-manager.io/v1"`. Note that
+          # SkipDryRunOnMissingResource on the issuer does NOT cover this: the CRD has to exist at APPLY
+          # time, not merely be tolerated at dry-run time.
+          crds:
+            enabled: true
+            # keep the CRDs on uninstall. A helm uninstall otherwise takes them and every CR in the
+            # cluster with them — measured on the ESO release, which dropped 12 CRDs to 1.
+            keep: true
   destination:
     server: "https://kubernetes.default.svc"
     namespace: cert-manager
@@ -24,6 +36,13 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
+      # REQUIRED, not cosmetic: cert-manager's own CRDs are too large for a client-side apply.
+      #   clusterissuers.cert-manager.io  311279 bytes
+      #   issuers.cert-manager.io         311188 bytes
+      # against the 262144-byte limit on the last-applied-configuration annotation — so enabling the CRDs
+      # without this fails with `metadata.annotations: Too long`, which is the same failure that hit the
+      # ESO CRDs (698 KB) and was fixed in #95.
+      - ServerSideApply=true
       - CreateNamespace=true
 ---
 apiVersion: cert-manager.io/v1

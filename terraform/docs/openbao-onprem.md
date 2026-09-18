@@ -112,11 +112,17 @@ then run the same command against a running, unsealed instance (unseal first if 
 
 ## Still to do
 
-- [ ] **NFS export ACL** — `/mnt/data/backups` lists `172.16.32.0/20`, which arithmetically covers
-      `172.16.40.33` (32–47), yet the mount is denied on **every** protocol version (4.2, 4.1, 3, default)
-      while `rpcinfo` reaches the server fine. So it is an authorisation mismatch, not a protocol one:
-      the share's Networks/Hosts field likely is not being applied as it reads. Until it is, snapshots stay
-      local-only.
+- [x] **Off-host snapshots — working via a hop.** The blocker was *not* the export: it is `*` again, and
+      both adonai (a VM) and a mgmt host mount it happily. The LXC is denied on **every** export, which
+      makes it client-side: an **unprivileged Proxmox LXC cannot use the kernel NFS client** without
+      `features: mount=nfs` in its config. Diagnosis that settled it: mounting several `*` exports, all
+      denied, while another host on the same bridge succeeded.
+      Until that feature is set (one line, plus a container restart — which leaves the vault sealed), the
+      snapshot ships **LXC → adonai → NAS** over a dedicated key. srv→srv, which the firewall matrix already
+      permits. Verified: identical sha256 on both ends, ciphertext on the NAS, and no host able to decrypt
+      it. The script prefers the direct path automatically once `/mnt/backups` mounts here.
+      *Fix if you want the direct path:* `pct set 120 --features mount=nfs` (unprivileged containers need
+      it explicit), then unseal afterwards.
 - [ ] **TLS** — terminate real TLS (Cloudflare DNS-01) and bind the class address; update `api_addr`,
       `cluster_addr` and the listener together. Needs the Cloudflare API token on the host.
 - [ ] **Auth** — `approle` for hosts, `kubernetes` for the home clusters, policies scoped per path.

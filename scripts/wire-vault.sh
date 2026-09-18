@@ -19,7 +19,19 @@ CLUSTER="${1:?usage: BAO_TOKEN=... wire-vault.sh <cluster>   e.g. wire-vault.sh 
 ROOT="terraform/clusters/${CLUSTER}"
 [ -d "$ROOT" ] || { echo "no such cluster root: $ROOT" >&2; exit 1; }
 
-: "${BAO_TOKEN:?set BAO_TOKEN (the vault token); it is read from the environment on purpose}"
+# The token: BAO_TOKEN wins, otherwise /etc/bao_token — which is where the runner keeps it, so CI does
+# not need the secret in its environment. Never as an argument: a token in argv is visible in the
+# process list.
+if [ -z "${BAO_TOKEN:-}" ] && [ -r /etc/bao_token ]; then
+  BAO_TOKEN="$(tr -d '\n' < /etc/bao_token)"
+fi
+: "${BAO_TOKEN:?no vault token: set BAO_TOKEN, or place the token in /etc/bao_token (mode 0600)}"
+
+# Flag a token file others can read rather than quietly using it.
+if [ -f /etc/bao_token ]; then
+  _mode="$(stat -c '%a' /etc/bao_token 2>/dev/null || echo '?')"
+  [ "$_mode" = "600" ] || echo "warning: /etc/bao_token is mode $_mode; 0600 recommended" >&2
+fi
 BAO_ADDR="${BAO_ADDR:-https://bao.srv.hnatekmar.dev}"
 ESO_NS="${ESO_NS:-external-secrets}"
 ESO_SA="${ESO_SA:-external-secrets}"

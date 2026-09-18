@@ -1,0 +1,64 @@
+---
+# cluster-base for this cluster, as an ArgoCD Application.
+#
+# This directory is what bootstrap-cluster.sh hands to ArgoCD (the root Application recurses over
+# bootstrap/argocd/<cluster>). Everything the cluster needs after the bootstrap is described here or by
+# the chart this points at — which is the point: ArgoCD is the boundary, and nothing above it is done
+# by hand.
+#
+# cluster-base renders one Application per component (cert-manager + its Cloudflare credential, ESO +
+# the secret store, Karpenter + the CCM, nginx, crossplane, and the RBAC bindings). So this single
+# Application is what closes the gap where the bindings had to be applied by hand.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-base
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    targetRevision: HEAD
+    path: charts/cluster-base
+
+    helm:
+      # THE ONE PER-CLUSTER VALUE. It decides which RBAC bindings this cluster gets:
+      #   dev   -> sso:k8s-dev-viewer / sso:k8s-dev-admin
+      #   infra -> sso:k8s-infra-viewer / sso:k8s-infra-admin
+      # The chart refuses to render without it, deliberately: guessing wrong would grant the wrong
+      # tier, so a missing class is a hard failure rather than a default.
+      values: |
+        clusterClass: dev
+
+        # Cloudflare credential via ESO, NOT sops. The SOPS route exists for the cluster that hosts the
+        # reverse proxy — it cannot source its cert-issuing token from the vault it fronts. Every other
+        # cluster reads it from the vault, which is also what gives it revocation and audit.
+        # The chart defaults to sops, so a cluster that wants ESO has to say so.
+        certManager:
+          cloudflare:
+            secretSource: eso
+        eso:
+          enabled: true
+
+  destination:
+    server: https://kubernetes.default.svc   # in-cluster
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

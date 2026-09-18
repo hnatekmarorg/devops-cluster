@@ -51,3 +51,14 @@ karpenter:
     # For a PoC this reuses the provider's credential. Give the CCM its own read-only token
     # (VM.Audit, Sys.Audit, VM.GuestAgent.Audit) when it matters.
     existingConfigSecret: karpenter-provider-proxmox
+
+# Which class of cluster this is: 'dev' or 'infra'. REQUIRED — the chart fails rather than defaulting,
+# because guessing wrong would grant dev-level access on a cluster that must keep working (or vice
+# versa). A cluster binds only its own class's roles, so this is what keeps the two axes isolated.
+clusterClass: ""
+
+clusterAccess:
+  # Prefix the API server applies to the token's groups claim (oidc-groups-prefix). Binding subjects
+  # must match it, hence sso:k8s-dev-admin. Not cosmetic: without a prefix a Keycloak role named
+  # system:masters would land verbatim in the token and be honoured as cluster-admin.
+  subjectPrefix: "sso:"

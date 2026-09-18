@@ -1,0 +1,60 @@
+{{/*
+Kubernetes access bindings for this cluster's CLASS.
+
+A cluster binds only its own class's roles, so k8s-dev-admin (which lets you break a sandbox freely)
+grants nothing on a cluster that must keep working. That isolation is the point of the two-axis model,
+and it is structural here: the class is a chart input, so an infra cluster literally cannot emit the
+dev bindings.
+
+Both bindings use built-in ClusterRoles (view, cluster-admin) — no custom roles to audit.
+
+Subjects are the `sso:`-prefixed role names. The prefix appears because the API server maps the token's
+`groups` claim with oidc-groups-prefix=sso:, and it is not cosmetic: without a prefix a Keycloak role
+named `system:masters` would land verbatim in the token and Kubernetes would honour it as such.
+
+Roles are assigned to users in Keycloak (see crossplane/config/keycloak/roles/k8s-*.yaml in
+hetzner-k8s). This chart does not create them — it only says what they mean here.
+*/}}
+{{- $class := .Values.clusterClass | required "clusterClass is required: set it to 'dev' or 'infra' in this cluster's values" }}
+{{- if not (has $class (list "dev" "infra")) }}
+{{- fail (printf "clusterClass must be 'dev' or 'infra', got %q — refusing to guess, since guessing wrong grants the wrong access" $class) }}
+{{- end }}
+{{- $prefix := .Values.clusterAccess.subjectPrefix | default "sso:" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sso-k8s-{{ $class }}-viewer
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/part-of: cluster-base
+    cluster-access/class: {{ $class }}
+    cluster-access/tier: viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: "{{ $prefix }}k8s-{{ $class }}-viewer"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sso-k8s-{{ $class }}-admin
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/part-of: cluster-base
+    cluster-access/class: {{ $class }}
+    cluster-access/tier: admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: "{{ $prefix }}k8s-{{ $class }}-admin"

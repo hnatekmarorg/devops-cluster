@@ -53,6 +53,8 @@ Tightening a live estate on the strength of a table is how outages get scheduled
    distinctive `log-prefix` and leave the traffic flowing — RouterOS logs and continues, so the
    rule is a counter, not a verdict. Read the logs for a week.
 2. **Enforce the confident rows first**: `iot → internal` (nothing should be there), `lab → mgmt`.
+   Both classes also get their `input` default-deny against the router itself — see "The router itself
+   is a target too" below.
 3. **Then the service-boundary rows**, port by port, where the logs showed real traffic.
 4. **Retire compat** and delete its row.
 
@@ -88,10 +90,32 @@ credentials) and in whatever cadence reads the deny logs — the two together ar
 loop: this one says the policy *can* work, the report says what it would cost.
 
 The existing *defconf* rules stay: they govern the WAN side (`drop all from WAN not DSTNATed`, the
-input chain's WAN handling) and the matrix is about east-west. Two interactions to keep in mind:
-the router's own resolver (`allow-remote-requests`) is off, so DNS in the matrix means *public*
-resolvers until the resolver step, and enabling it is what lets internal names work for VPN clients
-— the same decision as pointing `lmproxy` at names.
+input chain's WAN handling) and the matrix is about east-west. One interaction to keep in mind: the
+router's resolver (`allow-remote-requests`) **is on** — it serves the class sub-zones, and the DHCP
+scopes for mgmt, lab and srv hand out their own gateway as the resolver, while iot and compat keep
+public DNS (`8.8.8.8`). So "DNS" in a row means *this router's* resolver for those three classes, and a
+deny that forgets port 53 takes internal names away from the class it silences; see `dns.tf` for why the
+resolver lives here, and `docs/dns.md` for the rest.
+
+### The router itself is a target too
+
+The matrix table is about traffic *between* classes, and every row in it is a `forward` rule — so it says
+nothing about traffic addressed to the router, which the `input` chain judges. The `LAN` interface list
+holds all six class VLANs and the input chain's own rule is `drop all not coming from LAN`, i.e. the
+default is that every class can reach the router's services (ssh, WinBox, the API, WebFig, `btest`).
+
+Each class therefore gets its own `input` default-deny, with only the segment's plumbing named as an
+accept — and what "plumbing" means is per class, not a shared list:
+
+| Class | May reach the router | Why that is the list |
+|---|---|---|
+| iot | DHCP, ICMP | iot keeps public DNS by design, so nothing but an address is needed |
+| lab | DHCP, DNS (udp+tcp), ICMP | the lab scope hands out `172.16.30.1` as the resolver, so DNS is plumbing here |
+
+NTP is allowed for neither: both classes keep public time. ICMP needs no rule — defconf's `accept ICMP`
+sits above the deny, which is what keeps ping and PMTUD working. The classes whose row is not enforced yet
+(mgmt, srv, vpn, compat) are deliberately still reachable: their deny is a change of its own, and the
+matrix's order is iot, lab, srv, mgmt, compat last.
 
 ## What this deliberately leaves alone
 

@@ -22,12 +22,20 @@ spec:
     size: {{ .Values.karpenter.bootDevice.size }}
     storage: {{ .Values.karpenter.bootDevice.storage }}
   metadataOptions:
-    type: cdrom
-    # `secretRef`, not `templatesRef`. The installed CRD declares only {secretRef, type} and the field
-    # was written against a remembered schema rather than the CRD — the sync failed with
-    # ".spec.metadataOptions.templatesRef: field not declared in schema" and blocked every later wave,
-    # which is why ESO and the ClusterSecretStore never appeared.
-    secretRef:
+    type: cdrom                # the v0.12.0 CRD's enum is exactly [none, cdrom]
+    # `templatesRef`. The field name is VERSION-DEPENDENT, which is why it has now been wrong in both
+    # directions: provider v0.3.0 declared `secretRef`, and provider v0.12.0 declares
+    # {templatesRef, valuesRef, type} — dropping `secretRef` entirely. The earlier correction to
+    # `secretRef` was right for the CRD installed at the time and became wrong the moment this chart was
+    # bumped to v0.12.0. So treat the CRD as the source of truth, and re-read it after every bump:
+    #
+    #   kubectl get crd proxmoxnodeclasses.karpenter.proxmox.sinextra.dev -o json \
+    #     | jq '.spec.versions[]|select(.served).schema.openAPIV3Schema.properties.spec.properties.metadataOptions.properties|keys'
+    #
+    # The referenced Secret carries cloud-init fragments as keys, all optional:
+    #   user-data, meta-data, network-config
+    # NOTE: that Secret does not exist yet — this fixes the field, not the secret.
+    templatesRef:
       name: {{ .Values.karpenter.joinSecret.name }}
       namespace: {{ .Values.karpenter.joinSecret.namespace }}
   placementStrategy:

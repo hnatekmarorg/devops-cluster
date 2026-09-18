@@ -9,12 +9,18 @@ spec:
   sources:
     - repoURL: oci://ghcr.io/sergelogvinov/charts
       chart: karpenter-provider-proxmox
-      targetRevision: "0.1.0"      # pin: confirm against the chart's releases
+      # Chart 0.4.9 ships provider v0.12.0. The old pin (0.1.0 -> v0.3.0) ships a ClusterRole that
+      # cannot list proxmoxtemplates/proxmoxunmanagedtemplates, so the controller crash-loops on
+      # reflectors and the NodePool never reconciles ("NodeClassReady=Unknown").
+      targetRevision: "0.4.9"
       helm:
         releaseName: karpenter
         valuesObject:
-          settings:
-            existingConfigSecret: {{ .Values.karpenter.credentialsSecret }}
+          # TOP LEVEL, not under `settings:`. The chart reads .Values.existingConfigSecret, so nesting it
+          # under settings made the release look for a secret named <release>-<chart> that never existed —
+          # the pod sat in ContainerCreating on `secret "karpenter-karpenter-provider-proxmox" not found`.
+          existingConfigSecret: {{ .Values.karpenter.credentialsSecret }}
+          existingConfigSecretKey: config.yaml
   destination:
     server: "https://kubernetes.default.svc"
     namespace: kube-system

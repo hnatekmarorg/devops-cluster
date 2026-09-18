@@ -81,3 +81,16 @@ output "join_config" {
 output "nodes" {
   value = module.cluster.nodes
 }
+
+# The credential-free kubeconfig belongs in git next to the cluster definition: it carries no secret
+# (endpoint, public CA, a kubelogin exec block), so committing it is safe and means nobody has to be
+# handed a file. Regenerate it after every rebuild — the CA changes then.
+output "oidc_kubeconfig" {
+  description = "OIDC kubeconfig: no credential in it, safe to commit. Requires the kubelogin plugin."
+
+  # nonsensitive() is deliberate, not an oversight. This output derives from the kubeconfig resource,
+  # which holds the cluster's client certificate — but what this OUTPUT contains is only the endpoint,
+  # the PUBLIC CA and a kubelogin exec block. Marking it sensitive is what would defeat the purpose:
+  # the whole point is that it can be committed and shared. Terraform warns because it cannot tell.
+  value = nonsensitive(module.cluster.oidc_kubeconfig)
+}

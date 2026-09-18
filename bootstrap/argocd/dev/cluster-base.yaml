@@ -39,11 +39,23 @@ spec:
         # reverse proxy — it cannot source its cert-issuing token from the vault it fronts. Every other
         # cluster reads it from the vault, which is also what gives it revocation and audit.
         # The chart defaults to sops, so a cluster that wants ESO has to say so.
+        # The chart's keys are certManager.eso.*, NOT eso.* — the store template is gated on
+        # certManager.eso.enabled AND certManager.eso.storeServer, so the wrong nesting meant the
+        # ClusterSecretStore never rendered at all. Silent: no error, just a component that
+        # quietly does not exist.
+        #
+        # clusterName is required (the vault auth mount is per cluster and the default derives from it).
+        clusterName: dev
         certManager:
           cloudflare:
             secretSource: eso
-        eso:
-          enabled: true
+          eso:
+            enabled: true
+            storeName: local-dev
+            storeServer: https://bao.srv.hnatekmar.dev
+            vaultPath: secret              # the KV mount; per-cluster isolation is the dev/ prefix
+            mountPath: kubernetes-dev      # must match what wire-vault.sh enabled
+            vaultRole: local-dev
 
   destination:
     server: https://kubernetes.default.svc   # in-cluster

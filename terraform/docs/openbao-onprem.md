@@ -91,6 +91,29 @@ BAO_ADDR=http://127.0.0.1:8200 bao status | grep -E "Sealed|Initialized"   # exp
 curl -s http://127.0.0.1:8200/v1/sys/health    # expect "sealed":false,"standby":false
 ```
 
+## TLS (live)
+
+`https://bao.srv.hnatekmar.dev` serves the vault with a real Let's Encrypt certificate, issued over
+**DNS-01** — so the name needs no public A record and stays internal (two labels under the apex, which
+`*.hnatekmar.dev` cannot match).
+
+- **Caddy** (build with `github.com/caddy-dns/cloudflare`, from the Caddy download API so no Go toolchain
+  is needed) runs on the LXC, terminates TLS, and proxies to the vault on `127.0.0.1:8200`. The vault
+  itself never leaves loopback.
+- **Cloudflare token** at `/root/.cloudflare-token` (0600, dotenv style: `CLOUDFLARE_TOKEN`,
+  `CLOUDFLARE_ACCOUNT_ID`), consumed by the systemd unit via `EnvironmentFile` and referenced in the
+  Caddyfile as `{env.CLOUDFLARE_TOKEN}` — the plugin's own expected name (`CLOUDFLARE_API_TOKEN`) is
+  deliberately not what the file defines.
+- **Token scope**: `Zone → DNS → Edit` + `Zone → Zone → Read`, zone-scoped to `hnatekmar.dev`. That is the
+  floor for DNS-01. It is an *account-owned* token, so `/user/tokens/verify` answers `Invalid API Token`
+  while the token works perfectly — judge it by reading the zone, not by that endpoint.
+- **Vault addresses**: `api_addr = "https://bao.srv.hnatekmar.dev"` (so proxy-terminated TLS and any
+  redirects agree) and `cluster_addr = "https://127.0.0.1:8201"` — the latter is honest about being a
+  single-node raft; expose 8201 (through Caddy or directly) *before* adding a second node.
+
+**A restart leaves it sealed** — now confirmed in practice, not just in theory. Unseal with the key from the
+init file, via the API route above. Which raises the still-open question of *who* owns that key.
+
 ## Snapshots (verified)
 
 Daily via `openbao-snapshot.timer` → `/usr/local/bin/openbao-snapshot.sh`:
@@ -123,8 +146,7 @@ then run the same command against a running, unsealed instance (unseal first if 
       it. The script prefers the direct path automatically once `/mnt/backups` mounts here.
       *Fix if you want the direct path:* `pct set 120 --features mount=nfs` (unprivileged containers need
       it explicit), then unseal afterwards.
-- [ ] **TLS** — terminate real TLS (Cloudflare DNS-01) and bind the class address; update `api_addr`,
-      `cluster_addr` and the listener together. Needs the Cloudflare API token on the host.
+- [x] **TLS** — live via Caddy + Cloudflare DNS-01; `api_addr` now the external name. See the TLS section above.
 - [ ] **Auth** — `approle` for hosts, `kubernetes` for the home clusters, policies scoped per path.
 - [ ] **Vault config as code** — `vault.upbound.io` Crossplane manifests in `orign/crossplane/`, once TLS
       exists (every ESO store in the estate speaks `https://`).

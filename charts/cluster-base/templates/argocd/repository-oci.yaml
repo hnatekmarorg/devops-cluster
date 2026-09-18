@@ -1,0 +1,32 @@
+{{- if .Values.onprem }}
+# The Helm OCI repository, registered with ArgoCD — WITHOUT THIS THE OCI APPLICATIONS NEVER SYNC.
+#
+# ArgoCD only takes its OCI Helm path when the repository is registered with enableOCI. Unregistered, it
+# treats the source as an ordinary Helm repo and resolves the wrong package: it asks GHCR for
+# `sergelogvinov/charts` when the real package is `sergelogvinov/charts/<chart>`, so the token request
+#
+#     GET https://ghcr.io/token?scope=repository:sergelogvinov/charts:pull   -> 403 denied
+#
+# and the Application sits at `sync=Unknown` with a ComparisonError, forever. The `oci://` scheme in the
+# Application's repoURL does NOT substitute for this — it is what makes the wrapper path be computed.
+#
+# Measured consequence: proxmox-ccm and karpenter were served by bootstrap-cluster.sh's helm install, not
+# by GitOps, and every ArgoCD sync of them was a silent no-op. That is worth knowing before trusting a
+# green-looking app: check the revision resolved, not the status field.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-ghcr-sergelogvinov-charts
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  annotations:
+    # keep it out of the way of anything that diffs the argocd namespace by hand
+    argocd.argoproj.io/sync-wave: "-1"
+stringData:
+  name: ghcr-sergelogvinov-charts
+  type: helm
+  # no scheme
+  url: ghcr.io/sergelogvinov/charts
+  enableOCI: "true"
+{{- end }}

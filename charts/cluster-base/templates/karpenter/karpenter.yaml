@@ -7,7 +7,10 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: oci://ghcr.io/sergelogvinov/charts
+    # NO oci:// scheme. ArgoCD resolves the wrapper package from the registered repository
+    # (templates/argocd/repository-oci.yaml, enableOCI=true); with the scheme present it computes
+    # ghcr.io/v2/sergelogvinov/charts and GHCR answers 403 for the token request.
+    - repoURL: ghcr.io/sergelogvinov/charts
       chart: karpenter-provider-proxmox
       # Chart 0.4.9 ships provider v0.12.0. The old pin (0.1.0 -> v0.3.0) ships a ClusterRole that
       # cannot list proxmoxtemplates/proxmoxunmanagedtemplates, so the controller crash-loops on

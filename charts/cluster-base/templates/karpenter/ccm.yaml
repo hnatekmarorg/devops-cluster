@@ -1,0 +1,38 @@
+{{- if and .Values.onprem .Values.karpenter.enabled .Values.karpenter.ccm.enabled }}
+# The Proxmox Cloud Controller Manager.
+#
+# Required, not optional: it is what sets spec.providerID on Nodes. Without it the provider cannot
+# correlate a VM with a Node, so NodeClaims never register, Karpenter times out and terminates the
+# instance it just built, `karpenter.sh/nodepool` is never applied (pool-targeted pods never schedule),
+# and nodes whose VMs are gone linger as NotReady. Its counterpart requirement is on the kubelet side:
+# every kubelet must run with --cloud-provider=external (on Talos: patch the KubeletConfig document by
+# kind — a JSON patch will not work on a multi-document machine config).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: proxmox-ccm
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: oci://ghcr.io/sergelogvinov/charts
+      chart: proxmox-cloud-controller-manager
+      targetRevision: "0.2.0"      # pin: confirm against the chart's releases
+      helm:
+        releaseName: proxmox-ccm
+        valuesObject:
+          existingConfigSecret: {{ .Values.karpenter.ccm.existingConfigSecret }}
+          existingConfigSecretKey: config.yaml
+          enabledControllers:
+            - cloud-node
+            - cloud-node-lifecycle
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+{{- end }}

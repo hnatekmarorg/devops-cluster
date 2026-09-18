@@ -201,17 +201,75 @@ variable "extra_patches" {
 
 # ---------------------------------------------------------------- cluster services
 
-variable "join_secret_name" {
-  description = "Secret (kube-system) that will hold the worker join config, key `user-data`. Karpenter's NodeClass reads it."
-  type        = string
-  default     = "karpenter-talos-join"
+variable "set_hostnames" {
+  description = <<-EOT
+    Whether to patch each node's static hostname. DEFAULTS TO FALSE because it does not work through this
+    provider: the generated config already carries a HostnameConfig document and it cannot be neutralised
+    by a patch (see patches.tf for the five attempts). With it off, nodes are named `talos-<random>`,
+    which is cosmetic — addresses come from the reservations, so DNS still resolves.
+  EOT
+  type        = bool
+  default     = false
 }
 
-variable "install_vault_reviewer" {
+# ---------------------------------------------------------------- OIDC (Kubernetes user authentication)
+# Turning this on makes a credential-free kubeconfig possible: the cluster trusts Keycloak, and users
+# authenticate with kubelogin instead of a client certificate.
+variable "oidc_enabled" {
+  description = "Trust Keycloak for Kubernetes user authentication (structured AuthenticationConfiguration)."
+  type        = bool
+  default     = false
+}
+
+variable "oidc_issuer_url" {
+  description = "Keycloak realm issuer. NOTE the path: Keycloak 17+ dropped the /auth prefix."
+  type        = string
+  default     = "https://sso.hnatekmar.xyz/realms/master"
+}
+
+variable "oidc_client_id" {
+  description = "The PUBLIC Keycloak client kubelogin authenticates as. Also the expected token audience."
+  type        = string
+  default     = "kubectl-hnatekmar-xyz"
+}
+
+variable "oidc_username_claim" {
+  description = "Claim mapped to the Kubernetes username."
+  type        = string
+  default     = "email"
+}
+
+variable "oidc_groups_claim" {
   description = <<-EOT
-    Create a `vault-reviewer` service account, its long-lived token and the auth-delegator binding, so the
-    on-prem vault can authenticate this cluster's ESO via the `kubernetes` auth method. The CA and the
-    token are exported for the vault-side configuration.
+    Claim carrying cluster-access roles. Defaults to `groups` because the realm propagates the roles
+    attached to a user into that array — the estate's existing convention (OpenBao boundGroups, ArgoCD
+    group bindings). Binding subjects therefore read `sso:k8s-dev-admin` etc.
+
+    NOT realm_access.roles: the legacy --oidc-* flags read top-level claims, and the structured config
+    that can read a nested one is unusable on Talos 1.14 (siderolabs/talos#14394).
+  EOT
+  type        = string
+  default     = "groups"
+}
+
+variable "oidc_claim_prefix" {
+  description = <<-EOT
+    Prefix applied to mapped usernames and groups. Not cosmetic: without it, a Keycloak role named
+    system:masters would land verbatim in the token and Kubernetes honours system: prefixed groups,
+    silently granting cluster-admin.
+  EOT
+  type        = string
+  default     = "sso:"
+}
+
+variable "check_health" {
+  description = <<-EOT
+    Whether the factory gates on cluster health at apply time.
+
+    DEFAULT TRUE, and set it false to repair a broken cluster. The health data source reads the cluster
+    to decide, so when the API server is down a normal apply DEADLOCKS: the check waits for the thing
+    being repaired. That happened for real — an invalid OIDC config took the API server down, and the
+    revert plan hung on `talos_cluster_health: Still reading...` until it timed out.
   EOT
   type        = bool
   default     = true

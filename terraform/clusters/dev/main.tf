@@ -51,7 +51,19 @@ module "cluster" {
     },
   ]
 
-  cert_sans = ["172.16.40.100", "127.0.0.1"]
+  # Legacy --oidc-* flags: roles arrive in the top-level `groups` claim, the estate's convention.
+  oidc_enabled = true
+
+  # Talos already adds the cluster endpoint's hostname to the API server certificate automatically
+  # (verified: the served cert carries DNS:dev-k8s.srv.hnatekmar.dev), so these are for the OTHER ways
+  # in — connecting by node name, and localhost. dev-cp1.srv.hnatekmar.dev resolves to the same address
+  # and would otherwise fail TLS verification as a name mismatch.
+  cert_sans = [
+    "172.16.40.100",
+    "127.0.0.1",
+    "dev-cp1.srv.hnatekmar.dev",
+    "dev-k8s.srv.hnatekmar.dev",
+  ]
 }
 
 output "kubeconfig" {

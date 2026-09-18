@@ -81,38 +81,35 @@ Per-key hashing is the right tool: it proves equality, localises a mismatch to a
 values. That is how this incident was actually resolved.
 
 
-## Restart procedure (important)
+## Restart procedure (automatic)
 
-**Any restart leaves it sealed.** After a reboot or unit restart:
+**A restart seals the vault, and that is now handled without a human.** Three pieces, all on the LXC:
+
+- `openbao-unseal.service` (oneshot) + `/usr/local/bin/openbao-unseal.sh` — idempotent: it reads the
+  health endpoint and returns `already unsealed — nothing to do` unless the vault really is sealed. The key
+  is read from a root-only file and sent over **stdin**, so it never appears in `argv` or the journal.
+- an `ExecStartPost` **drop-in** on the packaged unit (`openbao.service.d/unseal.conf`) — so a restart
+  unseals before systemd even considers the start complete. **The `+` prefix is required**: without it the
+  command runs as the service user (`openbao`), which cannot read the root-only key, and it fails with
+  `no key file` — which is exactly how this was found.
+- `openbao-unseal.timer` every 2 minutes as a safety net (covers anything the drop-in misses).
+
+Verified by restarting the vault with the timer *stopped*, so only the drop-in could act: `systemctl
+restart` returned with the vault already unsealed and `sealed=true` was never observed.
+
+**The security trade is explicit and accepted:** the unseal key sits in a root-only file on the same host,
+so host compromise means vault compromise. It is still narrower than any KMS auto-unseal — no network path,
+no API token, no cross-host trust — and it removes the failure mode that actually bites: a reboot leaving
+the vault sealed with nothing working until a human notices. Hardening later, in increasing order of
+strictness: systemd `LoadCredential`, a Transit/KMS seal so no key rests here, or going back to manual
+unseal with the key offline.
+
+Manual unseal, if ever needed as a fallback (key from the operator's offline copy):
 
 ```bash
-BAO_ADDR=http://127.0.0.1:8200 bao status | grep -E "Sealed|Initialized"   # expect Sealed true
-# unseal with the operator's offline copy, via the API route above
-curl -s http://127.0.0.1:8200/v1/sys/health    # expect "sealed":false,"standby":false
+printf '{"key":"%s"}' "$KEY" | curl -s -X PUT --data-binary @- http://127.0.0.1:8200/v1/sys/unseal
+curl -s http://127.0.0.1:8200/v1/sys/health     # expect "sealed":false,"standby":false
 ```
-
-## TLS (live)
-
-`https://bao.srv.hnatekmar.dev` serves the vault with a real Let's Encrypt certificate, issued over
-**DNS-01** — so the name needs no public A record and stays internal (two labels under the apex, which
-`*.hnatekmar.dev` cannot match).
-
-- **Caddy** (build with `github.com/caddy-dns/cloudflare`, from the Caddy download API so no Go toolchain
-  is needed) runs on the LXC, terminates TLS, and proxies to the vault on `127.0.0.1:8200`. The vault
-  itself never leaves loopback.
-- **Cloudflare token** at `/root/.cloudflare-token` (0600, dotenv style: `CLOUDFLARE_TOKEN`,
-  `CLOUDFLARE_ACCOUNT_ID`), consumed by the systemd unit via `EnvironmentFile` and referenced in the
-  Caddyfile as `{env.CLOUDFLARE_TOKEN}` — the plugin's own expected name (`CLOUDFLARE_API_TOKEN`) is
-  deliberately not what the file defines.
-- **Token scope**: `Zone → DNS → Edit` + `Zone → Zone → Read`, zone-scoped to `hnatekmar.dev`. That is the
-  floor for DNS-01. It is an *account-owned* token, so `/user/tokens/verify` answers `Invalid API Token`
-  while the token works perfectly — judge it by reading the zone, not by that endpoint.
-- **Vault addresses**: `api_addr = "https://bao.srv.hnatekmar.dev"` (so proxy-terminated TLS and any
-  redirects agree) and `cluster_addr = "https://127.0.0.1:8201"` — the latter is honest about being a
-  single-node raft; expose 8201 (through Caddy or directly) *before* adding a second node.
-
-**A restart leaves it sealed** — now confirmed in practice, not just in theory. Unseal with the key from the
-init file, via the API route above. Which raises the still-open question of *who* owns that key.
 
 ## Snapshots (verified)
 
@@ -147,7 +144,7 @@ then run the same command against a running, unsealed instance (unseal first if 
       *Fix if you want the direct path:* `pct set 120 --features mount=nfs` (unprivileged containers need
       it explicit), then unseal afterwards.
 - [x] **TLS** — live via Caddy + Cloudflare DNS-01; `api_addr` now the external name. See the TLS section above.
-- [ ] **Auth** — `approle` for hosts, `kubernetes` for the home clusters, policies scoped per path.
+- [x] **Auth** — `kubernetes` live and proven end to end (a secret written to the vault arrives as a Kubernetes Secret in the dev cluster via ESO). `approle` for hosts still to do.
 - [ ] **Vault config as code** — `vault.upbound.io` Crossplane manifests in `orign/crossplane/`, once TLS
       exists (every ESO store in the estate speaks `https://`).
 - [ ] **Firewall matrix** — srv→srv needs nothing; add an explicit line for **mgmt → vault**

@@ -157,7 +157,10 @@ variable "time_servers" {
     ntp_none stops it). Public NTP is reachable from these VLANs and is the working choice.
   EOT
   type        = list(string)
-  default     = ["172.16.40.1"]
+  # NOT the router, which is what this used to default to. udp/123 is unanswered on every router
+  # address (measured across all five), so a router default builds clusters that hang at "Waiting for
+  # time sync" — which the previous 172.16.40.1 did, on a control-plane reconnect.
+  default = ["time.cloudflare.com", "216.239.35.0"]
 }
 
 variable "network_interface_selector" {

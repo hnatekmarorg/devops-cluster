@@ -20,8 +20,9 @@ module "cluster" {
   talos_schematic_id = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
   talos_version      = "v1.14.1"
 
-  proxmox_node     = "balteus"
-  template_vm_id   = 9000
+  proxmox_node   = "balteus"
+  template_vm_id = 9000
+  # The TEMPLATE lives on iscsi; each node's own disk chooses its datastore below.
   template_storage = "iscsi"
   vlan_id          = 40
 
@@ -39,6 +40,9 @@ module "cluster" {
       cores     = 4
       memory_mb = 8192
       disk_gb   = 40
+      # etcd is fsync-bound. On iSCSI this shows up as `etcdserver: request timed out`, and every
+      # lease holder exits together — controller-manager, scheduler, CCM, Karpenter. Local storage here.
+      storage = "local-lvm"
     },
     {
       name      = "dev-w1"
@@ -48,6 +52,8 @@ module "cluster" {
       cores     = 4
       memory_mb = 8192
       disk_gb   = 40
+      # A worker wants the room for images, and losing it does not take the cluster with it.
+      storage = "iscsi"
     },
   ]
 

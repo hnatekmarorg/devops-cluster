@@ -91,5 +91,10 @@ output "oidc_kubeconfig" {
     }]
     "current-context" = var.cluster_name
   }) : null
-  sensitive = false
+  # The CONTENT is publishable — it is a public CA and an exec block, no credential. But OpenTofu does not
+  # grade the content: the expression derives from talos_cluster_kubeconfig.kubeconfig_raw, which the
+  # provider marks sensitive, and exporting a sensitive-derived value from a root module is a hard error
+  # (`Output refers to sensitive values`). The module did not validate at all with `sensitive = false`.
+  # `tofu output oidc_kubeconfig` still prints it when asked for by name.
+  sensitive = true
 }

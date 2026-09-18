@@ -26,6 +26,26 @@ data "talos_machine_configuration" "worker" {
   kubernetes_version = var.kubernetes_version
 }
 
+# The config handed to clones the factory did not create — Karpenter's burst workers. The output
+# `join_config` references THIS, and it referenced a data source that did not exist, so `tofu validate`
+# failed and the join Secret had to be assembled by hand. Keep it a separate data source rather than
+# reusing `worker`: the clone contract is different in one way that matters.
+#
+#   It must NOT pin a hostname. The clones are named by Karpenter, and the CCM requires the VM name to
+#   start with the node name — which is satisfied because the provider templates
+#   `local-hostname: {{ .Hostname }}` into the cloud-init metadata and Talos's nocloud platform reads it.
+#   A HostnameConfig `auto:` value does not get in the way (automatic hostnames have the LOWEST priority
+#   against cloud-init), but an explicit `hostname:`, or a --hostname-override kubelet flag, would pin
+#   every clone to one name. So nothing per-node may be baked in here.
+data "talos_machine_configuration" "join" {
+  cluster_name       = var.cluster_name
+  machine_type       = "worker"
+  cluster_endpoint   = var.cluster_endpoint
+  machine_secrets    = talos_machine_secrets.this.machine_secrets
+  talos_version      = var.talos_version
+  kubernetes_version = var.kubernetes_version
+}
+
 data "talos_client_configuration" "this" {
   cluster_name         = var.cluster_name
   client_configuration = talos_machine_secrets.this.client_configuration
@@ -96,7 +116,9 @@ resource "talos_machine_configuration_apply" "node" {
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = each.value.role == "controlplane" ? data.talos_machine_configuration.controlplane.machine_configuration : data.talos_machine_configuration.worker.machine_configuration
   node                        = each.value.address
-  config_patches              = each.value.role == "controlplane" ? local.patches_controlplane : local.patches_worker
+  # Per node: the kubelet patch carries that node's hostname-override, so this can no longer be two
+  # shared lists keyed off the role.
+  config_patches = local.patches[each.key]
 
   # Applied at apply time rather than baked at generation — which is what makes the by-kind patches in
   # patches.tf valid (a generated config cannot carry a second KubeletConfig document).

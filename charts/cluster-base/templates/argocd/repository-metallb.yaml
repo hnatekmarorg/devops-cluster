@@ -1,0 +1,26 @@
+{{- if and .Values.onprem .Values.metallb.enabled }}
+# The MetalLB Helm repository, registered with ArgoCD.
+#
+# Same trap as repository-nginx.yaml, same silent failure: ArgoCD resolves an `https://` Helm source
+# through the repository registration, and the OCI registration (repository-oci.yaml) does NOT cover it.
+# With only the OCI repo registered, cluster-base sits OutOfSync on exactly one resource —
+# `Application/metallb` — with no other symptom, and the Application is never created.
+#
+# The consequence is worth stating because it does not look like this bug: MetalLB is absent while
+# everything that reports on it looks fine, so the symptom you see is `ingress-nginx-controller`
+# sitting at EXTERNAL-IP `<pending>` forever, which reads as "the pool is empty" rather than "the
+# controller was never installed".
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-metallb
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+stringData:
+  name: metallb
+  type: helm
+  url: https://metallb.github.io/metallb
+{{- end }}

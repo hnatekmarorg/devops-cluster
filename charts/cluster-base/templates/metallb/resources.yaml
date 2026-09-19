@@ -1,0 +1,62 @@
+{{- if and .Values.onprem .Values.metallb.enabled }}
+{{- $addresses := required "metallb.pool.addresses is required when metallb is enabled" .Values.metallb.pool.addresses }}
+# The namespace is declared here rather than created by the Application (`CreateNamespace=false` there)
+# because the speaker opens raw sockets on the host network and answers ARP: it needs the privileged Pod
+# Security profile, and a namespace created implicitly gets no labels at all.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/warn-version: latest
+---
+# The pool this cluster may allocate LoadBalancer addresses from.
+#
+# It sits inside the estate's reserved VIP block (172.16.48.0/20) so that a VIP and the node announcing
+# it share srv's subnet — the property L2 mode depends on. The /24 split and the reasoning behind it are
+# in charts/cluster-base/values.yaml.
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: {{ .Values.metallb.pool.name }}
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    # The IPAddressPool CRD arrives with the metallb Application in this same sync; on a first sync this
+    # resource legitimately does not exist yet. Without this the dry-run fails and the wave stalls.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/part-of: cluster-base
+spec:
+  addresses:
+{{- range $addresses }}
+    - {{ . | quote }}
+{{- end }}
+  # A Service gets an address without asking for one, which is what makes `type: LoadBalancer` behave
+  # the way the rest of Kubernetes expects.
+  autoAssign: true
+---
+# L2: the speaker answers ARP on whichever node holds the VIP, so the VIP is reachable without the
+# router routing anything. `spec.interfaces` is omitted on purpose — the speaker picks the interface
+# carrying the announcing node's address, which is the one on the class VLAN.
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: {{ .Values.metallb.pool.name }}
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/part-of: cluster-base
+spec:
+  ipAddressPools:
+    - {{ .Values.metallb.pool.name }}
+{{- end }}

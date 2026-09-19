@@ -89,11 +89,18 @@ locals {
     "wan-restricted" = local.ai_compute
 
     # The reader: ONE device, not a class — it takes the inverse of its class row (internet denied,
-    # LAN allowed), so the identity itself is the policy and the list is a deliberate /32. Kept at the
-    # end, outside the aligned block above, on purpose: an entry inserted mid-block splits the
-    # alignment group and forces `tofu fmt` to re-pad every line in it, which CI rejects. The address
-    # is stated once in `local.reader` (reader-lan-only.tf), next to the rules that depend on it.
-    "reader-nets" = ["${local.reader.address}/32"]
+    # LAN allowed), so the identity itself is the policy. Kept at the end, outside the aligned block
+    # above, on purpose: an entry inserted mid-block splits the alignment group and forces `tofu fmt`
+    # to re-pad every line in it, which CI rejects. The address is stated once in `local.reader`
+    # (reader-lan-only.tf), next to the rules that depend on it.
+    #
+    # BARE address, no `/32`: RouterOS normalises a single-host address-list entry and stores it
+    # without the prefix, so declaring `/32` never converges — `plan` compares the device's
+    # `172.16.70.123` against the config's `172.16.70.123/32` and reports an in-place update on every
+    # single run. Measured: #112's apply created it and the follow-up plan immediately wanted to
+    # rewrite it. The class lists above are CIDR blocks and are unaffected; this is the estate's first
+    # host-address entry, which is why it only shows up here.
+    "reader-nets" = [local.reader.address]
   }
 
   address_list_entries = flatten([

@@ -104,7 +104,7 @@ locals {
       mac        = local.reader.mac
       address    = local.reader.address
       class      = "iot"
-      option_set = routeros_ip_dhcp_server_option_set.reader.name
+      option_set = routeros_ip_dhcp_server_option_sets.reader.name
     }
 
     # The dedicated CI runner (a ZimaBoard, plugged in by hand). It is on a *compat* port today

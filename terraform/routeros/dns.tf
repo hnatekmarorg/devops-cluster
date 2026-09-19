@@ -63,6 +63,18 @@ locals {
     "dev-cp1.srv.hnatekmar.dev" = local.dhcp_reservations["dev-cp1"].address
     "dev-w1.srv.hnatekmar.dev"  = local.dhcp_reservations["dev-w1"].address
     "dev-k8s.srv.hnatekmar.dev" = local.dhcp_reservations["dev-cp1"].address
+
+    # The prod cluster. Same shape as dev's, including the alias: `prod-k8s` is what its configs and
+    # kubeconfigs point at, so moving the endpoint off a single node (today it resolves to cp1) does not
+    # touch the cluster. NOTE for review: with three control planes the endpoint SHOULD be a VIP
+    # (`172.16.48.0/20` is reserved for exactly that), which is not implemented yet — until it is, losing
+    # `prod-cp1` takes the API endpoint with it even though the other two keep etcd alive. See the scope
+    # list in the cluster PR.
+    "prod-cp1.srv.hnatekmar.dev" = local.dhcp_reservations["prod-cp1"].address
+    "prod-cp2.srv.hnatekmar.dev" = local.dhcp_reservations["prod-cp2"].address
+    "prod-cp3.srv.hnatekmar.dev" = local.dhcp_reservations["prod-cp3"].address
+    "prod-w1.srv.hnatekmar.dev"  = local.dhcp_reservations["prod-w1"].address
+    "prod-k8s.srv.hnatekmar.dev" = local.dhcp_reservations["prod-cp1"].address
     # The on-prem vault. Two labels under the apex on purpose: `*.hnatekmar.dev` matches exactly one, so
     # this name resolves on the LAN and nowhere else — which is the correct blast radius for it, since
     # only in-estate consumers (ESO with `kubernetes` auth, hosts with approle) and the operator use it.

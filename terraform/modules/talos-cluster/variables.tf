@@ -104,6 +104,22 @@ variable "nodes" {
     cores     = number
     memory_mb = number
     disk_gb   = number
+    # Where this node's disk lives. Defaults to template_storage (iscsi) when unset.
+    #
+    # SET IT TO LOCAL STORAGE FOR CONTROL PLANES. etcd's write path is fsync-bound, and on network block
+    # storage that latency is measurable: on the dev cluster's CP (disk on iscsi, LVM over iSCSI)
+    #
+    #   etcd: "apply request took too long"  took=118ms / 138ms / 350ms   (expected-duration 100ms)
+    #   apiserver -> etcd-client: "rpc error: code = Unavailable desc = etcdserver: request timed out"
+    #
+    # and once the API cannot answer for longer than a lease deadline, EVERY lease holder exits at once:
+    # kube-controller-manager, kube-scheduler, the CCM and Karpenter (which panics with
+    # "leader election lost"). The visible damage is a half-built VM — Karpenter had cloned it, then died
+    # before resizing the disk, attaching the cloud-init ISO and starting it.
+    #
+    # Workers are the opposite case: images want space, and a worker losing its API connection does not take
+    # the cluster with it, so they stay on iscsi.
+    storage = optional(string)
   }))
 
   validation {

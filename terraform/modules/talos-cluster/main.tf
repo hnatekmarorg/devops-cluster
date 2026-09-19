@@ -59,8 +59,7 @@ data "talos_machine_configuration" "join" {
     compact([
       local.patch_network,
       local.patch_time,
-      local.patch_install,
-      local.patch_install_trigger,
+      local.patch_unattended_install,
       local.patch_kubelet_join,
     ]),
     var.extra_patches,
@@ -108,8 +107,12 @@ resource "proxmox_virtual_environment_vm" "node" {
   }
 
   # Sized here rather than in the template, so one template serves every shape.
+  #
+  # The datastore is PER NODE: the control plane belongs on LOCAL storage (etcd is fsync-bound — see the
+  # note on the `storage` field in variables.tf) while workers want the room iscsi has for images. The
+  # clone still sources the template from wherever it lives; this only chooses where the clone's disk lands.
   disk {
-    datastore_id = var.template_storage
+    datastore_id = coalesce(each.value.storage, var.template_storage)
     interface    = "scsi0"
     size         = each.value.disk_gb
   }

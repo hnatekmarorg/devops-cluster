@@ -1,13 +1,26 @@
 # The patches — this file is the point of the factory. Each one encodes something that cost hours to find,
 # and they are applied at APPLY time (not baked into a generated config), which is what keeps them correct.
 #
-# THE RULE, discovered the hard way:
-#   a LEGACY field collides with its DOCUMENT equivalent, and only then.
-#     machine.network.hostname   ⇄ HostnameConfig    (collision)
-#     machine.kubelet.extraArgs  ⇄ KubeletConfig     (collision)
-#   Fields with no document — machine.install, machine.network.interfaces, machine.time, machine.certSANs,
-#   cluster.allowSchedulingOnControlPlanes — merge normally.
-#   So: patch the two above as DOCUMENTS (by kind), everything else as plain fields.
+# THE RULE, and the earlier version of it was WRONG. Measured on the first real apply of this module
+# against Talos v1.14.1 and provider v0.12.0, where four patches failed one after another:
+#
+#   a patch is refused when the GENERATED config already sets that field — either as a plain field or as
+#   the DOCUMENT equivalent. Talos rejects both forms:
+#
+#     *.cluster.allowSchedulingOnControlPlanes is already set in v1alpha1 config
+#     * UnattendedInstallConfig config is incompatible with v1alpha1 config (.machine.install)
+#     * HostnameConfig: 'auto' and 'hostname' cannot be set at the same time
+#     * KubeletConfig is already set in v1alpha1 config
+#
+#   What DOES merge: machine.network.interfaces, machine.time, machine.certSANs (the generated config
+#   leaves these alone).
+#
+#   And the provider's machinery must KNOW a document kind before it can carry it. With provider v0.11.0
+#   (the newest stable) `KubeletConfig` and `UnattendedInstallConfig` are simply "not registered", so the
+#   by-kind patches below could not even be expressed — hence the provider pin to v0.12.0-rc.0.
+#
+# So: patch as DOCUMENTS whatever the generated config already sets, as plain fields whatever it does
+# not, and check which is which after every Talos or provider bump.
 #
 # THE NODE NAME IS LOAD-BEARING, and it is not the OS hostname.
 #   The CCM's getInstanceInfo ends with
@@ -30,12 +43,26 @@ locals {
 
   # Declaring the interface is MANDATORY on nocloud: with nothing declared the guest boots with no address
   # at all, logging only `network is unreachable`, while looking healthy from the Proxmox side.
+  # TALOS CANNOT DECODE A NULL. The selector variable carries an optional `name` that is unset by
+  # default, and passing the object straight through renders
+  #   deviceSelector: {physical: true, name: null}
+  # which Talos refuses outright:
+  #
+  #   error decoding document /v1alpha1/ (line 1): unknown keys found during decoding:
+  #   machine.network.interfaces[0].deviceSelector: name: null
+  #
+  # The patch is rejected AS A WHOLE, so the machine config is never applied and the node sits in
+  # maintenance mode: booted, reachable on :50000, no address, no cluster. Build the selector from the
+  # fields that are actually set.
   patch_network = yamlencode({
     machine = {
       network = {
         interfaces = [{
-          deviceSelector = var.network_interface_selector
-          dhcp           = true
+          deviceSelector = merge(
+            var.network_interface_selector.physical == null ? {} : { physical = var.network_interface_selector.physical },
+            var.network_interface_selector.name == null ? {} : { name = var.network_interface_selector.name },
+          )
+          dhcp = true
         }]
       }
     }
@@ -52,45 +79,106 @@ locals {
   # Install to disk instead of running from the image. Running from the image means a RAM-backed /var
   # (we measured 2.1 GB of "none" filesystem on a 33 GB disk), which fills under load and taints the node
   # disk-pressure — after which nothing schedules at all.
-  patch_install = yamlencode({
-    machine = {
-      install = {
-        disk  = var.install_disk
-        image = local.install_image
-        wipe  = false
-      }
-    }
-  })
+  # NOT PATCHED as a legacy field. On Talos v1.14 the generated config already carries an
+  # UnattendedInstallConfig document, and Talos rejects having both — measured:
+  #
+  #   rpc error: code = InvalidArgument desc = 1 error occurred:
+  #     * UnattendedInstallConfig config is incompatible with v1alpha1 config (.machine.install)
+  #
+  # So the disk and the installer image are set on the DOCUMENT instead, by kind — see
+  # patch_unattended_install below, which replaces what this used to do.
+  patch_install = null
 
-  # The document that actually triggers the install on the nocloud platform. The stock config has it;
-  # removing it (to escape the clock problem, as we once did) silently returns the node to the RAM-backed
-  # ephemeral filesystem.
+  # NOT APPLIED, and this is a provider limitation rather than a choice.
+
   #
-  # THE SHAPE IS NOT FLAT. Talos v1.14's UnattendedInstallConfigV1Alpha1 is
+
+  # The document that triggers the disk install on nocloud is UnattendedInstallConfig, and its
+
+  # v1.14 shape is nested:
+
   #
+
   #   installer:    { image }
+
   #   provisioning: { diskSelector: { match }, wipe }
+
   #   reboot
+
   #
-  # and diskSelector/wipe at the TOP level are rejected outright:
+
+  # The terraform provider (siderolabs/talos v0.11.0, the newest stable — v0.12.0-rc.0 is the only
+
+  # newer release) carries Talos machinery older than that document, so it refuses the patch before
+
+  # Talos ever sees it:
+
   #
-  #   error decoding document v1alpha1/UnattendedInstallConfig/ (line 67): unknown keys found during
-  #   decoding: diskSelector: match: disk.dev_path == "/dev/sda"  wipe: false
+
+  #   Error: Error loading config patches
+
+  #   error decoding document v1alpha1/UnattendedInstallConfig/ (line 1):
+
+  #   "UnattendedInstallConfig" "v1alpha1": not registered
+
   #
-  # A decode failure fails the WHOLE config load ("failed to load config via platform nocloud"), so a node
-  # carrying the flat form never reaches the cluster at all — it sits in maintenance mode. Measured on a
-  # Karpenter clone; the same patch would break any factory-built node.
-  patch_install_trigger = yamlencode({
+
+  # and the flat form it replaced was rejected by the NODE instead
+
+  # ("unknown keys found during decoding: diskSelector ... wipe"). Either way the patch is not applied,
+
+  # so leaving it in fails the apply. machine.install (above) still names the disk and the nocloud
+
+  # installer image — what is missing is the document that TRIGGERS the install.
+
+  #
+
+  # FOLLOW-UP: confirm whether these nodes actually install to disk or run from the RAM-backed image
+
+  # (the author's note: 2.1 GB of "none" filesystem, which fills under load and taints disk-pressure).
+
+  # Two ways to restore it: bump the provider to v0.12.x when it goes stable, or apply the document
+
+  # post-provision with a talosctl that matches the cluster version.
+
+  # THE INSTALL, as the document v1.14 actually uses. Both halves live here: the installer image and
+
+  # the disk it installs to. This replaces the legacy machine.install patch, which v1.14 refuses
+
+  # outright when the generated config already carries this document.
+
+  #
+
+  # The shape is NESTED — installer, and provisioning{diskSelector, wipe} — not flat. The flat form
+
+  # (diskSelector/wipe at the top level) is rejected by the node with "unknown keys found during
+
+  # decoding", and because a decode failure fails the WHOLE config load, a node carrying it boots
+
+  # into maintenance mode and never joins.
+
+  patch_unattended_install = yamlencode({
+
     apiVersion = "v1alpha1"
-    kind       = "UnattendedInstallConfig"
+
+    kind = "UnattendedInstallConfig"
+
     installer = {
+
       image = local.install_image
+
     }
+
     provisioning = {
+
       diskSelector = { match = "disk.dev_path == \"${var.install_disk}\"" }
-      wipe         = false
+
+      wipe = false
+
     }
+
     reboot = false
+
   })
 
   # BY KIND. KubeletConfig is a document in this Talos format, so a legacy machine.kubelet patch fails with
@@ -112,9 +200,27 @@ locals {
     machine = { certSANs = var.cert_sans }
   }) : null
 
-  patch_scheduling = yamlencode({
-    cluster = { allowSchedulingOnControlPlanes = var.allow_scheduling_on_control_planes }
-  })
+  # NOT PATCHED. The generated v1.14 config already sets cluster.allowSchedulingOnControlPlanes, and a
+
+  # plain-field patch for a field that is already set is refused:
+
+  #
+
+  #   rpc error: code = InvalidArgument desc = 1 error occurred:
+
+  #     * .cluster.allowSchedulingOnControlPlanes is already set in v1alpha1 config
+
+  #
+
+  # The generated default stands. On Talos v1.14 that default is to ALLOW scheduling on control planes,
+
+  # which is what this patch wanted anyway — so the variable is now inert for this Talos version.
+
+  # VERIFY the taint state after provisioning rather than assuming: the CCM can also assign taints from
+
+  # VM configuration.
+
+  patch_scheduling = null
 
   # For the join config: same kubelet flags, but WITHOUT hostname-override. Every clone would otherwise
   # register under one name. cloud-provider=external must still be here — the CCM needs the kubelet to
@@ -132,11 +238,9 @@ locals {
       compact([
         local.patch_network,
         local.patch_time,
-        local.patch_install,
-        local.patch_install_trigger,
+        local.patch_unattended_install,
         local.patch_kubelet[n.name],
         n.role == "controlplane" ? local.patch_cert_sans : null,
-        n.role == "controlplane" ? local.patch_scheduling : null,
       ]),
       var.extra_patches,
     )

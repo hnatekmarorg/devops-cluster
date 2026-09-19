@@ -179,6 +179,14 @@ jobs:
     name: ${{ matrix.action }} · ${{ matrix.cluster }}
     needs: discover
     if: needs.discover.outputs.has == 'true'
+    # THE MATRIX — and its absence was this workflow's first real bug. The discover job produced a
+    # correct two-cluster matrix, but with no strategy block the job ran ONCE with `matrix.*` undefined:
+    # the name rendered as a bare "·", and every `if: matrix.action == 'apply'` was false, so the job
+    # reported SUCCESS having done nothing whatsoever. A silently-empty matrix looks exactly like success,
+    # which is why the fix is here and not in the discovery logic.
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
     runs-on: [self-hosted, mgmt, tofu]
     # An apply is a writer and must not be cancelled — but it also must not hold the runner's only slot
     # forever. A fresh cluster is ~10 min of apply plus a ~1 min bootstrap; the margin covers Proxmox

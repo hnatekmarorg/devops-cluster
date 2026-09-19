@@ -1,0 +1,62 @@
+# Workflow lint — actionlint, because this class of bug has no runtime symptom.
+#
+# WHY THIS EXISTS, in one line: the cluster-apply workflow shipped its first version with a job that USED
+# `matrix.*` but declared no `strategy.matrix`. GitHub ran it ONCE with the matrix undefined, every step's
+# `if: matrix.action == '...'` was false, and the job reported **success having done nothing at all** —
+# a provisioning run that looked fine and reconciled no clusters. The workflow even named the job "·".
+#
+# actionlint catches it precisely:
+#
+#   property "action" is not defined in object type {}   [expression]
+#
+# A linter is the right home for it, because there is no runtime signal to notice: the job is green and
+# the infrastructure is not. Config lives in .github/actionlint.yaml (the self-hosted runner labels).
+name: lint (workflows)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - '.github/actionlint.yaml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-workflows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: [self-hosted, mgmt, tofu]
+    # The runner has a single slot; a lint that hangs would block every apply behind it.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch actionlint
+        run: |
+          set -euo pipefail
+          # Pinned by version, fetched as a static binary: this runner image has no Go toolchain and no
+          # container runtime to run an actionlint container in.
+          ver="1.7.12"
+          curl -sfL "https://github.com/rhysd/actionlint/releases/download/v${ver}/actionlint_${ver}_linux_amd64.tar.gz" \
+            | tar -xz -C /tmp actionlint
+          /tmp/actionlint --version
+
+      # `-shellcheck=` disables actionlint's shellcheck integration ON PURPOSE. That integration only
+      # runs when a `shellcheck` binary is present, so leaving it on makes the result depend on the
+      # runner image: the same workflow lints clean on the runner (no shellcheck) and reports two
+      # pre-existing info-level findings anywhere shellcheck IS installed. A check whose verdict depends
+      # on which host it runs on is worse than no check. What remains is what this job is for — the
+      # workflow STRUCTURE and expressions, which is where the matrix bug lived.
+      - name: Lint
+        run: /tmp/actionlint -shellcheck= -color .github/workflows/*.yml

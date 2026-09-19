@@ -1,0 +1,67 @@
+---
+# cluster-base for the PROD cluster, as an ArgoCD Application. Draft — see the PR body.
+#
+# This directory is what bootstrap-cluster.sh hands to ArgoCD (the root Application recurses over
+# bootstrap/argocd/<cluster>). It is the only per-cluster file the bootstrap needs, and the only place
+# where prod differs from dev in a way that is about *access*.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-base
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    targetRevision: HEAD
+    path: charts/cluster-base
+
+    helm:
+      # THE ONE VALUE THAT MATTERS MOST HERE. `infra` is what makes this cluster bind
+      # sso:k8s-infra-viewer / sso:k8s-infra-admin instead of the dev tier — the whole point of the
+      # class axis. The chart refuses to render without it, deliberately: guessing wrong would grant
+      # dev-level access on the cluster that must keep working.
+      values: |
+        clusterClass: infra
+
+        clusterName: prod
+        certManager:
+          cloudflare:
+            secretSource: eso
+          eso:
+            enabled: true
+            storeName: local-prod
+            storeServer: https://bao.srv.hnatekmar.dev
+            vaultPath: secret              # the KV mount; per-cluster isolation is the prod/ prefix
+            mountPath: kubernetes-prod     # must match what wire-vault.sh enabled
+            vaultRole: local-prod
+
+        # Prod's autoscaling ceiling, above dev's 8/32Gi. The instance families still come from the
+        # chart default (c1/t1/s1) — deliberately no x1 on a box that is also the storage host.
+        karpenter:
+          limits:
+            cpu: "32"
+            memory: 128Gi
+
+  destination:
+    server: https://kubernetes.default.svc   # in-cluster
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

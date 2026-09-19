@@ -25,11 +25,12 @@
 # simply time out. Hence the per-lease option set below — one device, one DHCP option, no change to the
 # class's own policy (which is deliberate: "iot keeps public DNS" stays true for the segment).
 #
-# The DNS accept needs **both** protocols, and RouterOS will not let a port stand without one: it
-# refuses `dst-port` unless `proto` is tcp/udp/… — "ports can be specified if proto is
-# tcp,udp,udp-lite,dccp,sctp". Measured the hard way: the first apply of this file failed on exactly
-# that. It is not a formality either, because a filtered resolver falls back to TCP when an answer is
-# truncated, so a udp-only accept fails on the large answers.
+# The DNS accept needs **both** protocols, and it needs them as **two rules**: RouterOS refuses a port
+# without a protocol ("ports can be specified if proto is tcp,udp,udp-lite,dccp,sctp") and then refuses a
+# *list* in the protocol field ("input does not match any value of protocol") — `protocol` holds one name
+# or number, while `dst_port` takes a list (provider schema, and both errors measured). Two rules is the
+# only form that covers both transports, and both are needed: a filtered resolver truncates to TCP, so a
+# udp-only accept fails on exactly the large answers.
 #
 # DHCP option 6 takes a **typed** value: RouterOS answers "Unknown data type!" for a bare address, so
 # the value carries an explicit type prefix — `s'…'` for a string, `0x…` for raw hex (provider docs,
@@ -130,13 +131,15 @@ resource "routeros_ip_firewall_filter" "reader_web_allow" {
 # The router itself. Above `iot_router_deny`, the same anchor `iot_router_dhcp` uses, and for the same
 # reason: a catch-all deny is only as good as the accepts that sit above it.
 resource "routeros_ip_firewall_filter" "reader_router_dns" {
+  for_each = toset(["tcp", "udp"])
+
   chain            = "input"
   place_before     = routeros_ip_firewall_filter.iot_router_deny.id
   action           = "accept"
-  protocol         = "tcp,udp" # a port cannot stand without one, and TCP is the truncation fallback
+  protocol         = each.value
   src_address_list = "reader-nets"
   dst_port         = "53"
-  comment          = "reader exception: DNS (udp+TCP), because its internet is denied — firewall-matrix.md"
+  comment          = "reader exception: DNS over ${upper(each.value)} — its internet is denied, so the resolver is the router's — firewall-matrix.md"
 }
 
 resource "routeros_ip_firewall_filter" "reader_router_ntp" {

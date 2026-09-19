@@ -73,15 +73,52 @@ runs:
         ../../scripts/tofu-ci.sh --role=write check
         echo "armed=true" >> "$GITHUB_OUTPUT"
 
-    - name: init · plan · apply
+    - name: init
+      if: steps.preflight.outputs.armed == 'true'
+      shell: bash
+      working-directory: terraform/${{ inputs.module }}
+      run: ../../scripts/tofu-ci.sh --role=write init -input=false
+
+    # THE PLAN IS A READ, AND MUST NOT TAKE THE STATE LOCK. It used to, and that is what turned a wedged
+    # plan into a broken pipeline (measured 2026-09-19): the plan stopped responding mid-refresh, the job
+    # was killed at its timeout, and a SIGKILLed `tofu` cannot delete the lock object it wrote — so every
+    # later *apply* stalled on `Error acquiring the state lock … 412 PreconditionFailed` while `tf-plan`
+    # and `tf-drift` kept passing, because those have run `-lock=false` since 2026-09-16 for exactly this
+    # reason. The apply path was the last place still holding a lock across a read, which is why this
+    # presented as a stuck runner rather than as a stale lock. Only the apply below locks now, so a lock
+    # means one thing: a writer is mid-write.
+    #
+    # BOUNDED, and the bound is `timeout` rather than `timeout-minutes`: composite-action steps do not
+    # accept `timeout-minutes`, and an unsupported key there stops the action from loading at all — a
+    # worse failure than the one being fixed, which is why this does not rely on it. GNU `timeout` is
+    # present on every runner that executes this action, and its exit code 124 says plainly which thing
+    # ran out of time.
+    #
+    # WHY 60s: the wedge was ~20 minutes of total silence from the provider mid-refresh, with the device,
+    # the runner, the credential and the network all verified healthy and a plain `tofu plan` reproducing
+    # clean against the same state and the same provider build. A hung read is therefore a known failure
+    # mode here, not a one-off — and it is not worth the runner's only slot. A plan against these devices
+    # measures well under 20s, so 60s is the wedge dying, not real work being cut.
+    - name: plan (read — no state lock, hard-bounded)
       if: steps.preflight.outputs.armed == 'true'
       shell: bash
       working-directory: terraform/${{ inputs.module }}
       run: |
         set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
-        ../../scripts/tofu-ci.sh --role=write init -input=false
-        ../../scripts/tofu-ci.sh --role=write plan \
-          -input=false -no-color -lock-timeout=5m -out=apply.tfplan | tee apply-plan.txt
+        timeout --kill-after=10s 60 ../../scripts/tofu-ci.sh --role=write plan \
+          -input=false -no-color -lock=false -out=apply.tfplan | tee apply-plan.txt
+
+    # The writer — the one step that locks, and deliberately the one step with no tight bound of its own.
+    # Killing an apply mid-flight is how a device ends up half-changed with the state stale (and how a
+    # lock is orphaned for the next run to trip over), and that hazard is worse than a slow apply. So this
+    # step is bounded only by the job's `timeout-minutes`, which exists so a wedged write cannot hold the
+    # runner's slot forever. A real apply against these devices measures ~10-20s.
+    - name: apply (the only step that locks)
+      if: steps.preflight.outputs.armed == 'true'
+      shell: bash
+      working-directory: terraform/${{ inputs.module }}
+      run: |
+        set -o pipefail
         ../../scripts/tofu-ci.sh --role=write apply -input=false -no-color apply.tfplan | tee apply.txt
 
     - name: Record what changed

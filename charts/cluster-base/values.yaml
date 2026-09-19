@@ -121,3 +121,33 @@ storage:
   # enable this once the NAS is reachable from the cluster's class.
   nfs:
     enabled: false
+
+# Service VIPs. MetalLB hands out the addresses `type: LoadBalancer` Services get, which on this cluster
+# means the ingress controller's — without it that Service is `<pending>` forever and every Ingress is
+# unreachable however healthy its certificate looks.
+#
+# WHERE THE RANGE COMES FROM. The estate reserves 172.16.48.0/20 for exactly this (the `svc-vips`
+# address list in terraform/routeros/main.tf, which the firewall rules read; the srv DHCP pool states
+# that the block must never appear in it). The placement is structural rather than tidy: srv's router
+# interface is 172.16.40.1/19, so a VIP in 172.16.48.0/20 and the node announcing it are in ONE subnet.
+# That is what makes L2 announcement work with no routing protocol, no BGP peer on the router and no FRR
+# privileges on the speaker. BGP stays the upgrade path if single-announcer L2 ever becomes a real
+# constraint, and the range works there unchanged.
+#
+# The /20 is shared by every cluster and by future three-control-plane API VIPs, so each cluster takes a
+# /24 and STATES it — a pool that defaulted would be a pool two clusters could claim at once:
+#
+#   172.16.48.0/24   dev      this cluster; ingress VIP 172.16.48.1
+#   172.16.49.0/24   spare    the next cluster takes it, same shape
+#   the rest         API VIPs for three-control-plane clusters. terraform/modules/talos-cluster/
+#                    variables.tf documents the intent; nothing claims one yet.
+metallb:
+  # Off by default, and the pool is empty on purpose: both are per-cluster statements. A cluster enables
+  # this in its own values (bootstrap/argocd/<cluster>/cluster-base.yaml) with its own /24.
+  enabled: false
+  pool:
+    name: svc-vips
+    addresses: []
+  # The ingress VIP. Pinned, not first-come-first-served: published DNS names point at this address, and
+  # an address that could move between resyncs is a DNS record that silently rots.
+  ingressVIP: ""

@@ -73,6 +73,18 @@ spec:
             mountPath: kubernetes-dev      # must match what wire-vault.sh enabled
             vaultRole: local-dev
 
+        # Service VIPs for this cluster. Without MetalLB the ingress controller's Service sits at
+        # EXTERNAL-IP `<pending>` forever and every Ingress is unreachable, whatever cert-manager says
+        # about its certificate. 172.16.48.0/24 is this cluster's /24 out of the estate's reserved VIP
+        # block, 172.16.48.0/20 — see the range comment in charts/cluster-base/values.yaml.
+        metallb:
+          enabled: true
+          pool:
+            addresses:
+              - 172.16.48.1-172.16.48.254
+          # The first address of the block, so cluster -> VIP stays arithmetic rather than a lookup.
+          ingressVIP: 172.16.48.1
+
   destination:
     server: https://kubernetes.default.svc   # in-cluster
     namespace: argocd

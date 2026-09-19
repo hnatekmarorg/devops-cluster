@@ -25,8 +25,15 @@
 # simply time out. Hence the per-lease option set below — one device, one DHCP option, no change to the
 # class's own policy (which is deliberate: "iot keeps public DNS" stays true for the segment).
 #
-# The DNS accept carries **no protocol field on purpose**: a filtered resolver falls back to TCP when an
-# answer is truncated, so a udp-only accept fails on exactly the large answers. Port 53 either way.
+# The DNS accept needs **both** protocols, and RouterOS will not let a port stand without one: it
+# refuses `dst-port` unless `proto` is tcp/udp/… — "ports can be specified if proto is
+# tcp,udp,udp-lite,dccp,sctp". Measured the hard way: the first apply of this file failed on exactly
+# that. It is not a formality either, because a filtered resolver falls back to TCP when an answer is
+# truncated, so a udp-only accept fails on the large answers.
+#
+# DHCP option 6 takes a **typed** value: RouterOS answers "Unknown data type!" for a bare address, so
+# the value carries an explicit type prefix — `s'…'` for a string, `0x…` for raw hex (provider docs,
+# and the device's own pre-existing `ntp` option reads back as a quoted string).
 #
 # NTP: THE ACCEPT IS FORWARD-LOOKING, AND THE CLOCK IS A REAL GAP
 # ----------------
@@ -121,11 +128,11 @@ resource "routeros_ip_firewall_filter" "reader_web_allow" {
 
 # The router itself. Above `iot_router_deny`, the same anchor `iot_router_dhcp` uses, and for the same
 # reason: a catch-all deny is only as good as the accepts that sit above it.
-# No `protocol`: DNS truncates to TCP, so udp-only would fail on the large answers.
 resource "routeros_ip_firewall_filter" "reader_router_dns" {
   chain            = "input"
   place_before     = routeros_ip_firewall_filter.iot_router_deny.id
   action           = "accept"
+  protocol         = "tcp,udp" # a port cannot stand without one, and TCP is the truncation fallback
   src_address_list = "reader-nets"
   dst_port         = "53"
   comment          = "reader exception: DNS (udp+TCP), because its internet is denied — firewall-matrix.md"
@@ -145,16 +152,21 @@ resource "routeros_ip_firewall_filter" "reader_router_ntp" {
 # DHCP option 6 (DNS servers), attached to the reader's reservation in `dhcp.tf` via `option_set`.
 # Per-lease, so the class keeps its own "public DNS" policy untouched.
 resource "routeros_ip_dhcp_server_option" "reader_dns" {
-  name    = "reader-dns"
-  code    = 6
-  value   = local.reader.resolver
+  name = "reader-dns"
+  code = 6
+  # The type prefix is required, not decoration: a bare "172.16.70.1" is rejected by the device with
+  # "Unknown data type!" (measured — it failed the first apply). `s'…'` = string-typed, which is how the
+  # estate's existing `ntp` option reads back. Hex (`0xac104601`) would also work and is less readable.
+  value   = "s'${local.reader.resolver}'"
   comment = "${local.managed_by} — the reader's resolver, reachable without internet"
 }
 
-resource "routeros_ip_dhcp_server_option_set" "reader" {
+# Plural name on purpose: `routeros_ip_dhcp_server_option_set` (singular) is documented as "an alias for
+# backwards compatibility between plugin versions". Nothing is in state yet, so there is no reason to
+# build on the alias.
+resource "routeros_ip_dhcp_server_option_sets" "reader" {
   name = "reader"
-  # RouterOS takes this as a comma-separated string of option names, not a list (validate caught the
-  # tuple form). Referencing the resource keeps the dependency edge.
+  # A comma-separated string of option names, not a list (validate caught the tuple form).
   options = routeros_ip_dhcp_server_option.reader_dns.name
   comment = "${local.managed_by} — one device, one option set (reader)"
 }

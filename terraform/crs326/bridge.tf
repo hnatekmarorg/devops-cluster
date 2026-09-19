@@ -152,7 +152,10 @@ resource "routeros_interface_bridge" "bridge" {
 # change died, leaving the device correct and the state stale. Per-guest tags never touch this link.
 
 
-# idle bond, reserved for the second server
+# The second server's reservation — **now one member**: `ether24` left the bond for the island switch's
+# out-of-band link (see the `ether24` port below). A one-port 802.3ad bond aggregates nothing, which is
+# the honest representation: bukefalos' hardware takes the freed port back when it arrives, and a
+# two-member bond that cannot form would only mislead the next reader.
 resource "routeros_interface_bonding" "bukefalos" {
   arp                  = "enabled"
   arp_interval         = "100ms"
@@ -169,9 +172,62 @@ resource "routeros_interface_bonding" "bukefalos" {
   mtu                  = 1500
   name                 = "bukefalos"
   primary              = "none"
-  slaves               = ["ether23", "ether24"]
+  slaves               = ["ether23"]
   transmit_hash_policy = "layer-3-and-4"
   up_delay             = "0ms"
+}
+
+# **The island switch's out-of-band link** — the far end of the CRS317's 1 G management port.
+#
+# Measured 2026-09-19: `ether24` has carried zero bytes since boot and its bond is down, so this costs
+# nothing today. What it buys is a path to the CRS317 that does not run through the storage island:
+# that switch is reachable only in-band, across the same LACP bond that carries every VM disk's iSCSI,
+# so a bad bridge, VLAN or MTU change there is a lockout whose only way back is a console cable. It is
+# also the next device to come under this module's IaC, and a plan needs a reachable endpoint.
+#
+# Untagged access in mgmt, exactly like the escape hatch (`ether3`) and the IPMI port (`ether7`): the
+# CRS317's management port cannot tag, so it lands in VLAN 10 and nowhere else. Its own side keeps no
+# default route, so the island stays unrouted from mgmt while the device stays manageable.
+#
+# CEILING, and the reason the CRS317 side is a coordinated change: **this switch is not jumbo-capable**
+# (every port `l2mtu 1592`), while the CRS317's ports are 9000/9000. The CRS317 must set `mtu = 1500`
+# on its management port before this cable is plugged — otherwise it emits frames this switch cannot
+# forward, and only for large packets, so small management traffic keeps working and the fault reads as
+# intermittent.
+resource "routeros_interface_bridge_port" "ether24" {
+  auto_isolate            = false
+  bpdu_guard              = false
+  bridge                  = "bridge"
+  broadcast_flood         = true
+  comment                 = "CRS317 management — untagged VLAN 10 only"
+  disabled                = false
+  edge                    = "auto"
+  fast_leave              = false
+  frame_types             = "admit-only-untagged-and-priority-tagged"
+  horizon                 = "none"
+  hw                      = true
+  ingress_filtering       = true
+  interface               = "ether24"
+  internal_path_cost      = 10
+  learn                   = "auto"
+  multicast_router        = "temporary-query"
+  mvrp_applicant_state    = "normal-participant"
+  mvrp_registrar_state    = "normal"
+  path_cost               = "10"
+  point_to_point          = "auto"
+  priority                = "0x80"
+  pvid                    = 10
+  restricted_role         = false
+  restricted_tcn          = false
+  tag_stacking            = false
+  trusted                 = false
+  unknown_multicast_flood = true
+  unknown_unicast_flood   = true
+
+  # Ordering is load-bearing: the bridge port cannot be created while `ether24` is still a bond slave,
+  # and the provider cannot infer that from the two resources' shapes — there is no attribute linking
+  # them. Nothing else depends on the bond, so this is the whole ordering requirement.
+  depends_on = [routeros_interface_bonding.bukefalos]
 }
 
 # The PVE host's LAN port — a bare `ether2` since the LACP bond was dissolved. Untagged in compat

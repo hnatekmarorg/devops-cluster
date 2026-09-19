@@ -21,6 +21,24 @@ every port still on compat. One open question, to settle before that step: the s
 address lives in compat (`172.16.100.2`). Give it a mgmt address (`172.16.10.2/20`) so `ether3`
 stands alone, or accept that reaching it depends on the router's mgmt path.
 
+## The island switch's out-of-band link (this wave)
+
+`ether24` leaves the idle `bukefalos` bond and becomes an untagged **mgmt** access port — the far end of
+the CRS317's 1 G management port. The island's switch is otherwise reachable only from inside the island,
+across the same LACP bond that carries every VM disk's iSCSI, so a bad bridge, VLAN or MTU change there is
+a lockout with a console cable as the only way back. It is also the next device to be adopted by this tree,
+and a plan needs a reachable endpoint.
+
+Two constraints ride along, both measured 2026-09-19:
+
+- **MTU 1500, not 9000.** Every CRS326 port is `l2mtu 1592`, so this link is not jumbo and cannot be. The
+  CRS317's `ether1` must be set to `mtu = 1500` when it leaves that switch's bridge — *before* the cable is
+  plugged. A 9000-byte sender on a 1592-byte segment drops only the large frames, so it reads as an
+  intermittent fault rather than a broken link.
+- **The CRS317 side is hand-applied for now** — bridge removal, its mgmt address, the forward-drop rules
+  that keep the island unrouted, and NTP/DNS pointed at the router (which also fixes its 1972 clock, since
+  both are directly connected in mgmt). That switch becomes `terraform/crs317` once it is reachable here.
+
 ## Traps inherited from the router module
 
 - a stale checkout plans **destroys** — fetch before branching (`../scripts/tf-plan-check.sh`);

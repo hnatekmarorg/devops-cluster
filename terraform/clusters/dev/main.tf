@@ -36,7 +36,7 @@ module "cluster" {
   # OFF, deliberately: applying it reconfigures both running VMs, and Talos only sees a new NIC after a
   # reboot, so enabling this rolls the cluster once. The NIC is inert until a CSI node plugin wants to
   # mount something, which is the point at which to pay for the reboot.
-  # storage_bridge = "vmbr2"
+  storage_bridge = "vmbr2"
 
   # Addresses and MACs come from the router's reservations (terraform/routeros/dhcp.tf), so a rebuild
   # lands on the same addresses and nothing that refers to them by name has to change.

@@ -60,6 +60,23 @@ kubectl create secret generic spike-proxmox-credentials \
 kubectl label secret spike-proxmox-credentials platform.ionos.com/secret-type=proxmox-credentials
 ```
 
+**A re-create needs this secret re-created first.** Measured 2026-09-16: deleting the spike `Cluster` (and
+with it the `ProxmoxCluster`) took `spike-proxmox-credentials` with it. The CAPI-generated secrets going is
+expected (`spike-ca`, `spike-kubeconfig`, `spike-talos` — all gone, correctly), but this one is *created by
+hand* and it went too. The next apply then fails in a way that points at the wrong layer entirely:
+
+```
+Unable to initialize ProxmoxClient
+  github.com/ionos-cloud/cluster-api-provider-proxmox/pkg/scope.NewClusterScope
+```
+
+— and nothing else: no `ProxmoxCluster` provisioning, therefore **no Machines at all**, which reads as a
+bootstrap or provider problem and is a missing secret. The `GlobalInClusterIPPool`s and the
+`*MachineTemplate`s are standalone and survive a cluster deletion, so those do not need re-creating.
+
+If the token's secret value was only ever displayed once and is not written down, mint a fresh one on balteus
+(`pveum user token add capmox@pve capi -privsep 0`) — the *token id* alone is not enough to rebuild this.
+
 ## 3. Apply, and correct the placeholders
 
 ```bash

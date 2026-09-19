@@ -1,20 +1,42 @@
-# H2's instrument: the pool CAPMOX allocates node addresses from *if it can*.
+# H2's instrument, in two parts — so the control plane's address cannot drift.
 #
-# A /28 slice of srv — deliberately outside both srv DHCP pool ranges (`172.16.40.20–.99` and
-# `.200–.250`) and clear of every reservation in `terraform/routeros/dhcp.tf` (`.30 .111 .124 .145 .148
-# .180 .188 .203 .210`). If the nodes end up holding addresses from here, CAPMOX owns cluster addressing;
-# if they instead take leases from the srv scope, CAPMOX's nocloud network-config support is not there yet
-# and the router's reservation stays the owner. Either outcome is the answer H2 is asking for.
+# A single-CP spike uses its own address as the cluster endpoint
+# (`ProxmoxCluster.spec.controlPlaneEndpoint`). If IPAM handed that machine `.161` while the endpoint said
+# `.160`, the endpoint would point at nothing and every symptom would look like a bootstrap failure. Giving
+# the control plane a one-address pool makes the endpoint deterministic without introducing kube-vip.
+#
+# The band: `172.16.40.160-175` is a /28 inside srv, outside both srv DHCP pool ranges (`.20-.99` and
+# `.200-.250`) and clear of every reservation in `terraform/routeros/dhcp.tf` — so the router will never
+# hand one of these to something else, and the claim is visible in one place.
+#
+# What this measures: if the machines end up holding addresses from here, CAPMOX's IPAM owns cluster
+# addressing, and the estate's "the reservation owns the address" doctrine changes for cluster nodes (one
+# name per cluster, no per-node reservations). If they instead take DHCP leases from the srv scope, the
+# nocloud network-config support (CAPMOX issue #51) is not there yet and the router stays the owner.
+# Either answer is a result — record which, with the evidence.
+---
 apiVersion: ipam.cluster.x-k8s.io/v1alpha2
 kind: GlobalInClusterIPPool
 metadata:
-  name: spike-srv
+  name: spike-cp
   annotations:
-    # CAPMOX reads this to keep the pool's gateway out of the way of the real one (see its
-    # `cluster-template-multiple-vlans.yaml`, where the secondary device uses exactly this pattern).
+    # CAPMOX reads this to keep the pool's gateway out of the way of the real one (the pattern its own
+    # `cluster-template-multiple-vlans.yaml` uses for a secondary device).
     ipam.capmox.cluster.x-k8s.io/gateway-metric: "200"
 spec:
   addresses:
-    - 172.16.40.160-172.16.40.175
+    - 172.16.40.160 # exactly one — the control plane, which is also the cluster endpoint
+  prefix: 19
+  gateway: 172.16.40.1
+---
+apiVersion: ipam.cluster.x-k8s.io/v1alpha2
+kind: GlobalInClusterIPPool
+metadata:
+  name: spike-workers
+  annotations:
+    ipam.capmox.cluster.x-k8s.io/gateway-metric: "200"
+spec:
+  addresses:
+    - 172.16.40.161-172.16.40.175
   prefix: 19
   gateway: 172.16.40.1

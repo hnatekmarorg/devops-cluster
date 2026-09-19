@@ -73,3 +73,56 @@ pool already carries its annotations.
 - `terraform/routeros/dns.tf` — one record, `adonai.srv.hnatekmar.dev`, so the management VM has a name and
   nothing references it by address. **Merging this applies it** (the router apply runs on merge, on the mgmt
   runner).
+
+## Result, 2026-09-16 — H1 is a clear **no** on released, modern components
+
+The cluster objects reconciled; the machines never did. Precisely, in the order it happened:
+
+- `proxmoxcluster/spike` → **`READY=true`**, endpoint `172.16.40.160:6443`; `cluster/spike` →
+  **Provisioned**, **InfrastructureReady**; the `TalosControlPlane` and both `Machine`s were created.
+- CAPMOX then sat on **`"Bootstrap data secret reference is not yet available"`** and never cloned a VM —
+  its log has **zero** clone/task lines, so nothing was orphaned in Proxmox.
+- The Talos bootstrap provider sat on **`"Waiting for OwnerRef on the talosconfig"`**: the `TalosConfig`
+  objects existed but carried no owner reference, and the provider refuses to render a machine config
+  without one (`bsutil.GetConfigOwner` returns nil).
+- That ownerRef is CAPI's Machine controller to set. Which is the finding: **the released Talos providers
+  are built against an older CAPI than CAPMOX's modern line requires.**
+
+| component | version | declared / built against |
+|---|---|---|
+| cluster-api (core) | `v1.12.11` | — |
+| infrastructure-proxmox | `v0.9.1` | CAPMOX's matrix: **CAPI v1.11 / v1.12** |
+| bootstrap-talos (cabpt) | `v0.6.12` | `go.mod`: **cluster-api v1.10.9** |
+| control-plane-talos | `v0.5.13` | same line, same date (2026-04-27) |
+| cabpt `main` (unreleased) | — | `go.mod`: cluster-api **v1.12.2** |
+| cabpt prerelease | `v0.7.0-alpha.2` | the only published artefact on the newer line |
+
+**So the intersection is empty on released, modern components.** The four ways forward:
+
+1. **CAPI v1.10.x + CAPMOX v0.7.x** — every declared support satisfied, but CAPMOX v0.7 is the *obsolete*
+   `v1alpha1` line (core `v1beta1`), so the manifests here would have to be rewritten down to obsolete APIs.
+2. **CAPI v1.12.x + CAPMOX v0.9.x + cabpt `v0.7.0-alpha.2`** — modern APIs, on an **alpha** Talos provider.
+   (This is the cheap experiment that would settle "wait for cabpt v0.7 or abandon": re-init with the alpha
+   and re-apply; ten minutes.)
+3. **Give up the pairing for VMs**: CAPMOX's documented **kubeadm** flavours for VM pools, Talos kept for bare
+   metal (Sidero as today, or Metal3/Tinkerbell).
+4. **Drop CAPMOX**: provision Talos VMs another way (Terraform on Proxmox — declarative but episodic, no
+   reconciler).
+
+**H2 was never reached**, and that is a consequence rather than a failure: with no VM cloned there was no
+machine to take an address from, so "does CAPMOX's IPAM own cluster addressing, or the router's
+reservation" stays open until H1 has a home.
+
+### What the attempt established anyway
+
+- CAPMOX's validation is real and specific: `ProxmoxCluster.spec.ipv4Config` **may not contain the endpoint
+  IP**, which is why the control plane gets a one-address pool of its own. And against balteus' *compat*
+  address with a token secret, the `ProxmoxCluster` reached `READY=true` — so credentials, endpoint,
+  `vlan` tagging and the provider's health path are all sound.
+- Three manifest surprises, all from the *installed* CRDs versus the estate's older specs:
+  `TalosControlPlane.spec.controlPlaneConfig` wants `generateType`/`talosVersion` **inside `controlplane`**;
+  `infrastructureTemplate` takes `apiVersion`, not `apiGroup`; and `TalosConfigTemplate.template.spec`
+  advertises only `data`/`generateType` while accepting and storing `talosVersion`/`configPatches` — which
+  should be distrusted until a join config actually renders.
+- The version discipline earned its keep: because core was pinned *inside* CAPMOX's declared range, this
+  failure is attributable to the provider pairing rather than to an untested version combination.

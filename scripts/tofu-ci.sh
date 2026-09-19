@@ -31,11 +31,50 @@ ENC_FILE="${TF_CI_SECRET_FILE:-${REPO_ROOT}/terraform/secrets/enc.routeros-ci.en
 
 log() { printf '%s\n' "$*" >&2; } # diagnostics on stderr; stdout stays machine-readable
 
+# ---------------------------------------------------------------------------
+# Which state does this root address?
+#
+# TF_STATE_KEY used to default to `routeros/rb5009.tfstate` for EVERY root, which
+# is a live footgun rather than a convenience: run a cluster root without setting
+# it and the plan, apply or destroy silently addresses the ROUTER's state. Found
+# the hard way — `init -migrate-state` in terraform/clusters/dev was pointed at
+# the router's key. Nothing was lost that time (an empty local state does not
+# overwrite a populated remote one, verified: the router's state still read 134
+# resources), but the failure mode is "destroy the wrong infrastructure".
+#
+# So the default is now DERIVED FROM THE ROOT, and an unrecognised root is a hard
+# error rather than a silent fallback. One state per root, stated where the root
+# is, is the property worth having.
+# ---------------------------------------------------------------------------
+derive_state_key() {
+  [[ -n "${TF_STATE_KEY:-}" ]] && return 0
+
+  local derived=""
+  case "$PWD" in
+  */terraform/routeros) derived="routeros/rb5009.tfstate" ;;
+  */terraform/crs326) derived="crs326/crs326.tfstate" ;;
+  */terraform/clusters/*) derived="cluster-$(basename "$PWD")/terraform.tfstate" ;;
+  esac
+
+  if [[ -z "$derived" ]]; then
+    log "tofu-ci: TF_STATE_KEY is not set and this root has no known state key:"
+    log "         $PWD"
+    log "         Set it explicitly (TF_STATE_KEY=<key>) rather than letting this tool guess —"
+    log "         guessing is how a root ends up addressing another root's infrastructure."
+    exit 64
+  fi
+
+  export TF_STATE_KEY="$derived"
+  log "tofu-ci: TF_STATE_KEY not set — derived '${TF_STATE_KEY}' from ${PWD##*/}/"
+}
+
 ROLE="read"
 if [[ "${1:-}" == --role=* ]]; then
   ROLE="${1#--role=}"
   shift
 fi
+
+derive_state_key
 
 user_key=""
 pass_key=""
@@ -48,8 +87,18 @@ write)
   user_key=ROS_WRITE_USERNAME
   pass_key=ROS_WRITE_PASSWORD
   ;;
+none)
+  # A root that talks to neither the router nor anything else with its own
+  # identity: the cluster roots. They authenticate to Proxmox with
+  # PROXMOX_VE_* (supplied by the job, read by the bpg provider directly) and
+  # to the state bucket with AWS_*, so there is no role pair to resolve. Before
+  # this existed the apply died at exit 78 *before* touching Proxmox, with a
+  # message about RouterOS credentials that had nothing to do with the job.
+  user_key=""
+  pass_key=""
+  ;;
 *)
-  log "tofu-ci: unknown role '${ROLE}' (expected read|write)"
+  log "tofu-ci: unknown role '${ROLE}' (expected read|write|none)"
   exit 64
   ;;
 esac
@@ -60,6 +109,10 @@ esac
 CRED_SOURCE=""
 
 resolve_creds() {
+  if [[ "$ROLE" == "none" ]]; then
+    CRED_SOURCE="none required (the provider authenticates itself)"
+    return 0
+  fi
   if [[ -n "${!user_key:-}" && -n "${!pass_key:-}" ]]; then
     CRED_SOURCE="job environment (repo/environment secret, or mounted into the runner)"
   elif [[ -f "$ENC_FILE" ]]; then
@@ -80,6 +133,7 @@ resolve_creds() {
       value="${value#\"}" # tolerate KEY="value"
       case "$name" in
       ROS_READ_USERNAME | ROS_READ_PASSWORD | ROS_WRITE_USERNAME | ROS_WRITE_PASSWORD | \
+        PROXMOX_VE_* | \
         TF_STATE_* | AWS_*) export "${name}=${value}" ;;
       esac
     done <<<"$decrypted"
@@ -110,7 +164,7 @@ backend_args() {
       return 1
     fi
     printf -- '-backend-config=bucket=%s\n' "$TF_STATE_BUCKET"
-    printf -- '-backend-config=key=%s\n' "${TF_STATE_KEY:-routeros/rb5009.tfstate}"
+    printf -- '-backend-config=key=%s\n' "$TF_STATE_KEY"
     printf -- '-backend-config=region=%s\n' "${TF_STATE_REGION:-us-east-1}"
     printf -- '-backend-config=endpoint=%s\n' "$TF_STATE_ENDPOINT"
     # MinIO is not AWS: the STS/IAM validation calls do not exist there, and
@@ -142,7 +196,7 @@ preflight() {
   fi
 
   if [[ -n "${TF_STATE_BUCKET:-}" && -n "${TF_STATE_ENDPOINT:-}" ]]; then
-    log "tofu-ci: state backend s3 — bucket and endpoint present (key: ${TF_STATE_KEY:-routeros/rb5009.tfstate})"
+    log "tofu-ci: state backend s3 — bucket and endpoint present (key: ${TF_STATE_KEY})"
   else
     log "tofu-ci: state backend s3 — TF_STATE_BUCKET/TF_STATE_ENDPOINT missing"
     ok=false
@@ -155,7 +209,21 @@ preflight() {
     ok=false
   fi
 
-  log "tofu-ci: ROS_HOSTURL=${ROS_HOSTURL:-<unset>}"
+  # A cluster root authenticates to Proxmox, not to RouterOS, so the "is CI armed?" question is
+  # answered by these two. Without them the plan dies with `Error: Missing Proxmox VE API Endpoint` —
+  # a failure that reads like a code problem and is configuration. Same rule as the router's preflight:
+  # an un-armed CI must not block reviews, it must say which piece is missing.
+  if [[ "$ROLE" == "none" ]]; then
+    if [[ -n "${PROXMOX_VE_ENDPOINT:-}" && -n "${PROXMOX_VE_API_TOKEN:-}" ]]; then
+      log "tofu-ci: proxmox credentials present (PROXMOX_VE_ENDPOINT / PROXMOX_VE_API_TOKEN)"
+    else
+      log "tofu-ci: proxmox credentials missing — set PROXMOX_VE_ENDPOINT and PROXMOX_VE_API_TOKEN as"
+      log "         secrets on the environment this job uses (clusters-production for the cluster roots)"
+      ok=false
+    fi
+  else
+    log "tofu-ci: ROS_HOSTURL=${ROS_HOSTURL:-<unset>}"
+  fi
 
   if [[ "$ok" == "true" ]]; then
     echo "ready=true"

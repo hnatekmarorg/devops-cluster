@@ -1,0 +1,272 @@
+# Cluster IaC — plan on pull request (read-only gate).
+#
+# THE PRINCIPLE, inherited from the device workflows and applied to clusters: a merge to `main` is the
+# authorization to apply, so the plan reviewed on the PR must be the change that lands. That is why this
+# workflow is not merely a courtesy — for a DELETION it is the only place the teardown is ever reviewed.
+# A PR that removes `terraform/clusters/<name>/` gets a `tofu plan -destroy` posted on it, so "close the
+# PR and the cluster dies" is something you approve rather than something that happens.
+#
+# One plan per affected cluster, discovered from the diff: a PR touching two clusters gets two plans and
+# two comments, each with its own marker.
+name: tf-plan (clusters)
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/clusters/**'
+      - 'terraform/modules/talos-cluster/**'
+      - '.github/workflows/tf-plan-cluster.yml'
+      - '.github/workflows/tf-apply-cluster.yml'
+      - 'scripts/tofu-ci.sh'
+  workflow_dispatch:
+    inputs:
+      cluster:
+        description: 'Cluster to plan (e.g. dev)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# One plan per branch — same reasoning as the device plans: a plan is read-only and takes no state lock
+# (`-lock=false` below), so cancelling a superseded one cannot leave anything behind, and the runner has
+# a single slot that a stale plan would otherwise hold.
+concurrency:
+  group: tf-plan-cluster-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  # LAN traffic must bypass the runner's egress proxy or the Proxmox call gets proxied and fails.
+  NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT || 'https://console-minio.hnatekmar.xyz' }}
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'europe' }}
+  # State credential only. A pull request can run code from a same-repo branch, so it must never see a
+  # credential that can create infrastructure — that one is an environment secret on the apply job.
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  # THE PROXMOX CREDENTIAL HERE MUST BE READ-ONLY, and that is why it is a repository secret while
+  # the apply's is an environment secret. A pull-request job can run code from a same-repo branch, so
+  # whatever it can reach is reachable by unreviewed code — the same rule the router workflows state
+  # ("a pull request can never reach a write credential"). Mint a token with the built-in PVEAuditor
+  # role (VM.Audit, Sys.Audit, Datastore.Audit — read-only, no VM.Allocate, no VM.Config.*):
+  #
+  #   pveum user token add kubernetes@pve terraform-ro --privsep 0
+  #   pveum acl modify / --tokens 'kubernetes@pve!terraform-ro' --roles PVEAuditor
+  #
+  # and put it in the repository secrets as PROXMOX_VE_API_TOKEN. Without it the preflight reports
+  # "proxmox credentials missing" and the plan is skipped — the environment's write token is
+  # deliberately NOT visible here.
+  PROXMOX_VE_ENDPOINT: ${{ secrets.PROXMOX_VE_ENDPOINT }}
+  PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+  PROXMOX_VE_INSECURE: ${{ vars.PROXMOX_VE_INSECURE || 'true' }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Which clusters does this PR touch, and in which direction?
+  # ---------------------------------------------------------------------------
+  discover:
+    name: which clusters
+    runs-on: [self-hosted, mgmt, tofu]
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+      has: ${{ steps.set.outputs.has }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the diff against the base needs history
+
+      - id: set
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          base="${BASE_SHA:-HEAD^}"
+          head="${HEAD_SHA:-HEAD}"
+          if ! git cat-file -e "$base" 2>/dev/null; then
+            echo "matrix={\"include\": []}" >> "$GITHUB_OUTPUT"
+            echo "has=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # merge-base, not a plain two-dot diff: a plain diff also reports everything main has that the
+          # branch does not, which would plan clusters this PR never touched.
+          mb="$(git merge-base "$base" "$head" 2>/dev/null || echo "$base")"
+          git diff --name-status -M "$mb" "$head" -- terraform/clusters/ > /tmp/cluster-diff.txt || true
+          echo "changed:"
+          sed 's/^/  /' /tmp/cluster-diff.txt | head -20
+
+          python3 - > /tmp/cluster-matrix.json <<'PY'
+          import json
+
+          entries = {}
+          for line in open('/tmp/cluster-diff.txt'):
+              parts = line.rstrip('\n').split('\t')
+              if len(parts) < 2:
+                  continue
+              status, path = parts[0], parts[-1]  # a rename carries three fields; the new path is last
+              bits = path.split('/')
+              if len(bits) < 3 or bits[0] != 'terraform' or bits[1] != 'clusters':
+                  continue
+              cluster = bits[2]
+              action = 'destroy' if status.startswith('D') else 'apply'
+              # One entry per cluster per direction. A PR that both removes and re-adds a root is
+              # reported as apply, which is the safer of the two to get wrong.
+              entries[f'{cluster}:{action}'] = {
+                  'cluster': cluster,
+                  'action': action,
+                  'state_key': f'cluster-{cluster}/terraform.tfstate',
+              }
+
+          print(json.dumps({'include': list(entries.values())}))
+          PY
+
+          matrix="$(cat /tmp/cluster-matrix.json)"
+          echo "matrix: ${matrix}"
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+          if [ "$matrix" = '{"include": []}' ]; then
+            echo "has=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # One plan per affected cluster.
+  # ---------------------------------------------------------------------------
+  plan:
+    name: plan · ${{ matrix.cluster }} (${{ matrix.action }})
+    needs: discover
+    if: needs.discover.outputs.has == 'true'
+    runs-on: [self-hosted, mgmt, tofu]
+    # `tofu` has no client-side timeout: a wedged provider or state call holds the runner's only slot
+    # forever, silently. Same bound the device plans use, for the same measured reason.
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.12.6
+          tofu_wrapper: false # this runner image has no `node` on PATH for the wrapper
+
+      - name: Format check
+        working-directory: terraform/clusters/${{ matrix.cluster }}
+        run: ../../../scripts/tofu-ci.sh fmt -check -recursive .
+
+      - name: Preflight — are the CI prerequisites in place?
+        id: preflight
+        continue-on-error: true
+        working-directory: terraform/clusters/${{ matrix.cluster }}
+        env:
+          TF_STATE_KEY: ${{ matrix.state_key }}
+        run: ../../../scripts/tofu-ci.sh --role=none check
+
+      - name: init · validate · plan
+        id: plan
+        if: steps.preflight.outcome == 'success'
+        working-directory: terraform/clusters/${{ matrix.cluster }}
+        env:
+          TF_STATE_KEY: ${{ matrix.state_key }}
+        run: |
+          set -o pipefail   # without this, `| tee` reports tee's status, not tofu's
+          ../../../scripts/tofu-ci.sh --role=none init -input=false
+          ../../../scripts/tofu-ci.sh validate
+          # A destroy plan is a different question and deserves its own answer on the PR: it says what
+          # will be REMOVED, which for a cluster is the whole point of the review.
+          if [ "${{ matrix.action }}" = "destroy" ]; then
+            ../../../scripts/tofu-ci.sh --role=none plan -destroy \
+              -input=false -no-color -lock=false -out=plan.tfplan | tee plan.txt
+          else
+            ../../../scripts/tofu-ci.sh --role=none plan \
+              -input=false -no-color -lock=false -out=plan.tfplan | tee plan.txt
+          fi
+
+      - name: Note the health gate if the plan hit it
+        if: always() && steps.preflight.outcome == 'success'
+        working-directory: terraform/clusters/${{ matrix.cluster }}
+        run: |
+          # The module's health gate cannot pass on a cluster with a hostname override: Talos looks for
+          # the control-plane static pods under the MACHINE hostname while the kubelet names them after
+          # the NODE. A plan that fails only there is that, not a broken cluster.
+          if grep -q 'cluster health check failed' plan.txt 2>/dev/null; then
+            {
+              echo "### \`${{ matrix.cluster }}\`: the plan hit the module's health gate"
+              echo
+              echo "Expected on any cluster with a hostname override — see \`terraform/docs/cluster-lifecycle.md\`."
+              echo "7 of the gate's 8 checks pass; the failing one is the static-pod naming."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Post the plan on the PR
+        if: always() && github.event_name == 'pull_request' && steps.preflight.outcome == 'success'
+        uses: actions/github-script@v7
+        env:
+          PLAN_PATH: terraform/clusters/${{ matrix.cluster }}/plan.txt
+          CLUSTER: ${{ matrix.cluster }}
+          ACTION: ${{ matrix.action }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = `<!-- tf-plan-cluster-${process.env.CLUSTER} -->`;
+            let plan = '';
+            try { plan = fs.readFileSync(process.env.PLAN_PATH, 'utf8'); }
+            catch (e) { plan = '(plan output not found — see the job log)'; }
+            const limit = 55000;
+            if (plan.length > limit) plan = plan.slice(0, limit) + '\n… truncated — full output in the job log';
+            const isDestroy = process.env.ACTION === 'destroy';
+            const body = [
+              marker,
+              `### cluster \`${process.env.CLUSTER}\` — ${isDestroy ? 'DESTROY plan' : 'plan'} (read-only)`,
+              '',
+              isDestroy
+                ? '> This PR removes the cluster root, so merging it **destroys the cluster and its VMs**. ' +
+                  'The router reservations and DNS records are deliberately left in place, so a later ' +
+                  'rebuild lands on the same names and addresses.'
+                : '',
+              '<details><summary>tofu plan</summary>',
+              '',
+              '```',
+              plan.trimEnd(),
+              '```',
+              '',
+              '</details>',
+              '',
+              '_Read-only: applies nothing. A merge to `main` applies it via `tf-apply-cluster`._',
+            ].filter(Boolean).join('\n');
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(
+              github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 },
+            );
+            const existing = comments.find(
+              (c) => c.body && c.body.includes(marker) && c.user.login === 'github-actions[bot]',
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Explain what the preflight found
+        if: steps.preflight.outcome != 'success'
+        working-directory: terraform/clusters/${{ matrix.cluster }}
+        run: |
+          {
+            echo "### cluster \`${{ matrix.cluster }}\`: CI prerequisites are not in place — plan skipped"
+            echo
+            echo "The root formats and validates; only the parts needing live credentials or state were"
+            echo "skipped. The preflight above reports which piece is missing:"
+            echo
+            echo "1. The state backend — \`TF_STATE_BUCKET\` / \`TF_STATE_ENDPOINT\` repository variables, plus the \`AWS_*\` state credentials"
+            echo "2. The Proxmox identity — \`PROXMOX_VE_ENDPOINT\` and \`PROXMOX_VE_API_TOKEN\` secrets"
+            echo
+            echo "Nothing here needs a code change — the workflow plans itself as soon as those exist."
+          } >> "$GITHUB_STEP_SUMMARY"

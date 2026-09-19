@@ -15,6 +15,15 @@
 # process list — same rule as the unseal key.
 set -euo pipefail
 
+# Tools before anything else. The bao CLI is the obvious one, and it was missing from the CI runner
+# image — found only when the step failed, because nothing checked. Same shape as bootstrap-cluster.sh.
+for _tool in bao kubectl tofu; do
+  command -v "$_tool" >/dev/null 2>&1 || {
+    echo "wire-vault.sh: $_tool is not on PATH — install it first (the CI job does)" >&2
+    exit 69
+  }
+done
+
 CLUSTER="${1:?usage: BAO_TOKEN=... wire-vault.sh <cluster>   e.g. wire-vault.sh dev}"
 ROOT="terraform/clusters/${CLUSTER}"
 # The cluster root is only needed to derive a kubeconfig when the caller has none. With KUBECONFIG set,

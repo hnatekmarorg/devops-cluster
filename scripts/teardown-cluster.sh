@@ -68,6 +68,15 @@ CLUSTER_ROOT="${REPO_ROOT}/terraform/clusters/${CLUSTER}"
 STATE_KEY="cluster-${CLUSTER}/terraform.tfstate"
 PVE_ENDPOINT="${PROXMOX_VE_ENDPOINT:-}"
 
+# Tools first: the same list the CI job installs, checked here so a local run fails with a name rather
+# than halfway through a teardown.
+for _tool in kubectl tofu curl; do
+  command -v "$_tool" >/dev/null 2>&1 || {
+    echo "teardown-cluster.sh: $_tool is not on PATH — install it first" >&2
+    exit 69
+  }
+done
+
 log() { printf '  %s\n' "$*"; }
 say() { printf '\n== %s\n' "$*"; }
 

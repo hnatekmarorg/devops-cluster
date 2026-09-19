@@ -44,9 +44,9 @@ export KUBECONFIG="$KUBECONFIG_FILE"
 # has NEITHER until the job installs them. A missing kubectl previously surfaced 15 minutes later as
 # "API server never came up" — because the wait below discards stderr — which sent a whole debugging pass
 # after the wrong cause. Naming it here costs nothing and cannot be misread.
-for _tool in kubectl helm; do
+for _tool in kubectl helm tofu; do
   command -v "$_tool" >/dev/null 2>&1 || {
-    echo "bootstrap: $_tool is not on PATH — install it first (the CI job does; .github/workflows/tf-apply-cluster.yml)" >&2
+    echo "bootstrap-cluster.sh: $_tool is not on PATH — install it first (the CI job does; .github/workflows/tf-apply-cluster.yml)" >&2
     exit 69
   }
 done

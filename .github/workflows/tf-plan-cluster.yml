@@ -253,6 +253,10 @@ jobs:
             echo "### cluster \`${{ matrix.cluster }}\`: CI prerequisites are not in place — plan skipped"
             echo
             echo "The root formats and validates; only the parts needing live credentials or state were"
-            echo "skipped. Missing pieces are in the preflight log above — usually the state bucket/endpoint"
-            echo "or the Proxmox credential, which are repository/environment configuration, not code."
+            echo "skipped. The preflight above reports which piece is missing:"
+            echo
+            echo "1. The state backend — \`TF_STATE_BUCKET\` / \`TF_STATE_ENDPOINT\` repository variables, plus the \`AWS_*\` state credentials"
+            echo "2. The Proxmox identity — \`PROXMOX_VE_ENDPOINT\` and \`PROXMOX_VE_API_TOKEN\` secrets"
+            echo
+            echo "Nothing here needs a code change — the workflow plans itself as soon as those exist."
           } >> "$GITHUB_STEP_SUMMARY"

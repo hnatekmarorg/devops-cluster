@@ -320,6 +320,10 @@ jobs:
           {
             echo "### cluster \`${{ matrix.cluster }}\`: prerequisites missing — nothing applied"
             echo
-            echo "See the preflight log. This is configuration (state bucket/endpoint, the Proxmox write"
-            echo "identity on the \`clusters-production\` environment), not code."
+            echo "Nothing was created or destroyed. The preflight above reports which piece is missing:"
+            echo
+            echo "1. The state backend — \`TF_STATE_BUCKET\` / \`TF_STATE_ENDPOINT\` repository variables, plus the \`AWS_*\` state credentials"
+            echo "2. The Proxmox identity — \`PROXMOX_VE_ENDPOINT\` and \`PROXMOX_VE_API_TOKEN\` **on the \`clusters-production\` environment**"
+            echo
+            echo "Nothing here needs a code change — the apply arms itself as soon as those exist."
           } >> "$GITHUB_STEP_SUMMARY"

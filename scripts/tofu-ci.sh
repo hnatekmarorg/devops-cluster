@@ -170,7 +170,21 @@ preflight() {
     ok=false
   fi
 
-  log "tofu-ci: ROS_HOSTURL=${ROS_HOSTURL:-<unset>}"
+  # A cluster root authenticates to Proxmox, not to RouterOS, so the "is CI armed?" question is
+  # answered by these two. Without them the plan dies with `Error: Missing Proxmox VE API Endpoint` —
+  # a failure that reads like a code problem and is configuration. Same rule as the router's preflight:
+  # an un-armed CI must not block reviews, it must say which piece is missing.
+  if [[ "$ROLE" == "none" ]]; then
+    if [[ -n "${PROXMOX_VE_ENDPOINT:-}" && -n "${PROXMOX_VE_API_TOKEN:-}" ]]; then
+      log "tofu-ci: proxmox credentials present (PROXMOX_VE_ENDPOINT / PROXMOX_VE_API_TOKEN)"
+    else
+      log "tofu-ci: proxmox credentials missing — set PROXMOX_VE_ENDPOINT and PROXMOX_VE_API_TOKEN as"
+      log "         secrets on the environment this job uses (clusters-production for the cluster roots)"
+      ok=false
+    fi
+  else
+    log "tofu-ci: ROS_HOSTURL=${ROS_HOSTURL:-<unset>}"
+  fi
 
   if [[ "$ok" == "true" ]]; then
     echo "ready=true"

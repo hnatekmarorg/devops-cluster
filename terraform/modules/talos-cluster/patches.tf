@@ -188,6 +188,42 @@ locals {
   # name (see the header). The VM is created from var.nodes[].name, so that name is what the node must
   # report. Setting it here rather than as an OS hostname is deliberate — see the header for why a
   # HostnameConfig patch cannot be used.
+  # THE API SERVER'S AUTHENTICATION CONFIG. Talos 1.14 runs the kube-apiserver with
+  # `--authentication-config` and no longer passes the legacy `--oidc-*` flags at all — `.cluster.apiServer`
+  # was deprecated in favour of KubeAPIServerConfig, so there is no other way to declare an issuer. With
+  # this document absent the generated config carries `jwt: []` and EVERY bearer token is rejected as
+  # "invalid bearer token".
+  #
+  # Which is exactly what was happening: the module built a kubelogin kubeconfig for the CLIENT and never
+  # told the SERVER to trust that issuer, so SSO logged in, fetched a token, and the API answered 401.
+  # Verified live before encoding it here: with the document applied, the API server logs
+  # "oidc: verify token: failed to verify signature" for a bogus token — the authenticator is live.
+  #
+  # Control planes only; workers run no API server.
+  patch_authentication = var.oidc_enabled ? yamlencode({
+    apiVersion = "v1alpha1"
+    kind       = "KubeAuthenticationConfig"
+    configuration = {
+      apiVersion = "apiserver.config.k8s.io/v1beta1"
+      kind       = "AuthenticationConfiguration"
+      # Preserve the anonymous endpoints Talos sets by default — health probes must not need a token.
+      anonymous = {
+        enabled    = true
+        conditions = [{ path = "/livez" }, { path = "/readyz" }, { path = "/healthz" }]
+      }
+      jwt = [{
+        issuer = {
+          url       = var.oidc_issuer_url
+          audiences = [var.oidc_client_id]
+        }
+        claimMappings = {
+          username = { claim = var.oidc_username_claim, prefix = var.oidc_claim_prefix }
+          groups   = { claim = var.oidc_groups_claim, prefix = var.oidc_claim_prefix }
+        }
+      }]
+    }
+  }) : null
+
   patch_kubelet = {
     for n in var.nodes : n.name => yamlencode({
       apiVersion = "v1alpha1"
@@ -241,6 +277,7 @@ locals {
         local.patch_unattended_install,
         local.patch_kubelet[n.name],
         n.role == "controlplane" ? local.patch_cert_sans : null,
+        n.role == "controlplane" ? local.patch_authentication : null,
       ]),
       var.extra_patches,
     )

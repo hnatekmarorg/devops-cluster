@@ -62,7 +62,9 @@ module "cluster" {
   # did not come up, and the apply stops reporting a red job for a cluster that is fine.
   check_health = false
 
-  # Legacy --oidc-* flags: roles arrive in the top-level `groups` claim, the estate's convention.
+  # OIDC via a structured AuthenticationConfiguration (the API server runs with
+  # --authentication-config; the legacy --oidc-* flags are gone in 1.14). Roles arrive in the
+  # top-level `groups` claim, the estate's convention.
   oidc_enabled = true
 
   # Talos already adds the cluster endpoint's hostname to the API server certificate automatically

@@ -273,8 +273,16 @@ variable "oidc_groups_claim" {
     attached to a user into that array — the estate's existing convention (OpenBao boundGroups, ArgoCD
     group bindings). Binding subjects therefore read `sso:k8s-dev-admin` etc.
 
-    NOT realm_access.roles: the legacy --oidc-* flags read top-level claims, and the structured config
-    that can read a nested one is unusable on Talos 1.14 (siderolabs/talos#14394).
+NOT realm_access.roles. The structured AuthenticationConfiguration CAN read a nested claim
+      (claimMappings.groups.claim = "realm_access.roles" would work), but staying on the top-level array
+      keeps this consistent with everything else that binds these roles — OpenBao's boundGroups, ArgoCD's
+      group bindings — so there is one documented shape rather than two.
+
+      The note that used to be here cited siderolabs/talos#14394 for the opposite conclusion. That issue
+      is about KubeAPIServerConfig missing extraVolumes; it says nothing about claim mappings. What IS true
+      on 1.14 is that .cluster.apiServer is deprecated and the API server runs with
+      --authentication-config, so an issuer must be declared as a KubeAuthenticationConfig document — which
+      this module now does via patches.tf.
   EOT
   type        = string
   default     = "groups"

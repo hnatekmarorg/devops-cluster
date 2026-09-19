@@ -38,6 +38,7 @@ locals {
     "crs326.mgmt.hnatekmar.dev"      = "172.16.10.2"
     "charon.mgmt.hnatekmar.dev"      = "172.16.10.200"
     "crs804.mgmt.hnatekmar.dev"      = local.dhcp_reservations["crs804"].address
+    "crs317.mgmt.hnatekmar.dev"      = local.dhcp_reservations["crs317"].address
     "bmc-balteus.mgmt.hnatekmar.dev" = local.dhcp_reservations["balteus-ipmi"].address
     "runner.mgmt.hnatekmar.dev"      = local.dhcp_reservations["runner"].address
     # The operator host (vault, WebUI, admin box) — re-classed to mgmt, so its name states that class.

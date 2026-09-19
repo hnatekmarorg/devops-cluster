@@ -96,9 +96,11 @@ resource "routeros_ip_firewall_filter" "iot_deny" {
 #     drop makes the input chain's *fall-through* accept stop applying.
 #   * ICMP — not listed here: defconf's `accept ICMP` sits above this rule, so ping and PMTUD keep working.
 #
-# NTP (udp 123) is deliberately **not** allowed even though the router serves it: the probe uses public
-# pool servers, and if any iot device does want the router's clock the drop is logged under this same
-# prefix — measured rather than guessed, and one accept rule away.
+# NTP (udp 123) is deliberately **not** allowed: this segment keeps public pool time by policy, for the
+# same reason it keeps public DNS, and its clock therefore does not depend on the router being healthy.
+# The router *does* serve time as of 2026-09-19 (`ntp.tf`) — which is what makes this a policy choice
+# rather than a limitation. If an iot device should take the router's clock instead, the drop is logged
+# under this same prefix: measured rather than guessed, and one accept rule away.
 resource "routeros_ip_firewall_filter" "iot_router_deny" {
   chain            = "input"
   action           = "drop"

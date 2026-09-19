@@ -145,6 +145,13 @@ locals {
     # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
     # than being moved again for suffix symmetry — one address change per device is enough.
     "crs804" = { mac = "D0:EA:11:02:70:5A", address = "172.16.10.201", class = "mgmt" }
+    # The storage island's switch, which joined mgmt on 2026-09-19 through CRS326 `ether24`
+    # (devops-cluster#106). Its `.203` is *static on the device* — no DHCP client is configured — so this
+    # reservation is the documented claim on the number, exactly like balteus-ipmi's is on `.46`. It is
+    # not cosmetic: `.203` sits inside the mgmt pool (`172.16.10.200–250`), so without a claim the server
+    # could hand the address to someone else and lock the island switch out of its own management path.
+    # The MAC is `ether1`'s; the bridge adopts it (`auto_mac = false`).
+    "crs317" = { mac = "2C:C8:1B:71:63:AF", address = "172.16.10.203", class = "mgmt" }
     # The TV-isolation gateway again, in the class it is moving to: `.125` keeps its suffix the way it
     # did in compat (`172.16.100.125`, reserved in the unmanaged compat scope) and in mgmt. Different
     # subnet, same identity — so the weekly digest and the TV harness keep working from wherever the box
@@ -181,12 +188,15 @@ resource "routeros_ip_dhcp_server" "class" {
 # `ntp-server` empty does not stop the router from handing out a time source. The empty field means "pass
 # the NTP servers configured on the router", gated by `ntp-none` on this same object, whose default is
 # `no` — so a client on any of these four segments is handed DHCP option 42 = the segment's own `.1`,
-# i.e. the router. It is not a time server: `/system ntp server` reads `enabled=false` (the box runs the
-# NTP *client*), and udp/123 is unanswered on all five of its addresses (measured 2026-09-18). A client
-# that honours option 42 therefore trades a working default for one that never answers — Talos on dev-w1
-# retried `172.16.40.1:123` indefinitely instead of falling back to its `time.cloudflare.com` default.
-# The classes keep public time, which is what the enforced iot/lab input denies already assume
-# (`stage3-firewall.tf`), so this stops the advertisement instead of making it real. Note `ntp-none` is
+# i.e. the router. **As of 2026-09-19 the router does serve time** (`ntp.tf`): the server measured
+# `enabled=false` on 2026-09-18 — udp/123 unanswered on all five addresses, which is what had Talos on
+# dev-w1 retrying `172.16.40.1:123` indefinitely instead of falling back to its
+# `time.cloudflare.com` default — and that is now fixed at the source rather than worked around here.
+#
+# It is still not advertised, and that is now a *per-class decision* rather than inertia: for `iot` and
+# `lab`, udp/123 to the router is dropped by the enforced input denies (`stage3-firewall.tf`), so option
+# 42 would hand those segments a source they cannot reach — the same failure, one layer down. `mgmt`,
+# `srv` and `vpn` could take it. Note `ntp-none` is
 # not reported by `print` while it sits at its default, which is why no inventory ever showed it.
 resource "routeros_ip_dhcp_server_network" "class" {
   for_each = local.dhcp_scopes

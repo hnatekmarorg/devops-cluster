@@ -119,10 +119,11 @@ something. Without NTP the clock drifts and TLS fails — a functional requireme
 **A firewall accept alone does not deliver DNS.** The iot scope hands out `dns-server=8.8.8.8` (read off
 the device), so allowing DNS *to the router* changes nothing unless the device is told to ask it: hence
 a per-lease DHCP option set (option 6 → the estate's resolver) on this one reservation, while the
-class's own "public DNS" policy stays untouched. Two device constraints, both learned by failing an
-apply: the DNS accept must carry `protocol = "tcp,udp"` (RouterOS refuses `dst-port` without a proto,
-and a filtered resolver truncates to TCP), and the option's value must be **typed** (`s'…'`) or the
-device answers "Unknown data type!".
+class's own "public DNS" policy stays untouched. Three device constraints, every one of them learned by
+failing an apply rather than by `validate`: `dst-port` is illegal without a protocol; the `protocol`
+field takes **one** name or number, never a list, so covering udp *and* tcp needs **two rules** (and
+both are needed — a filtered resolver truncates to TCP); and the option's value must be **typed**
+(`s'…'`) or the device answers "Unknown data type!".
 
 **The clock is an open gap, not a solved one.** iot sets `ntp-none=true`, so nothing is advertised and
 this accept permits traffic that is not yet invited; it is written so that advertising the router as

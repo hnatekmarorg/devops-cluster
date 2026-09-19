@@ -307,7 +307,11 @@ jobs:
               echo "Use it with the \`kubelogin\` plugin; the first call opens a browser for Keycloak SSO."
             } >> "$GITHUB_STEP_SUMMARY"
 
-            if ! git diff --quiet -- "terraform/clusters/${cluster}/kubeconfig.yaml"; then
+            # `git status --porcelain`, NOT `git diff --quiet`. For a cluster whose kubeconfig is not in
+            # git yet — every newly declared cluster — `git diff` reports no change (untracked files are
+            # invisible to it, measured) and this PR would never open. Porcelain reports both `??` and
+            # ` M`, so a first build and a rebuild are handled by the same check.
+            if [ -n "$(git status --porcelain -- "terraform/clusters/${cluster}/kubeconfig.yaml")" ]; then
               # The committed copy is now stale — after a rebuild the CA differs, and a stale file is
               # worse than no file. Open a PR rather than committing to main: main is reviewed, and CI
               # writing to it would quietly break that.
@@ -318,8 +322,9 @@ jobs:
               git add "terraform/clusters/${cluster}/kubeconfig.yaml"
               git commit -q -m "chore(${cluster}): refresh the OIDC kubeconfig — the CA changed with the rebuild"
               git push -q origin "$branch"
-              # GITHUB_TOKEN-created PRs do not trigger other workflows, so the kubeconfig is posted as
-              # a comment HERE rather than left to kubeconfig-comment.yml.
+              # GITHUB_TOKEN-created PRs do not trigger other workflows, so the kubeconfig goes into the
+              # PR BODY here rather than being left to kubeconfig-comment.yml, which will never fire for
+              # this PR. Either way, whoever reviews it has the kubeconfig in front of them.
               api="${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY}"
               body="$(python3 - "$cluster" "$branch" <<'PY'
           import json, os, sys

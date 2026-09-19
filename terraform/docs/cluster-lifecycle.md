@@ -73,10 +73,9 @@ a message about RouterOS credentials that had nothing to do with the job.
 The kubeconfig contains **no credential** — endpoint, public CA, and a `kubelogin` exec block. The
 identity lives in Keycloak, which is why it is safe in git and safe to post.
 
-- **In CI**: the apply job writes it to the run's job summary, and if the committed copy no longer matches
-  (a rebuild means a new CA) it opens a PR with the refreshed file. That matters because a stale
-  kubeconfig fails with `x509: certificate signed by unknown authority` — an error that looks like
-  anything but a stale file.
+- **In CI**: the apply job writes it to the run's job summary, and opens a PR with the file whenever it
+  needs (re)committing — a rebuild changes the CA, and a cluster's **first** build has no file in git at
+  all. Both cases open one, and the kubeconfig is in that PR's body, so it reaches you either way.
 - **In git**: `terraform/clusters/<name>/kubeconfig.yaml`, refreshed by `scripts/kubeconfig.sh <name>`
   after every rebuild. `kubeconfig-comment.yml` posts it as a PR comment whenever it changes.
 - **To use it**: install the `kubelogin` plugin (`kubectl oidc-login`), point `KUBECONFIG` at the file,

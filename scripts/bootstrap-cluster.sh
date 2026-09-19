@@ -40,13 +40,25 @@ trap 'rm -f "$KUBECONFIG_FILE"' EXIT
 chmod 600 "$KUBECONFIG_FILE"
 export KUBECONFIG="$KUBECONFIG_FILE"
 
+# Tools first, in one line. This script drives kubectl (19 calls) and helm (9), and the CI runner image
+# has NEITHER until the job installs them. A missing kubectl previously surfaced 15 minutes later as
+# "API server never came up" — because the wait below discards stderr — which sent a whole debugging pass
+# after the wrong cause. Naming it here costs nothing and cannot be misread.
+for _tool in kubectl helm; do
+  command -v "$_tool" >/dev/null 2>&1 || {
+    echo "bootstrap: $_tool is not on PATH — install it first (the CI job does; .github/workflows/tf-apply-cluster.yml)" >&2
+    exit 69
+  }
+done
+
 say "waiting for the API server"
-# 15 minutes, not the 2.5 it used to be, and the reason is a change elsewhere: the module's health gate
-# was switched off (it cannot pass on a cluster with a hostname override — Talos looks for the static
-# pods under the machine hostname, the kubelet names them after the node). The gate was quietly doing the
-# waiting too, so an apply now returns as soon as the resources EXIST rather than when the cluster is up,
-# and this loop is the only thing left between a fresh apply and a live API server. Measured on a cold
-# build: the old 150s expired at "API server never came up" while the API answered fine minutes later.
+# 15 minutes, not the 2.5 it used to be. Two reasons, and the second is why the first was MISDIAGNOSED:
+# the module's health gate is off (it cannot pass on a cluster with a hostname override — Talos looks for
+# the static pods under the machine hostname, the kubelet names them after the node), so an apply returns
+# when the resources EXIST rather than when the cluster is up. But the original failure was not a short
+# budget: `kubectl` was absent from the CI runner image, and this loop discards stderr, so it looked
+# exactly like an unreachable API server. The tool check above now names that in one line; this budget is
+# the margin for a genuinely slow boot.
 for _ in $(seq 1 180); do
   kubectl get --raw /healthz >/dev/null 2>&1 && break
   sleep 5

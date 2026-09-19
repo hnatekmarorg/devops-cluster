@@ -244,6 +244,31 @@ jobs:
       # -----------------------------------------------------------------------
       # APPLY
       # -----------------------------------------------------------------------
+      # The bootstrap and the teardown drive `kubectl` (19 references) and `helm` (9), and this runner
+      # image ships NEITHER — measured inside the container, not assumed. `tofu` is the one tool that IS
+      # provided, by setup-opentofu. Without this step the bootstrap dies inside
+      # `kubectl get --raw /healthz`, whose stderr is discarded, so a missing binary reads as an
+      # unreachable API server and the step sits out its whole wait budget before saying so.
+      - name: Install kubectl and helm
+        if: matrix.action == 'apply' || matrix.action == 'destroy'
+        run: |
+          set -euo pipefail
+          # kubectl pinned to the cluster's own version (both nodes are v1.37.0, which is also current
+          # stable). Helm pinned to the latest 3.x: the bootstrap's commands are helm-3 syntax, and helm 4
+          # is a 2025 major release — not something to adopt inside a provisioning path by accident.
+          KUBECTL_VERSION="v1.37.0"
+          HELM_VERSION="v3.22.0"
+          dest="$HOME/.local/bin"
+          mkdir -p "$dest"
+          curl -sfL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" -o "$dest/kubectl"
+          chmod +x "$dest/kubectl"
+          curl -sfL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" | tar -xz -O linux-amd64/helm > "$dest/helm"
+          chmod +x "$dest/helm"
+          # $GITHUB_PATH, not a system directory: the job runs as the unprivileged `runner` user.
+          echo "$dest" >> "$GITHUB_PATH"
+          "$dest/kubectl" version --client
+          "$dest/helm" version --short
+
       - name: Preflight
         if: matrix.action == 'apply'
         id: preflight

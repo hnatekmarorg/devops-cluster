@@ -10,10 +10,13 @@
 # `ether3` would reach nothing. 172.16.10.2/20 makes the escape port stand on its own, independent
 # of whether the router's mgmt path is healthy.
 #
-# Not touched, deliberately: the dormant 192.168.88.1/24 on ether1. Martin described the storage
-# network as "housed in the CRS317" with 192.168.88.1/24 — if this switch's copy is that network's
-# gateway, deleting it would break storage, and it does nothing while the bond exists. Listed as a
-# cleanup to do with him, not by me.
+# Not touched, deliberately — but the open question above is now closed by measurement (2026-09-19).
+# The storage island's live `192.168.88.1` is the **CRS317** (read from that device), and this switch's
+# copy sits on a bare `ether1` with no bridge membership, no link and 0 bytes since boot: it is not —
+# and cannot be — that network's gateway, so deleting it is safe. It waits for the address wave only
+# because adopting an address is its own reviewed step (see bridge.tf), not because it has a job. The
+# earlier note here (ether1 inside a bond) is stale as well: ether1 has been standalone since the bond
+# was dissolved, which is what makes the address inert rather than dangerous.
 #
 # Acceptance test after apply: 24/24 ports still `hw=yes` (bonds included — the classic offload
 # killer), the compat LAN unaffected, 172.16.100.2 still answers, and a laptop on ether3 reaching
@@ -53,7 +56,7 @@ resource "routeros_interface_bridge_vlan" "compat" {
     "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether17",
     "ether18", "ether19", "ether20", "ether21", "ether22", "sfp-sfpplus1", "sfp-sfpplus2",
   "bridge"]
-  comment = "compat — everything not yet migrated; does not include ether3, ether7 or ether16"
+  comment = "compat — everything not yet migrated; does not include ether3, ether7, ether16 or ether24"
 }
 
 resource "routeros_interface_bridge_vlan" "mgmt" {
@@ -66,15 +69,17 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
   #
   # Tagged on both uplinks: `ether18` toward the router (so this switch and the router share one mgmt
   # segment) and `ether4` toward the CSS610 (so charon, on that box, can live in mgmt). Untagged for
-  # the two access ports that belong to the out-of-band/management plane: `ether3` (the escape hatch)
-  # and `ether7` (balteus IPMI). Every other port keeps its compat pvid 1.
+  # the three access ports that belong to the out-of-band/management plane: `ether3` (the escape
+  # hatch), `ether7` (balteus IPMI) and `ether24` (the CRS317's management port — so the island
+  # switch stops needing a journey through the storage island to be reachable; see crs326/bridge.tf
+  # for the 1500-byte ceiling this link has to respect). Every other port keeps its compat pvid 1.
   #
   # `ether2` is here because the Proxmox host is a trunk: the host itself stays on compat (the port's
   # pvid is 1, untouched), and its guests are tagged into the class they belong to. A VM in mgmt is
   # therefore possible without moving the host — which is what keeps this additive.
   tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4", "ether2"]
-  untagged = ["ether3", "ether7"]
-  comment  = "mgmt — the escape hatch, the IPMI's access port, tagged on both uplinks"
+  untagged = ["ether3", "ether7", "ether24"]
+  comment  = "mgmt — escape hatch, IPMI and the CRS317's port untagged; tagged on both uplinks"
 }
 
 # ---------------------------------------------------------------------------

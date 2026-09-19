@@ -31,6 +31,15 @@ tunnelling clients into it).
 `bond0`); a physical node would need a 10 G port on the storage island's own switch (CRS317) —
 outside the LAN carve, but know it before the hardware arrives.
 
+**The island's own switch is the exception (2026-09-19):** the CRS317's 1 G management port leaves its
+bridge and joins `mgmt` through **CRS326 `ether24`** — an untagged access port, not a trunk member, in the
+same shape as the escape hatch (`ether3`) and the IPMI port (`ether7`). Reaching the device must not depend
+on the LACP bond that carries every VM disk's iSCSI, and the CRS317 is the next device to be adopted into
+`terraform/`. This link runs at **MTU 1500, not 9000**: every CRS326 port is `l2mtu 1592` while the CRS317's
+ports are 9000/9000, so the island switch's management port has to be lowered *before* the cable is plugged.
+The island itself stays unrouted from `mgmt` — no default route on that device, plus forward-drop rules in
+both directions.
+
 ## Order of work this implies
 
 1. **RB5009** — `ether1` as the escape port, LAN IP off `ether2` onto the bridge/VLAN, then

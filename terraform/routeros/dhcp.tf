@@ -83,6 +83,30 @@ locals {
     "inference"    = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
     "balteus-ipmi" = { mac = "3C:EC:EF:73:09:9D", address = "172.16.10.46", class = "mgmt" }
 
+    # The reader — a Redmi Pad 2 Pro used as an e-reader and for internal web browsing (2026-09-19).
+    # It keeps its last octet as its suffix (`.23` → `.123`), the way the Sparks and the BMC keep
+    # theirs, and moves out of the dynamic pool (`.20–.99`) into the band where fixed identities live.
+    #
+    # This reservation is not cosmetic: the firewall identity for the device *is* this address
+    # (`reader-nets`, from `local.reader` in reader-lan-only.tf). A dynamic lease would move, and the
+    # reader policy would silently stop matching.
+    #
+    # `option_set` is the exception inside the exception: the scope hands this class `dns-server=8.8.8.8`,
+    # which stops resolving the moment the device's internet is denied, so this one lease is handed the
+    # estate's own resolver instead. A resource reference, not the string "reader", so Terraform orders
+    # the option set before the lease that names it.
+    #
+    # CAVEAT, measured: this MAC is **randomized** by Android (the locally-administered bit is set), so
+    # it is a property of the SSID's private-MAC setting, not of the hardware. If the private MAC is
+    # reset the reservation matches nothing and the device falls back to the iot row — internet back,
+    # LAN gone. The durable fix is on the device: Wi-Fi → the network → Privacy → "Use device MAC".
+    "reader" = {
+      mac        = local.reader.mac
+      address    = local.reader.address
+      class      = "iot"
+      option_set = routeros_ip_dhcp_server_option_set.reader.name
+    }
+
     # The dedicated CI runner (a ZimaBoard, plugged in by hand). It is on a *compat* port today
     # (`.100.126`) and takes this address as soon as it hangs off a mgmt access port — the router's
     # `ether1`, which is already prepared for exactly this (pvid 10, admit-only-untagged). Mgmt class
@@ -221,4 +245,9 @@ resource "routeros_ip_dhcp_server_lease" "reserved" {
   mac_address = each.value.mac
   server      = routeros_ip_dhcp_server.class[each.value.class].name
   comment     = "${local.managed_by} — fixed identity: the address its name resolves to"
+
+  # Optional per-lease DHCP option set: `try` keeps every existing reservation a no-op (null = "the
+  # scope's options apply", which is what they all want). Only the reader overrides, because only the
+  # reader cannot reach the resolver its class is handed.
+  dhcp_option_set = try(each.value.option_set, null)
 }

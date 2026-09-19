@@ -260,6 +260,20 @@ jobs:
         if: matrix.action == 'apply'
         run: ./scripts/bootstrap-cluster.sh "${{ matrix.cluster }}" 2>&1 | tee bootstrap.txt
 
+      # ESO's ClusterSecretStore cannot authenticate until the vault knows THIS cluster: the
+      # `auth/kubernetes-<cluster>` mount holds the cluster's CA and a TokenReview credential, and both
+      # change on every rebuild. Without this step a freshly built cluster converges with cluster-base
+      # reporting `InvalidProviderConfig` — the failure I hit by hand the first time, and the reason
+      # wire-vault.sh exists. It must run AFTER the bootstrap and BEFORE anything expects a secret.
+      #
+      # No new CI secret: BAO_TOKEN wins when set, otherwise the script reads /etc/bao_token, which is
+      # where the runner keeps it (mode 0600) and where the `bao` CLI is already installed.
+      - name: Wire the vault to this cluster
+        if: matrix.action == 'apply'
+        run: ./scripts/wire-vault.sh "${{ matrix.cluster }}" 2>&1 | tee vault.txt
+        env:
+          BAO_TOKEN: ${{ secrets.BAO_TOKEN }}
+
       - name: Post-apply summary + the kubeconfig
         if: matrix.action == 'apply'
         run: |
@@ -271,6 +285,11 @@ jobs:
             echo "### bootstrap"
             echo '```'
             tail -40 bootstrap.txt 2>/dev/null || echo "(no bootstrap output)"
+            echo '```'
+            echo
+            echo "### vault"
+            echo '```'
+            tail -12 vault.txt 2>/dev/null || echo "(no vault output)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

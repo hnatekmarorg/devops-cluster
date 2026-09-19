@@ -6,6 +6,9 @@
 #   ./scripts/teardown-cluster.sh prod --yes           # what CI runs
 #   ./scripts/teardown-cluster.sh prod --yes --unmount-vault
 #
+#   --dry-run       show the destroy plan and what is left behind, change nothing
+#   --local-state   the root's state is local, not in the S3 bucket (see below)
+#
 # ---------------------------------------------------------------------------
 # WHY `tofu destroy` IS NOT ENOUGH — and what each extra step buys
 # ---------------------------------------------------------------------------
@@ -37,13 +40,17 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CLUSTER=""
 ASSUME_YES=false
 UNMOUNT_VAULT=false
+LOCAL_STATE=false
+DRY_RUN=false
 
 for arg in "$@"; do
   case "$arg" in
   --yes) ASSUME_YES=true ;;
   --unmount-vault) UNMOUNT_VAULT=true ;;
+  --local-state) LOCAL_STATE=true ;;
+  --dry-run) DRY_RUN=true ;;
   -h | --help)
-    sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
   -*) echo "teardown-cluster: unknown option '$arg'" >&2; exit 64 ;;
@@ -73,10 +80,65 @@ say "cluster: ${CLUSTER}"
 log "state:  ${STATE_KEY}"
 log "action: drain Karpenter's claims, tofu destroy, sweep for leftovers"
 
-if [[ "$ASSUME_YES" != "true" ]]; then
+# A dry run changes nothing, so it does not need the destructive-action confirmation.
+if [[ "$ASSUME_YES" != "true" && "$DRY_RUN" != "true" ]]; then
   printf '\nThis destroys the cluster and its VMs. Type the cluster name to confirm: '
   read -r reply
   [[ "$reply" == "$CLUSTER" ]] || { echo "  declined"; exit 1; }
+fi
+
+# ---------------------------------------------------------------------------
+# 0b. WHICH STATE IS REAL? This is the trap that makes a teardown silently do
+#     nothing. This script drives `tofu-ci.sh`, which initialises the S3 backend
+#     for the cluster's key — so a root whose state is still LOCAL gets an empty
+#     S3 state, reports "0 destroyed", and leaves every VM running. Visible, but
+#     only after the fact, and the next command anyone reaches for is a manual
+#     delete.
+#
+#     Measured: the dev cluster's state was local, and `tofu destroy` against
+#     the S3 key destroyed nothing until the local state was used instead.
+#
+#     So: if a local state holds resources, either say so and stop, or run the
+#     local path deliberately with --local-state (which parks the S3 backend
+#     declaration, exactly as the manual recipe does, and restores it after).
+# ---------------------------------------------------------------------------
+LOCAL_STATE_FILE="${CLUSTER_ROOT}/terraform.tfstate"
+LOCAL_STATE_RESOURCES=0
+if [[ -f "$LOCAL_STATE_FILE" ]]; then
+  LOCAL_STATE_RESOURCES="$(python3 -c '
+import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+    print(len(d.get("resources") or []))
+except Exception:
+    print(0)
+' "$LOCAL_STATE_FILE" 2>/dev/null || echo 0)"
+fi
+
+PARKED_BACKEND=false
+if [[ "$LOCAL_STATE_RESOURCES" -gt 0 ]]; then
+  if [[ "$LOCAL_STATE" != "true" ]]; then
+    cat >&2 <<ERR
+teardown-cluster: REFUSING to continue.
+
+  This root has a LOCAL state with ${LOCAL_STATE_RESOURCES} resources:
+    ${LOCAL_STATE_FILE}
+
+  This script would initialise the S3 backend instead (key ${STATE_KEY}), which would NOT see
+  those resources: the destroy would report "0 destroyed" and every VM would stay up.
+
+  Either migrate the state first:
+      cd ${CLUSTER_ROOT#${REPO_ROOT}/} && tofu init -migrate-state
+
+  or look first, then run the local path deliberately:
+      ${0##*/} ${CLUSTER} --dry-run --local-state
+      ${0##*/} ${CLUSTER} --yes      --local-state
+ERR
+    exit 78
+  fi
+  log "local state detected (${LOCAL_STATE_RESOURCES} resources) — using it, as asked"
+else
+  log "no local state with resources — the S3 backend for ${STATE_KEY} is the one that counts"
 fi
 
 # ---------------------------------------------------------------------------
@@ -88,7 +150,20 @@ fi
 # ---------------------------------------------------------------------------
 if [[ -d "$CLUSTER_ROOT" ]]; then
   say "initialising the backend"
-  if (cd "$CLUSTER_ROOT" && "${SCRIPT_DIR}/tofu-ci.sh" --role=none init -input=false >/dev/null 2>&1); then
+  if [[ "$LOCAL_STATE_RESOURCES" -gt 0 ]]; then
+    # The S3 declaration has to go for a local state to be visible; the trap restores it.
+    trap '[[ -f "$CLUSTER_ROOT/backend.tf.parked" ]] && mv -f "$CLUSTER_ROOT/backend.tf.parked" "$CLUSTER_ROOT/backend.tf"' EXIT
+    if [[ -f "$CLUSTER_ROOT/backend.tf" ]]; then
+      mv "$CLUSTER_ROOT/backend.tf" "$CLUSTER_ROOT/backend.tf.parked"
+      PARKED_BACKEND=true
+      log "parked backend.tf — this run uses the local state"
+    fi
+    if (cd "$CLUSTER_ROOT" && tofu init -reconfigure -input=false >/dev/null 2>&1); then
+      log "local backend ready"
+    else
+      log "init FAILED — the drain below will be skipped"
+    fi
+  elif (cd "$CLUSTER_ROOT" && "${SCRIPT_DIR}/tofu-ci.sh" --role=none init -input=false >/dev/null 2>&1); then
     log "backend ready"
   else
     log "init FAILED — the drain will be skipped and the sweep at the end will report what is left"
@@ -104,7 +179,7 @@ fi
 # ---------------------------------------------------------------------------
 say "draining Karpenter's claims (best effort)"
 if KUBECONFIG_TMP="$(mktemp)" &&
-  (cd "$CLUSTER_ROOT" 2>/dev/null && "${SCRIPT_DIR}/tofu-ci.sh" --role=none output -raw kubeconfig >"$KUBECONFIG_TMP" 2>/dev/null) &&
+  (cd "$CLUSTER_ROOT" 2>/dev/null && { [[ "$PARKED_BACKEND" == "true" ]] && tofu output -raw kubeconfig 2>/dev/null || "${SCRIPT_DIR}/tofu-ci.sh" --role=none output -raw kubeconfig >"$KUBECONFIG_TMP" 2>/dev/null; } >"$KUBECONFIG_TMP") &&
   [[ -s "$KUBECONFIG_TMP" ]]; then
   export KUBECONFIG="$KUBECONFIG_TMP"
   claims="$(kubectl get nodeclaims --no-headers 2>/dev/null | awk '{print $1}' || true)"
@@ -135,8 +210,30 @@ if [[ ! -d "$CLUSTER_ROOT" ]]; then
   log "cannot run destroy without the root directory; if the root was deleted from git, the CI job"
   log "runs it from a checkout of the commit BEFORE the deletion. Nothing to do here."
 else
-  (cd "$CLUSTER_ROOT" && "${SCRIPT_DIR}/tofu-ci.sh" --role=none init -input=false >/dev/null &&
-    "${SCRIPT_DIR}/tofu-ci.sh" --role=none destroy -input=false -auto-approve)
+  # `-refresh=false` is not an optimisation, it is the difference between working and hanging.
+  # A refresh runs the module's health data source, which reads the cluster to decide — and on a
+  # cluster with a hostname override that read NEVER completes (Talos looks for the static pods
+  # under the machine hostname, the kubelet names them after the node). Measured: a destroy plan
+  # sat on `data.talos_cluster_health.this: Still reading...` for 5 minutes until it was killed.
+  # The state is authoritative for what EXISTS, which is the only question a destroy asks.
+  if [[ "$DRY_RUN" == "true" ]]; then
+    say "DRY RUN — the destroy plan, nothing is changed"
+    if [[ "$PARKED_BACKEND" == "true" ]]; then
+      (cd "$CLUSTER_ROOT" && tofu plan -destroy -refresh=false -input=false -no-color | tail -40) || true
+    else
+      (cd "$CLUSTER_ROOT" && "${SCRIPT_DIR}/tofu-ci.sh" --role=none init -input=false >/dev/null &&
+        "${SCRIPT_DIR}/tofu-ci.sh" --role=none plan -destroy -refresh=false -input=false -no-color | tail -40) || true
+    fi
+    say "DRY RUN — nothing was destroyed. Drop --dry-run to do it."
+    exit 0
+  fi
+
+  if [[ "$PARKED_BACKEND" == "true" ]]; then
+    (cd "$CLUSTER_ROOT" && tofu destroy -refresh=false -input=false -auto-approve)
+  else
+    (cd "$CLUSTER_ROOT" && "${SCRIPT_DIR}/tofu-ci.sh" --role=none init -input=false >/dev/null &&
+      "${SCRIPT_DIR}/tofu-ci.sh" --role=none destroy -refresh=false -input=false -auto-approve)
+  fi
 fi
 
 # ---------------------------------------------------------------------------

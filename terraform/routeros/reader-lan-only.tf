@@ -81,8 +81,9 @@
 # `reader` class (its own VLAN + SSID + DHCP scope + a matrix row), and this file is deleted with it.
 
 locals {
-  # The reader's identity, stated once: `main.tf` takes the address for `reader-nets` from here, and the
-  # reservation in `dhcp.tf` claims the same address. A second literal is how a name and a rule drift.
+  # The reader's identity, stated once: `main.tf` takes the address for `reader-nets` from here (bare,
+  # because RouterOS stores a host entry without a prefix — see the note there), and the reservation in
+  # `dhcp.tf` claims the same address. A second literal is how a name and a rule drift.
   reader = {
     address = "172.16.70.123"
     mac     = "46:FC:89:6A:6C:9C"

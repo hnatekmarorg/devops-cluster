@@ -124,6 +124,22 @@ resource "proxmox_virtual_environment_vm" "node" {
     mac_address = each.value.mac
     vlan_id     = var.vlan_id
   }
+
+  # The storage NIC, when the cluster wants one. Declared AFTER net0 on purpose: Proxmox numbers the
+  # interfaces in declaration order, and the class VLAN tag belongs on net0.
+  #
+  # No vlan_id — the island is a flat L2 segment on its own bridge, untagged and deliberately unrouted —
+  # and no address, because the island runs DHCP and Talos asks every physical interface for one (see
+  # patch_network). Both of those are why the whole node needs nothing per-node here.
+  dynamic "network_device" {
+    for_each = var.storage_bridge == null ? [] : [1]
+
+    content {
+      bridge      = var.storage_bridge
+      mac_address = each.value.storage_mac
+      mtu         = var.storage_mtu
+    }
+  }
 }
 
 # The API has to be up before a config can be applied; the provider retries, but this keeps the first

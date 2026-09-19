@@ -15,9 +15,16 @@ module "cluster" {
   cluster_name     = "dev"
   cluster_endpoint = "https://dev-k8s.srv.hnatekmar.dev:6443"
 
-  # Schematic includes siderolabs/qemu-guest-agent — without it Proxmox cannot report guest addresses,
-  # and the CCM has nothing to correlate a node with.
-  talos_schematic_id = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
+  # The node image, from the schematic kept in git at terraform/schematics/talos-nocloud.yaml —
+  # regenerate the ID with the curl in that file's header after any edit. It now carries iscsi-tools and
+  # util-linux-tools alongside qemu-guest-agent, which is what the storage tiers need.
+  #
+  # The ID is necessary but NOT sufficient to change a node: it decides what the installer image
+  # contains, so a NEW node gets the extensions at install time, a Karpenter clone only when the PVE
+  # template is rebuilt (a clone boots the template's installed disk and does not reinstall), and an
+  # EXISTING node only when it is rolled (`talosctl upgrade`). See the schematic file and
+  # terraform/docs/cluster-autoscaling.md.
+  talos_schematic_id = "53513e54bb39202f35694412577a6bc53d484744d35a126e5d42ef34785c0d83"
   talos_version      = "v1.14.1"
 
   proxmox_node   = "balteus"
@@ -25,6 +32,14 @@ module "cluster" {
   # The TEMPLATE lives on iscsi; each node's own disk chooses its datastore below.
   template_storage = "iscsi"
   vlan_id          = 40
+
+  # The storage LAN (`192.168.88.0/24`, vmbr2 on balteus, jumbo MTU, DHCP). Uncomment to give every node
+  # in this cluster its own 10 Gbps link to the NAS — the rule the storage tiers are built on.
+  #
+  # OFF, deliberately: applying it reconfigures both running VMs, and Talos only sees a new NIC after a
+  # reboot, so enabling this rolls the cluster once. The NIC is inert until a CSI node plugin wants to
+  # mount something, which is the point at which to pay for the reboot.
+  # storage_bridge = "vmbr2"
 
   # Addresses and MACs come from the router's reservations (terraform/routeros/dhcp.tf), so a rebuild
   # lands on the same addresses and nothing that refers to them by name has to change.

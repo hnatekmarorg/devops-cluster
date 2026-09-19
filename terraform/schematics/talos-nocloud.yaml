@@ -1,0 +1,39 @@
+# The factory schematic every node image is built from — kept in git so the opaque ID in the cluster
+# roots is reviewable, and so the next person can tell what a node is actually running.
+#
+# Mint the ID after ANY edit (the ID is the hash of this document):
+#
+#   curl -s -X POST https://factory.talos.dev/schematics \
+#     -H 'Content-Type: application/yaml' --data-binary @terraform/schematics/talos-nocloud.yaml
+#   -> {"id":"...","schematic":"..."}
+#
+# That ID is what a cluster root passes as `talos_schematic_id`.
+#
+# WHY EACH EXTENSION IS HERE
+#
+#   qemu-guest-agent   Proxmox cannot report a guest's addresses without it, and the CCM has nothing to
+#                      correlate a node with if it cannot — nodes then stay uninitialised and nothing
+#                      schedules.
+#   iscsi-tools        `iscsiadm`, `lsblk` and friends: what a CSI node plugin calls to attach a block
+#                      volume over iSCSI. Without it the storage tiers cannot mount anything.
+#   util-linux-tools   a real `mount`, plus the NFS helpers — the RWX tier is NFS, and the minimal
+#                      busybox-ish userland in the default image is not enough for it.
+#
+# THE ID IS NECESSARY BUT NOT SUFFICIENT, and this is the trap: the schematic decides what the *installer*
+# image contains, so a new extension reaches
+#
+#   - a NEW static node        automatically (it installs from `machine.install.image`), and
+#   - a Karpenter clone        only when the PVE TEMPLATE is rebuilt: a clone boots the template's
+#                              already-installed disk and does not reinstall itself, and
+#   - an existing static node  only when it is rolled — `talosctl upgrade --image` with the installer for
+#                              this schematic. Applying the new config does not reinstall a node that is
+#                              already installed.
+#
+# So changing this file is the first of two steps; rebuilding the template is the second. See
+# terraform/docs/cluster-autoscaling.md.
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/qemu-guest-agent
+      - siderolabs/iscsi-tools
+      - siderolabs/util-linux-tools

@@ -110,6 +110,12 @@ Two follow-ons from the same pass, both per-device bootstrap rather than design:
   CRS326 drifted nine days before this. The router already runs NTP against the europe pool.
   Enable it on the switches in the same sitting as the read-group change below — a switch whose
   clock drifts makes every log, backup filename and certificate check lie.
+  **Status 2026-09-19:** the CRS326 now syncs against the europe pool directly (verified,
+  `synchronized`). The router additionally **serves** time as of the same date
+  (`terraform/routeros/ntp.tf`, `routeros_system_ntp_server`) — which is what lets a device with no
+  egress sync at all. First consumer: the storage island's CRS317, pointed at `172.16.10.1` over its
+  new management link, since it is deliberately given no default route (and its time zone still needs
+  setting from `manual`/`+00:00` to `Europe/Prague`).
 - The router carries **nine static DNS entries** that currently reach nobody, because it does not
   serve DNS. They become useful the moment (b) happens — that is the argument for (b) being a
   deliberate step rather than an accident.

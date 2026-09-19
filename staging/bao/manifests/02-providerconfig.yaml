@@ -1,0 +1,16 @@
+---
+apiVersion: vault.upbound.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: bao-staging
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  # dev mode serves plain HTTP (no TLS, no unseal step)
+  address: http://openbao.bao-staging.svc:8200
+  credentials:
+    source: Secret
+    secretRef:
+      name: bao-staging-token
+      namespace: crossplane-system
+      key: config

@@ -62,8 +62,12 @@ jobs:
     # terraform/docs/ci-runner.md § "Resolved".
     runs-on: [self-hosted, mgmt, tofu]
     # Bounded: an apply is a writer and must not be cancelled, but it also must not be able to occupy the
-    # runner's only slot forever if the device stops answering mid-apply.
-    timeout-minutes: 20
+    # runner's only slot forever if the device stops answering mid-apply. 20 minutes was the old number
+    # and it was measuring the wrong thing — normal jobs here finish in ~40s, so 20 minutes only ever
+    # described a wedge. The plan now dies at 60s of its own accord (see ../actions/tofu-apply), and this
+    # is the backstop above that: it should never be the bound that fires, and if it is, something wedged
+    # in a way the per-step bound did not catch.
+    timeout-minutes: 5
     # The environment scopes the write identity and enforces "protected branches only", i.e. this can
     # only be deployed from `main` — reviewed code. It no longer adds an approval click: the review and
     # the posted plan on the PR are the authorization.

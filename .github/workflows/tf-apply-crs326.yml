@@ -45,8 +45,9 @@ jobs:
     # `gha-runner-scale-set-hnatekmarorg` to fall back to the ARC runners on the k8s cluster.
     runs-on: [self-hosted, mgmt, tofu]
     # Bounded like the router apply: a writer is never cancelled, but it must not hold the runner's only
-    # slot forever either.
-    timeout-minutes: 20
+    # slot forever either. Same reasoning, same numbers — the plan is hard-bounded at 60s inside
+    # ../actions/tofu-apply and this is the job-level backstop above it.
+    timeout-minutes: 5
     # Scopes the write identity; deploys from `main` only (protected-branches policy on the environment).
     environment: crs326-production
     concurrency:

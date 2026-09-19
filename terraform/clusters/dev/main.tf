@@ -15,17 +15,14 @@ module "cluster" {
   cluster_name     = "dev"
   cluster_endpoint = "https://dev-k8s.srv.hnatekmar.dev:6443"
 
-  # The node image, from the schematic kept in git at terraform/schematics/talos-nocloud.yaml —
-  # regenerate the ID with the curl in that file's header after any edit. It now carries iscsi-tools and
-  # util-linux-tools alongside qemu-guest-agent, which is what the storage tiers need.
+  # The node image is NOT an input any more: the module registers it (talos_image_factory_schematic) from
+  # `talos_schematic_extensions`, whose defaults carry qemu-guest-agent, iscsi-tools and util-linux-tools.
+  # So there is no hash here to drift out of sync with a schematic file.
   #
-  # The ID is necessary but NOT sufficient to change a node: it decides what the installer image
-  # contains, so a NEW node gets the extensions at install time, a Karpenter clone only when the PVE
-  # template is rebuilt (a clone boots the template's installed disk and does not reinstall), and an
-  # EXISTING node only when it is rolled (`talosctl upgrade`). See the schematic file and
-  # terraform/docs/cluster-autoscaling.md.
-  talos_schematic_id = "53513e54bb39202f35694412577a6bc53d484744d35a126e5d42ef34785c0d83"
-  talos_version      = "v1.14.1"
+  # What the extension list does and does not achieve: a NEW node gets the extensions at install, a
+  # Karpenter clone only when the PVE template is rebuilt (it boots the template's installed disk and never
+  # reinstalls), and an existing node only when it is rolled. See terraform/docs/cluster-autoscaling.md.
+  talos_version = "v1.14.1"
 
   proxmox_node   = "balteus"
   template_vm_id = 9000
@@ -108,6 +105,18 @@ output "join_config" {
 
 output "nodes" {
   value = module.cluster.nodes
+}
+
+# Re-exported because a module's outputs are invisible from the root until it re-declares them — and these
+# two are the seam for the OTHER half of the image story: the PVE template Karpenter clones boot.
+output "schematic_id" {
+  description = "The node image's schematic, as the provider registered it."
+  value       = module.cluster.schematic_id
+}
+
+output "template_image_url" {
+  description = "The image a PVE template is built from — see terraform/docs/cluster-autoscaling.md."
+  value       = module.cluster.template_image_url
 }
 
 # The credential-free kubeconfig belongs in git next to the cluster definition: it carries no secret

@@ -45,9 +45,11 @@ marker, not arithmetic.
   halves agree — a Karpenter clone inherits this `net1`, while a *static* node gets its second NIC from
   the cluster root's `storage_bridge`. Point them at different bridges and half the cluster lands on a
   segment the other half cannot see.
-- **An image built from `terraform/schematics/talos-nocloud.yaml`** — the schematic is now in git,
-  because the extensions it carries are what the storage tiers need (`iscsi-tools` for the block tier,
-  `util-linux-tools` for the NFS one, `qemu-guest-agent` for everything). See "The storage network".
+- **An image carrying the right extensions.** The module registers the schematic itself
+  (`talos_image_factory_schematic` over `talos_schematic_extensions`), so the extension list *is* the
+  definition of the node image: `iscsi-tools` for the block tier, `util-linux-tools` for the NFS one,
+  `qemu-guest-agent` for everything. Nothing has to be kept in sync by hand — and "The storage network"
+  below explains what registering it does and does not deliver.
 - **Sized generously enough for the instance types you will offer.**
 
 **2. `bootDevice.storage` selects the zones.** The provider derives zones from the storage named there and
@@ -126,16 +128,28 @@ Three things follow — and they *are* the whole "add the storage network" job:
    `net0` and the template's `net1` never reaches it. `storage_bridge = "vmbr2"` in the cluster root adds
    it — verified inert while unset (`Plan: No changes`) — and it costs **one reboot per node**, because
    Talos enumerates interfaces at boot and will not see a NIC attached to a running VM.
-3. **The image.** The schematic must carry `iscsi-tools` and `util-linux-tools`, and the schematic ID is
-   necessary but **not sufficient** — it decides what the *installer* image contains:
-   - a **new** node installs from it, so it gets the extensions;
-   - a **clone** boots the template's already-installed disk and does **not** reinstall, so the template
-     must be rebuilt from the new image;
+3. **The image.** The extensions live in `talos_schematic_extensions` on the module, which registers the
+   schematic and returns the ID (`talos_image_factory_schematic`) — so the list is the definition and
+   nothing has to be kept in sync. That alone still does **not** deliver an extension, because the list
+   decides what the *installer* image contains:
+   - a **new** node installs from it, so it gets them;
+   - a **clone** boots the template's already-installed disk and does **not** reinstall — the template has
+     to be rebuilt from `factory.talos.dev/image/<schematic_id>/<version>/nocloud-amd64.raw.xz`, which is
+     what the cluster root's `template_image_url` output prints;
    - an **existing** node keeps the system it installed until it is rolled (`talosctl upgrade`).
 
-   Applying a new `talos_schematic_id` is a side-effect-free config change — `Plan: 0 to add, 2 to change,
-   0 to destroy`, and the only difference inside the patch is the installer image, with `wipe = false` and
-   `reboot = false` in the install document. Delivering the extensions is the two steps above.
+   Changing the extension list is otherwise a small, non-destructive diff: the provider re-registers the
+   schematic and what reaches the nodes is the installer image inside an `UnattendedInstallConfig` patch
+   carrying `wipe = false` and `reboot = false`, so no VM is replaced and nothing is wiped. On the first
+   apply after this change the plan is `1 to add, 2 to change, 0 to destroy` — the schematic itself plus
+   the two nodes' config applies — and the join config is re-rendered only because the ID is unknown until
+   then.
+
+   Rebuilding the template is `curl` + `qm importdisk` + `qm template`; the only written-up version of that
+   is `spike/capmox-talos/runbook-2-talos-template.md`, and two of its rows are now wrong for this path —
+   the class VLAN tag **does** belong on the template's `net0` (the provider inherits it, and the clone's
+   `vlan_id` must agree), and the provider attaches its own cloud-init CD-ROM, so the template does not
+   need one.
 
 ### A second Proxmox host (bukefalos)
 

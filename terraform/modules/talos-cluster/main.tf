@@ -8,6 +8,24 @@ resource "talos_machine_secrets" "this" {
   talos_version = var.talos_version
 }
 
+# The node image, registered rather than written down. The provider POSTs this document to the Image
+# Factory and keeps the ID it returns in state, so the ID is DERIVED — there is no hash to keep in sync
+# with the extension list, and nothing to mint by hand.
+#
+# Cost and behaviour, since both matter for a plan: `Create` makes one API call (~1s) against the factory
+# URL in `provider "talos"` (default https://factory.talos.dev), and `Read` is a no-op — so refresh and
+# plan never call out. The ID is in state after the first apply; changing `talos_schematic_extensions`
+# re-registers it and flows into every `machine.install.image` below.
+resource "talos_image_factory_schematic" "this" {
+  schematic = yamlencode({
+    customization = {
+      systemExtensions = {
+        officialExtensions = var.talos_schematic_extensions
+      }
+    }
+  })
+}
+
 data "talos_machine_configuration" "controlplane" {
   cluster_name       = var.cluster_name
   machine_type       = "controlplane"

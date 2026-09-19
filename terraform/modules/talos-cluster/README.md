@@ -49,8 +49,8 @@ roles into the `groups` array.
 
 - `cpu=x86-64-v2-AES` (or the clone panics)
 - the class VLAN tag on its NIC
-- `agent: enabled=1`, and an image built from the schematic in `terraform/schematics/talos-nocloud.yaml`
-  (`qemu-guest-agent`, `iscsi-tools`, `util-linux-tools`)
+- `agent: enabled=1`, and an image built from the extensions the module registers
+  (`talos_schematic_extensions` — `qemu-guest-agent`, `iscsi-tools`, `util-linux-tools`)
 - a single storage — a cloud-init drive on a second storage gives `Multiple storage IDs found for template`
 - **`net1` on the storage bridge** (jumbo MTU, untagged) when the cluster's nodes are to reach the NAS: a
   Karpenter clone inherits this NIC, while a static node gets its second one from `storage_bridge`, so the
@@ -76,6 +76,8 @@ but Talos only sees the new NIC after a reboot.
 | `join_config` | Karpenter's `ProxmoxNodeClass` secret — rendered **without** a hostname so each clone names itself after its claim |
 | `talosconfig`, `client_configuration` | operations |
 | `nodes` | which address each node landed on |
+| `schematic_id` | the node image's definition, as the factory registered it |
+| `template_image_url` | building the PVE template a Karpenter clone boots — the only place a new extension reaches a burst node |
 
 ## Repairing a broken cluster
 

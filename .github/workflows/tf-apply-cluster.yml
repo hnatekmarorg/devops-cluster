@@ -266,7 +266,12 @@ jobs:
       # ends up with a stale CA and a join secret from the previous generation.
       - name: Bootstrap — CCM, CRDs, ArgoCD, join secret
         if: matrix.action == 'apply'
-        run: ./scripts/bootstrap-cluster.sh "${{ matrix.cluster }}" 2>&1 | tee bootstrap.txt
+        run: |
+          # `set -o pipefail`: without it `| tee` reports TEE's status, and the bootstrap failing at
+          # "API server never came up" produced a green step with a cluster that was never bootstrapped.
+          # Every piped step in this job needs this line, not just the ones with obvious failure modes.
+          set -o pipefail
+          ./scripts/bootstrap-cluster.sh "${{ matrix.cluster }}" 2>&1 | tee bootstrap.txt
 
       # ESO's ClusterSecretStore cannot authenticate until the vault knows THIS cluster: the
       # `auth/kubernetes-<cluster>` mount holds the cluster's CA and a TokenReview credential, and both
@@ -278,12 +283,22 @@ jobs:
       # where the runner keeps it (mode 0600) and where the `bao` CLI is already installed.
       - name: Wire the vault to this cluster
         if: matrix.action == 'apply'
-        run: ./scripts/wire-vault.sh "${{ matrix.cluster }}" 2>&1 | tee vault.txt
+        run: |
+          set -o pipefail   # same reason as the bootstrap: a failed wire-vault also looked green
+          ./scripts/wire-vault.sh "${{ matrix.cluster }}" 2>&1 | tee vault.txt
         env:
+          # EITHER a repository/environment secret, OR a file the CONTAINER can read — note that
+          # /etc/bao_token on the runner HOST is not visible inside the runner container, which is where
+          # this runs. wire-vault.sh falls back to /etc/bao_token only if that path exists in-container.
           BAO_TOKEN: ${{ secrets.BAO_TOKEN }}
 
       - name: Post-apply summary + the kubeconfig
         if: matrix.action == 'apply'
+        # The PR step calls the REST API directly; without this the shell reports
+        # "GITHUB_TOKEN: unbound variable" inside a command substitution, where `|| true` swallowed it —
+        # so the kubeconfig PR silently never opened.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           cluster="${{ matrix.cluster }}"

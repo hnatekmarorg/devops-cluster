@@ -41,7 +41,13 @@ chmod 600 "$KUBECONFIG_FILE"
 export KUBECONFIG="$KUBECONFIG_FILE"
 
 say "waiting for the API server"
-for _ in $(seq 1 30); do
+# 15 minutes, not the 2.5 it used to be, and the reason is a change elsewhere: the module's health gate
+# was switched off (it cannot pass on a cluster with a hostname override — Talos looks for the static
+# pods under the machine hostname, the kubelet names them after the node). The gate was quietly doing the
+# waiting too, so an apply now returns as soon as the resources EXIST rather than when the cluster is up,
+# and this loop is the only thing left between a fresh apply and a live API server. Measured on a cold
+# build: the old 150s expired at "API server never came up" while the API answered fine minutes later.
+for _ in $(seq 1 180); do
   kubectl get --raw /healthz >/dev/null 2>&1 && break
   sleep 5
 done

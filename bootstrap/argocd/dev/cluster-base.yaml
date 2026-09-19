@@ -47,6 +47,16 @@ spec:
         #
         # clusterName is required (the vault auth mount is per cluster and the default derives from it).
         clusterName: dev
+        instanceFamilies:
+          - c1
+          - t1
+          - s1
+          - m1
+          - x1
+        karpenter:
+          limits:
+            cpu: "128"
+            memory: "512Gi"
         certManager:
           cloudflare:
             secretSource: eso
@@ -59,7 +69,7 @@ spec:
             vaultRole: local-dev
 
   destination:
-    server: https://kubernetes.default.svc   # in-cluster
+    server: https://kubernetes.default.svc # in-cluster
     namespace: argocd
 
   syncPolicy:

@@ -41,12 +41,16 @@ spec:
             mountPath: kubernetes-prod     # must match what wire-vault.sh enabled
             vaultRole: local-prod
 
-        # Prod's autoscaling ceiling, above dev's 8/32Gi. The instance families still come from the
-        # chart default (c1/t1/s1) — deliberately no x1 on a box that is also the storage host.
+        # Prod's autoscaling ceiling. The families are stated EXPLICITLY now that pools live in values,
+        # and they stay c1/t1/s1: deliberately no m1/x1 on a box that is also the storage host.
         karpenter:
-          limits:
-            cpu: "32"
-            memory: 128Gi
+          pools:
+            - name: talos-nocloud-template
+              templateName: talos-nocloud-template
+              instanceFamilies: ["c1", "t1", "s1"]
+              limits:
+                cpu: "32"
+                memory: 128Gi
 
   destination:
     server: https://kubernetes.default.svc   # in-cluster

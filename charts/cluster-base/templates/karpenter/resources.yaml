@@ -1,26 +1,48 @@
 {{- if and .Values.onprem .Values.karpenter.enabled }}
-# Which PVE template to clone. Unmanaged ⇒ the provider searches every Proxmox node for this NAME.
+{{- $defaults := default dict .Values.karpenter.defaults }}
+{{- $defaultBoot := default dict $defaults.bootDevice }}
+
+{{- /* One template CR per distinct templateName: two pools may share a PVE template (same machine image,
+       different size budget or taints), and two CRs of the same name would fight over one object. */}}
+{{- $templateNames := dict }}
+{{- range .Values.karpenter.pools }}
+{{- $_ := set $templateNames .templateName true }}
+{{- end }}
+{{- range $name, $_ := $templateNames }}
+---
+# Which PVE template to clone. Unmanaged ⇒ the provider SEARCHES every Proxmox node for this NAME, so a
+# matching template must exist on each node a clone may land on — same name, class VLAN tag on its net0,
+# the storage bridge on net1, and one storage only.
 apiVersion: karpenter.proxmox.sinextra.dev/v1alpha1
 kind: ProxmoxUnmanagedTemplate
 metadata:
-  name: {{ .Values.karpenter.templateName }}
+  name: {{ $name }}
 spec:
-  region: {{ .Values.karpenter.region }}
-  templateName: {{ .Values.karpenter.templateName }}
+  region: {{ $.Values.karpenter.region }}
+  templateName: {{ $name }}
+{{- end }}
+{{- range .Values.karpenter.pools }}
+{{- $boot := merge (deepCopy (default dict .bootDevice)) (deepCopy $defaultBoot) }}
+{{- $limits := merge (deepCopy (default dict .limits)) (deepCopy (default dict $defaults.limits)) }}
+{{- $families := default $defaults.instanceFamilies .instanceFamilies }}
+{{- $disruption := merge (deepCopy (default dict .disruption)) (deepCopy (default dict $defaults.disruption)) }}
+{{- $expire := default $defaults.expireAfter .expireAfter | default "Never" }}
 ---
 # Where and how: region, disk (which also selects the zones), and how the machine config is delivered.
+# One NodeClass PER POOL — a pool's template, disk and storage are its own, so two pools that differ in
+# any of them cannot share a NodeClass.
 apiVersion: karpenter.proxmox.sinextra.dev/v1alpha1
 kind: ProxmoxNodeClass
 metadata:
-  name: {{ .Values.karpenter.templateName }}
+  name: {{ .name }}
 spec:
-  region: {{ .Values.karpenter.region }}
+  region: {{ $.Values.karpenter.region }}
   instanceTemplateRef:
     kind: ProxmoxUnmanagedTemplate
-    name: {{ .Values.karpenter.templateName }}
+    name: {{ .templateName }}
   bootDevice:
-    size: {{ .Values.karpenter.bootDevice.size }}
-    storage: {{ .Values.karpenter.bootDevice.storage }}
+    size: {{ $boot.size }}
+    storage: {{ $boot.storage }}
   metadataOptions:
     type: cdrom                # the v0.12.0 CRD's enum is exactly [none, cdrom]
     # `templatesRef`. The field name is VERSION-DEPENDENT, which is why it has now been wrong in both
@@ -34,40 +56,66 @@ spec:
     #
     # The referenced Secret carries cloud-init fragments as keys, all optional:
     #   user-data, meta-data, network-config
-    # NOTE: that Secret does not exist yet — this fixes the field, not the secret.
     templatesRef:
-      name: {{ .Values.karpenter.joinSecret.name }}
-      namespace: {{ .Values.karpenter.joinSecret.namespace }}
+      name: {{ $.Values.karpenter.joinSecret.name }}
+      namespace: {{ $.Values.karpenter.joinSecret.namespace }}
   placementStrategy:
     zoneBalance: Balanced
   tags:
     - karpenter
+{{- with .securityGroups }}
+  securityGroups:
+{{ toYaml . | indent 4 }}
+{{- end }}
 ---
 # What may be provisioned. No family requirement ⇒ Karpenter sizes each node to fit the pending pods,
 # which is what you want on-prem: no over-provisioning.
+#
+# `limits` is a BUDGET, not the machine's size — the provider does not overcommit memory and Proxmox
+# reserves nothing, so a limit near the host's capacity lets this pool race every other VM on the box.
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: {{ .Values.karpenter.templateName }}
+  name: {{ .name }}
 spec:
+{{- if .weight }}
+  weight: {{ .weight }}
+{{- end }}
   template:
+{{- with .labels }}
+    metadata:
+      labels:
+{{ toYaml . | indent 8 }}
+{{- end }}
     spec:
       nodeClassRef:
         group: karpenter.proxmox.sinextra.dev
         kind: ProxmoxNodeClass
-        name: {{ .Values.karpenter.templateName }}
+        name: {{ .name }}
+      # A GPU pool is this shape plus a taint (so only GPU workloads land there) and a `templateName`
+      # pointing at a GPU template. It also needs a PVE PCI resource mapping — PVE picks the FIRST FREE
+      # device from the mapping at VM start, which is what lets two GPU nodes hold two different cards —
+      # and the NVIDIA extensions in the node image. See terraform/docs/cluster-autoscaling.md.
+{{- with .taints }}
+      taints:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      expireAfter: {{ $expire }}
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["on-demand"]
         - key: karpenter.proxmox.sinextra.dev/instance-family
           operator: In
-          values: {{ .Values.karpenter.instanceFamilies | toJson }}
-      expireAfter: Never
+          values: {{ $families | toJson }}
+{{- with .extraRequirements }}
+{{ toYaml . | indent 8 }}
+{{- end }}
   limits:
-    cpu: {{ .Values.karpenter.limits.cpu | quote }}
-    memory: {{ .Values.karpenter.limits.memory }}
+    cpu: {{ $limits.cpu | quote }}
+    memory: {{ $limits.memory }}
   disruption:
-    consolidationPolicy: WhenEmpty
-    consolidateAfter: 1m
+    consolidationPolicy: {{ $disruption.consolidationPolicy }}
+    consolidateAfter: {{ $disruption.consolidateAfter }}
+{{- end }}
 {{- end }}

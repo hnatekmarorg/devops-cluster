@@ -249,25 +249,54 @@ jobs:
       # provided, by setup-opentofu. Without this step the bootstrap dies inside
       # `kubectl get --raw /healthz`, whose stderr is discarded, so a missing binary reads as an
       # unreachable API server and the step sits out its whole wait budget before saying so.
-      - name: Install kubectl and helm
+      - name: Install the tools the runner image lacks
         if: matrix.action == 'apply' || matrix.action == 'destroy'
         run: |
           set -euo pipefail
-          # kubectl pinned to the cluster's own version (both nodes are v1.37.0, which is also current
-          # stable). Helm pinned to the latest 3.x: the bootstrap's commands are helm-3 syntax, and helm 4
-          # is a 2025 major release — not something to adopt inside a provisioning path by accident.
+          # Three binaries, three discoveries, one lesson: this runner image has none of them and each
+          # one failed at a different point (kubectl inside a wait loop that discards stderr, helm after
+          # it, bao in wire-vault). They are installed here, together, so the next missing one is a
+          # non-event. Versions are pinned and deliberate:
+          #   kubectl  v1.37.0  — the cluster's own version (both nodes report it), and current stable
+          #   helm     v3.22.0  — the latest 3.x; the scripts are helm-3 syntax and helm 4 is a 2025
+          #                       major release, not something to adopt inside a provisioning path
+          #   bao      v2.6.2   — matches the on-prem OpenBao's own version
           KUBECTL_VERSION="v1.37.0"
           HELM_VERSION="v3.22.0"
+          BAO_VERSION="v2.6.2"
           dest="$HOME/.local/bin"
           mkdir -p "$dest"
           curl -sfL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" -o "$dest/kubectl"
           chmod +x "$dest/kubectl"
           curl -sfL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" | tar -xz -O linux-amd64/helm > "$dest/helm"
           chmod +x "$dest/helm"
+          # The OpenBao release asset drops the 'v' from its version, hence the strip.
+          curl -sfL "https://github.com/openbao/openbao/releases/download/${BAO_VERSION}/openbao_${BAO_VERSION#v}_linux_amd64.tar.gz" | tar -xz -O bao > "$dest/bao"
+          chmod +x "$dest/bao"
           # $GITHUB_PATH, not a system directory: the job runs as the unprivileged `runner` user.
           echo "$dest" >> "$GITHUB_PATH"
           "$dest/kubectl" version --client
           "$dest/helm" version --short
+          "$dest/bao" version
+
+      # THE WHOLE LIST, IN ONE PLACE. Every missing binary so far was found the hard way — a failed run
+      # each — because they fail at different points, some inside loops that discard stderr. This names
+      # them all before anything touches a cluster, so the next gap costs one step, not one evening.
+      - name: Verify every tool this job needs is on PATH
+        if: matrix.action == 'apply' || matrix.action == 'destroy'
+        run: |
+          set -euo pipefail
+          # tofu comes from setup-opentofu; the rest from the step above or the base image. jq, curl, git,
+          # python3 and coreutils are present in the image — verified, not assumed.
+          missing=""
+          for t in tofu kubectl helm bao curl git python3 jq base64 stat mktemp tar; do
+            command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing from PATH:$missing"
+            exit 1
+          fi
+          echo "all present: $(for t in tofu kubectl helm bao jq curl git python3; do printf '%s ' "$t"; done)"
 
       - name: Preflight
         if: matrix.action == 'apply'

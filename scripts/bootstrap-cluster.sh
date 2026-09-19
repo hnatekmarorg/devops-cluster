@@ -15,6 +15,17 @@
 # Safe to re-run: helm upgrade --install, kubectl apply and the CRD apply are all upserts.
 set -euo pipefail
 
+# TOOLS FIRST — genuinely first, before this script calls tofu for the kubeconfig twenty lines down.
+# It drives kubectl (19 calls), helm (9) and tofu, and the CI runner image shipped none of them: the
+# missing kubectl surfaced 15 minutes later as "API server never came up" (the wait discards stderr), and
+# an earlier version of this very check sat AFTER the first tofu call, so it never ran.
+for _tool in tofu kubectl helm; do
+  command -v "$_tool" >/dev/null 2>&1 || {
+    echo "bootstrap-cluster.sh: $_tool is not on PATH — install it first (the CI job does; .github/workflows/tf-apply-cluster.yml)" >&2
+    exit 69
+  }
+done
+
 CLUSTER="${1:?usage: bootstrap-cluster.sh <cluster>   e.g. bootstrap-cluster.sh dev}"
 ROOT="terraform/clusters/${CLUSTER}"
 [ -d "$ROOT" ] || { echo "no such cluster root: $ROOT" >&2; exit 1; }
@@ -39,17 +50,6 @@ trap 'rm -f "$KUBECONFIG_FILE"' EXIT
 ( cd "$ROOT" && tofu output -raw kubeconfig ) > "$KUBECONFIG_FILE"
 chmod 600 "$KUBECONFIG_FILE"
 export KUBECONFIG="$KUBECONFIG_FILE"
-
-# Tools first, in one line. This script drives kubectl (19 calls) and helm (9), and the CI runner image
-# has NEITHER until the job installs them. A missing kubectl previously surfaced 15 minutes later as
-# "API server never came up" — because the wait below discards stderr — which sent a whole debugging pass
-# after the wrong cause. Naming it here costs nothing and cannot be misread.
-for _tool in kubectl helm; do
-  command -v "$_tool" >/dev/null 2>&1 || {
-    echo "bootstrap: $_tool is not on PATH — install it first (the CI job does; .github/workflows/tf-apply-cluster.yml)" >&2
-    exit 69
-  }
-done
 
 say "waiting for the API server"
 # 15 minutes, not the 2.5 it used to be. Two reasons, and the second is why the first was MISDIAGNOSED:

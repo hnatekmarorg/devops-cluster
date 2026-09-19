@@ -15,16 +15,28 @@ module "cluster" {
   cluster_name     = "dev"
   cluster_endpoint = "https://dev-k8s.srv.hnatekmar.dev:6443"
 
-  # Schematic includes siderolabs/qemu-guest-agent — without it Proxmox cannot report guest addresses,
-  # and the CCM has nothing to correlate a node with.
-  talos_schematic_id = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
-  talos_version      = "v1.14.1"
+  # The node image is NOT an input any more: the module registers it (talos_image_factory_schematic) from
+  # `talos_schematic_extensions`, whose defaults carry qemu-guest-agent, iscsi-tools and util-linux-tools.
+  # So there is no hash here to drift out of sync with a schematic file.
+  #
+  # What the extension list does and does not achieve: a NEW node gets the extensions at install, a
+  # Karpenter clone only when the PVE template is rebuilt (it boots the template's installed disk and never
+  # reinstalls), and an existing node only when it is rolled. See terraform/docs/cluster-autoscaling.md.
+  talos_version = "v1.14.1"
 
   proxmox_node   = "balteus"
   template_vm_id = 9000
   # The TEMPLATE lives on iscsi; each node's own disk chooses its datastore below.
   template_storage = "iscsi"
   vlan_id          = 40
+
+  # The storage LAN (`192.168.88.0/24`, vmbr2 on balteus, jumbo MTU, DHCP). Uncomment to give every node
+  # in this cluster its own 10 Gbps link to the NAS — the rule the storage tiers are built on.
+  #
+  # OFF, deliberately: applying it reconfigures both running VMs, and Talos only sees a new NIC after a
+  # reboot, so enabling this rolls the cluster once. The NIC is inert until a CSI node plugin wants to
+  # mount something, which is the point at which to pay for the reboot.
+  storage_bridge = "vmbr2"
 
   # Addresses and MACs come from the router's reservations (terraform/routeros/dhcp.tf), so a rebuild
   # lands on the same addresses and nothing that refers to them by name has to change.
@@ -93,6 +105,18 @@ output "join_config" {
 
 output "nodes" {
   value = module.cluster.nodes
+}
+
+# Re-exported because a module's outputs are invisible from the root until it re-declares them — and these
+# two are the seam for the OTHER half of the image story: the PVE template Karpenter clones boot.
+output "schematic_id" {
+  description = "The node image's schematic, as the provider registered it."
+  value       = module.cluster.schematic_id
+}
+
+output "template_image_url" {
+  description = "The image a PVE template is built from — see terraform/docs/cluster-autoscaling.md."
+  value       = module.cluster.template_image_url
 }
 
 # The credential-free kubeconfig belongs in git next to the cluster definition: it carries no secret

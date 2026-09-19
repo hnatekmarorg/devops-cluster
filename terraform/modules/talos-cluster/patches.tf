@@ -39,7 +39,13 @@
 #   factory cannot leave naming to `auto: stable` and hope.
 
 locals {
-  install_image = coalesce(var.install_image, "factory.talos.dev/nocloud-installer/${var.talos_schematic_id}:${var.talos_version}")
+  # The installer image every node installs from. The schematic ID is the one the factory returned for
+  # `var.talos_schematic_extensions`, so this string is derived all the way down.
+  install_image = coalesce(var.install_image, "factory.talos.dev/nocloud-installer/${talos_image_factory_schematic.this.id}:${var.talos_version}")
+
+  # What a PVE template is built from — and a Karpenter clone boots the template's installed disk rather
+  # than installing anything, so this URL is the only place the extensions reach a burst node.
+  template_image_url = "https://factory.talos.dev/image/${talos_image_factory_schematic.this.id}/${var.talos_version}/nocloud-amd64.raw.xz"
 
   # Declaring the interface is MANDATORY on nocloud: with nothing declared the guest boots with no address
   # at all, logging only `network is unreachable`, while looking healthy from the Proxmox side.

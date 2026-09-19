@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       cluster:
-        description: 'Cluster name (e.g. dev)'
+        description: "Cluster name (e.g. dev), or 'all' — every root in main (the reconcile pass)"
         required: true
         type: string
       action:
@@ -91,12 +91,34 @@ jobs:
 
           # A dispatch names its target explicitly; a push is discovered from the diff.
           if [ "$EVENT" = "workflow_dispatch" ]; then
-            python3 - > /tmp/cluster-matrix.json <<PY
+            if [ "$IN_CLUSTER" = "all" ]; then
+              # THE RECONCILE PASS. A cluster root already in main has nothing to push, so the push
+              # trigger can never build it — which is the state EVERY pre-existing cluster is in the
+              # moment CI is armed. Without this, arming builds nothing until someone edits a root.
+              #
+              # `all` with destroy is refused on purpose: "destroy every cluster at once" is a typo away
+              # from an outage and has no legitimate use here.
+              if [ "$IN_ACTION" = "destroy" ]; then
+                echo "::error::refusing cluster=all with action=destroy — destroy one cluster at a time"
+                exit 1
+              fi
+              python3 - > /tmp/cluster-matrix.json <<'PY'
+          import json, os
+          base = 'terraform/clusters'
+          roots = sorted(d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d)))
+          print(json.dumps({"include": [
+              {"cluster": c, "action": "apply", "state_key": f"cluster-{c}/terraform.tfstate"}
+              for c in roots
+          ]}))
+          PY
+            else
+              python3 - > /tmp/cluster-matrix.json <<PY
           import json
           c = "$IN_CLUSTER"
           print(json.dumps({"include": [{"cluster": c, "action": "$IN_ACTION",
                                          "state_key": f"cluster-{c}/terraform.tfstate"}]}))
           PY
+            fi
             matrix="$(cat /tmp/cluster-matrix.json)"
             echo "matrix: ${matrix}"
             echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"

@@ -9,6 +9,12 @@ PR deletes terraform/clusters/<name>/   →  plan -destroy on the PR →  merge 
 PR closed without merging               →  nothing at all
 ```
 
+**A root that is already in `main` is not provisioned until something changes it** — a push trigger needs
+a change. That matters exactly once per cluster, at the moment CI is armed: the clusters declared *before*
+arming have nothing to push, so arming alone builds nothing. `workflow_dispatch` with `cluster: all` is the
+reconcile pass that builds them. It refuses `all` together with `destroy` — "every cluster at once" is a
+typo away from an outage and has no legitimate use here.
+
 ## Why not "close the PR and the cluster dies"
 
 The review-app pattern is tempting and does not survive contact with this estate, for one reason: **a

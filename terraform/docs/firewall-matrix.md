@@ -89,9 +89,64 @@ loop: this one says the policy *can* work, the report says what it would cost.
 
 The existing *defconf* rules stay: they govern the WAN side (`drop all from WAN not DSTNATed`, the
 input chain's WAN handling) and the matrix is about east-west. Two interactions to keep in mind:
-the router's own resolver (`allow-remote-requests`) is off, so DNS in the matrix means *public*
-resolvers until the resolver step, and enabling it is what lets internal names work for VPN clients
-— the same decision as pointing `lmproxy` at names.
+the router's own resolver (`allow-remote-requests`) is **on** as of `dns.tf` (measured on the device
+2026-09-19 — this document said "off" until then, and the change is what lets internal names work for
+VPN clients, for the reader below, and is the same decision as pointing `lmproxy` at names). The
+matrix therefore no longer means *public* resolvers for classes that are allowed to ask the router.
+
+## The reader exception (2026-09-19)
+
+One device — a tablet used as an e-reader and to browse internal services — gets the **inverse of its
+class row**: internet denied, internal web allowed. It lives in iot (`172.16.70.123`), whose row is
+"internet ✓ only", so this is a per-device exception in the sense of the last section: a rule with a
+comment and a class reason, reviewed like code (`terraform/routeros/reader-lan-only.tf`).
+
+**The class reason.** The device's purpose is to hold the vendor's telemetry *inside* the house and
+still be useful, which is the opposite of both available class rows. iot's row lets it phone home and
+gives it nothing internal to reach; the LAN classes would give it everything internal *and* the
+internet. Neither is the intent, so the intent is written down: **no internet, and only web ports to
+internal destinations.**
+
+**Both halves are one change.** A WAN deny alone would leave the device able to reach nothing at all,
+because `iot → internal` is already denied. Conversely, the LAN accepts are *narrow*: `src=reader-nets`,
+`dst=<class>`, `tcp 80,443`. No blanket accept, so the guardian's third assertion still holds.
+
+**Two policies are deliberately contradicted, each with one reason.** iot keeps public DNS and public
+pool time *because it has internet* (see `iot_router_deny`). Once the internet is denied, neither
+exists for this device: a resolver and a clock have to come from somewhere, and the router is the only
+something. Without NTP the clock drifts and TLS fails — a functional requirement, not a nicety.
+
+**A firewall accept alone does not deliver DNS.** The iot scope hands out `dns-server=8.8.8.8` (read off
+the device), so allowing DNS *to the router* changes nothing unless the device is told to ask it: hence
+a per-lease DHCP option set (option 6 → the estate's resolver) on this one reservation, while the
+class's own "public DNS" policy stays untouched. The DNS accept carries no protocol on purpose — a
+filtered resolver falls back to TCP when an answer is truncated, so a udp-only rule fails on exactly
+the large answers.
+
+**The clock is an open gap, not a solved one.** iot sets `ntp-none=true`, so nothing is advertised and
+this accept permits traffic that is not yet invited; it is written so that advertising the router as
+time source (option 42) becomes a DHCP-side change only. Measured 2026-09-19: `ntp.tf` declares the NTP
+server `enabled = true` while the device reports `enabled=false` — that drift is the real blocker and it
+belongs to the NTP work. Until then a reader with no internet has no time source, and a drifted clock
+breaks TLS against internal services.
+
+**Ordering is derived from the device, not assumed.** Measured: the five `dst-address-list=wan` accepts
+match `connection-nat-state=dstnat` (inbound-published), so they are irrelevant to egress; the class
+drops sit at 21–26; there is no terminal accept, so unmatched traffic falls through and is accepted —
+which is how iot keeps its internet today, and what an appended deny pre-empts. Hence the deny is
+appended (the convention for matrix drops) while the accepts carry `place_before` anchors on the class
+drop they contradict; an appended accept would sit *below* it and never match.
+
+**Fail-open, stated.** The identity is an address claimed by a DHCP reservation keyed on a MAC this
+tablet **randomizes** (locally-administered bit set). Reset the private MAC and the reservation matches
+nothing, the list matches nothing, and the device quietly reverts to the iot row — internet back, LAN
+gone. The durable fix is on the device: *Wi-Fi → the network → Privacy → "Use device MAC"*. Until then,
+the byte counter on the WAN deny is the check: a device in use with zero packets is no longer matching.
+
+**End state.** A second reader device makes this file the wrong answer. The honest move then is a
+`reader` class — own VLAN, own SSID, own DHCP scope, its own row above — and this exception is deleted
+with the file it lives in.
+
 
 ## What this deliberately leaves alone
 

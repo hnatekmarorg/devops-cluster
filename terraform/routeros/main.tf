@@ -87,6 +87,13 @@ locals {
     "svc-vips"       = ["172.16.48.0/20"]
     "ai-compute"     = local.ai_compute
     "wan-restricted" = local.ai_compute
+
+    # The reader: ONE device, not a class — it takes the inverse of its class row (internet denied,
+    # LAN allowed), so the identity itself is the policy and the list is a deliberate /32. Kept at the
+    # end, outside the aligned block above, on purpose: an entry inserted mid-block splits the
+    # alignment group and forces `tofu fmt` to re-pad every line in it, which CI rejects. The address
+    # is stated once in `local.reader` (reader-lan-only.tf), next to the rules that depend on it.
+    "reader-nets" = ["${local.reader.address}/32"]
   }
 
   address_list_entries = flatten([

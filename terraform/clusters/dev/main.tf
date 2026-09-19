@@ -57,6 +57,11 @@ module "cluster" {
     },
   ]
 
+  # The module's health gate cannot pass on a cluster that sets a hostname override — see the note in
+  # terraform/modules/talos-cluster/main.tf. With it off, the bootstrap's own waits catch a cluster that
+  # did not come up, and the apply stops reporting a red job for a cluster that is fine.
+  check_health = false
+
   # Legacy --oidc-* flags: roles arrive in the top-level `groups` claim, the estate's convention.
   oidc_enabled = true
 

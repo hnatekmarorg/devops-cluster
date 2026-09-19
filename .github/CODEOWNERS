@@ -1,0 +1,25 @@
+# Who must review what.
+#
+# WHY THIS FILE EXISTS: a review gate is the only control that matches the actual risk here. Cluster
+# configs are not just "a config" — `charts/cluster-base` renders ClusterSecretStores that read the
+# vault, Karpenter node classes that create VMs, and workloads that run with the cluster's credentials.
+# A manual approval button would only gate WHEN such code runs; this gates WHAT it can be.
+#
+# Owner: the repository owner, so nothing in these trees merges without them.
+
+# The cluster factory: the module every cluster root calls, and the charts each cluster applies.
+/terraform/            @Hnatekmar
+/charts/               @Hnatekmar
+/bootstrap/            @Hnatekmar
+
+# The lifecycle scripts — apply, bootstrap, wire-vault, teardown. Teardown destroys infrastructure, so
+# it is in the same class as the code that creates it.
+/scripts/tofu-ci.sh            @Hnatekmar
+/scripts/bootstrap-cluster.sh  @Hnatekmar
+/scripts/teardown-cluster.sh   @Hnatekmar
+/scripts/wire-vault.sh         @Hnatekmar
+/scripts/kubeconfig.sh         @Hnatekmar
+
+# The workflows themselves: editing one can change what may be applied where.
+/.github/workflows/    @Hnatekmar
+/.github/actions/      @Hnatekmar

@@ -48,8 +48,18 @@ write)
   user_key=ROS_WRITE_USERNAME
   pass_key=ROS_WRITE_PASSWORD
   ;;
+none)
+  # A root that talks to neither the router nor anything else with its own
+  # identity: the cluster roots. They authenticate to Proxmox with
+  # PROXMOX_VE_* (supplied by the job, read by the bpg provider directly) and
+  # to the state bucket with AWS_*, so there is no role pair to resolve. Before
+  # this existed the apply died at exit 78 *before* touching Proxmox, with a
+  # message about RouterOS credentials that had nothing to do with the job.
+  user_key=""
+  pass_key=""
+  ;;
 *)
-  log "tofu-ci: unknown role '${ROLE}' (expected read|write)"
+  log "tofu-ci: unknown role '${ROLE}' (expected read|write|none)"
   exit 64
   ;;
 esac
@@ -60,6 +70,10 @@ esac
 CRED_SOURCE=""
 
 resolve_creds() {
+  if [[ "$ROLE" == "none" ]]; then
+    CRED_SOURCE="none required (the provider authenticates itself)"
+    return 0
+  fi
   if [[ -n "${!user_key:-}" && -n "${!pass_key:-}" ]]; then
     CRED_SOURCE="job environment (repo/environment secret, or mounted into the runner)"
   elif [[ -f "$ENC_FILE" ]]; then
@@ -80,6 +94,7 @@ resolve_creds() {
       value="${value#\"}" # tolerate KEY="value"
       case "$name" in
       ROS_READ_USERNAME | ROS_READ_PASSWORD | ROS_WRITE_USERNAME | ROS_WRITE_PASSWORD | \
+        PROXMOX_VE_* | \
         TF_STATE_* | AWS_*) export "${name}=${value}" ;;
       esac
     done <<<"$decrypted"

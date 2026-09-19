@@ -8,12 +8,19 @@
 #   tofu plan
 #   tofu apply
 #
-# NOTE on health: the module's `check_health` gate cannot pass on ANY cluster that sets a hostname
-# override. Talos looks for the control-plane static pods named after the *machine* hostname
-# (`talos-<auto>`) while the kubelet names them after the node (`kube-apiserver-prod-cp1`), so
-# "waiting for all control plane static pods to be running" never completes and the apply fails its gate
-# on a perfectly healthy cluster. 7 of its 8 checks pass; this is the one. Set `check_health = false`
-# until the two names are made to agree (cloud-init meta-data with `local-hostname` — see the scope list).
+# HEALTH GATE OFF, deliberately — and this is about CI, not about this cluster being special. The
+# module's gate cannot pass on ANY cluster that sets a hostname override: Talos looks for the control
+# plane static pods named after the *machine* hostname (`talos-<auto>`) while the kubelet names them
+# after the node (`kube-apiserver-prod-cp1`), so "waiting for all control plane static pods to be
+# running" never completes and the apply fails its gate on a perfectly healthy cluster. 7 of its 8
+# checks pass; this is the one. Leaving it on would mean every apply of this cluster reports a red job
+# for a cluster that came up correctly — which is worse than no gate, because it teaches people to
+# ignore red jobs.
+#
+# Turn it back on when the two names agree (cloud-init meta-data with `local-hostname` — the scope list
+# in the PR). Note what replaces it: with the gate off, the BOOTSTRAP's own waits are what catch a
+# cluster that did not come up — it waits for the API server, for the CCM to clear the taint, and for
+# ArgoCD — so a broken cluster still fails, just later and with a more specific message.
 
 module "cluster" {
   source = "../../modules/talos-cluster"
@@ -82,6 +89,10 @@ module "cluster" {
       storage   = "iscsi"
     },
   ]
+
+  # See the note above the module block. With the gate off, a cluster that did not come up is caught by
+  # the bootstrap's waits instead — the API server, the taint, ArgoCD.
+  check_health = false
 
   oidc_enabled = true
 

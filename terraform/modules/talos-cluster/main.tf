@@ -168,7 +168,24 @@ resource "talos_cluster_kubeconfig" "this" {
 }
 
 # The readiness gate: without it, everything downstream races the cluster coming up.
+#
+# GATED ON `check_health` — which is the entire reason that variable exists, and it was declared and
+# never wired, so the documented escape hatch did nothing. Two consequences, both measured:
+#
+#   1. Repairing a broken cluster deadlocks here (the gate reads the cluster it is waiting for) — the
+#      failure mode `check_health = false` was written to prevent.
+#   2. The gate CANNOT PASS at all on any cluster that sets a hostname override: Talos looks for the
+#      control-plane static pods named after the MACHINE hostname (`talos-<auto>`) while the kubelet
+#      names them after the NODE (`kube-apiserver-dev-cp1`). "waiting for all control plane static
+#      pods to be running" then never completes, and the apply fails its gate on a healthy cluster —
+#      7 of the 8 checks pass; this is the one. Every apply in CI would fail on it.
+#
+# An empty count is how a data source is turned off in Terraform, so `check_health = false` now really
+# does skip it. Nothing reads this data source (it gates by side-effect: a failed read fails the
+# apply), so no reference needed updating.
 data "talos_cluster_health" "this" {
+  count = var.check_health ? 1 : 0
+
   client_configuration = talos_machine_secrets.this.client_configuration
   endpoints            = [for n in local.controlplanes : n.address]
   control_plane_nodes  = [for n in local.controlplanes : n.address]

@@ -1,0 +1,325 @@
+# Cluster IaC — provision on merge, destroy on removal (the lifecycle).
+#
+# THE LIFECYCLE IS "EXISTS IN MAIN", not "has an open PR". A merge to main is the authorization to apply
+# (the plan is reviewed on the PR, main is protected by required PR + approval), so the applied scope has
+# to equal the reviewed scope. A PR that closes without merging provisions and destroys NOTHING.
+#
+#   PR adds    terraform/clusters/<name>/   -> plan on the PR        -> merge -> provision
+#   PR deletes terraform/clusters/<name>/   -> plan -destroy on PR   -> merge -> destroy
+#   PR closed without merging               -> nothing, at all
+#
+# Why not "close the PR and the cluster dies" (the review-app pattern)? Because a merge IS a close, and
+# the cluster's ArgoCD wiring has to live in main for the bootstrap to find it — so merging the
+# description would immediately destroy the cluster it describes. Existence in main has no such collision,
+# and it gets the teardown REVIEWED as a `plan -destroy` before it runs.
+name: tf-apply (clusters)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/clusters/**'
+      - '.github/workflows/tf-apply-cluster.yml'
+      - 'scripts/tofu-ci.sh'
+      - 'scripts/bootstrap-cluster.sh'
+      - 'scripts/teardown-cluster.sh'
+  workflow_dispatch:
+    inputs:
+      cluster:
+        description: 'Cluster name (e.g. dev)'
+        required: true
+        type: string
+      action:
+        description: 'What to do'
+        required: true
+        default: apply
+        type: choice
+        options: [apply, destroy]
+      note:
+        description: 'Why this is being run (recorded in the run summary)'
+        required: false
+        type: string
+
+permissions:
+  contents: write # the kubeconfig follow-up PR
+  pull-requests: write
+  actions: read
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  # The arming switch — the panic button, same pattern as the device workflows: set the repository
+  # variable to anything but 'true' and merges stop touching infrastructure. Read at workflow level
+  # because a composite action has no `vars` context.
+  CLUSTER_CI_ENABLED: ${{ vars.CLUSTER_CI_ENABLED || 'false' }}
+  # LAN traffic must bypass the runner's egress proxy, or the Proxmox call gets proxied and fails.
+  NO_PROXY: 'localhost,127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,.svc,.cluster.local'
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT || 'https://console-minio.hnatekmar.xyz' }}
+  TF_STATE_REGION: ${{ vars.TF_STATE_REGION || 'europe' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  # The Proxmox identity that creates VMs. Environment-scoped on the job below, so a pull request can
+  # never reach it: repo-level it would be readable by any same-repo branch.
+  PROXMOX_VE_INSECURE: ${{ vars.PROXMOX_VE_INSECURE || 'true' }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # What did this merge add, change or remove?
+  # ---------------------------------------------------------------------------
+  discover:
+    name: which clusters
+    if: vars.CLUSTER_CI_ENABLED == 'true'
+    runs-on: [self-hosted, mgmt, tofu]
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+      has: ${{ steps.set.outputs.has }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the push diff needs the parent
+
+      - id: set
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          EVENT: ${{ github.event_name }}
+          IN_CLUSTER: ${{ inputs.cluster }}
+          IN_ACTION: ${{ inputs.action }}
+        run: |
+          set -euo pipefail
+
+          # A dispatch names its target explicitly; a push is discovered from the diff.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            python3 - > /tmp/cluster-matrix.json <<PY
+          import json
+          c = "$IN_CLUSTER"
+          print(json.dumps({"include": [{"cluster": c, "action": "$IN_ACTION",
+                                         "state_key": f"cluster-{c}/terraform.tfstate"}]}))
+          PY
+            matrix="$(cat /tmp/cluster-matrix.json)"
+            echo "matrix: ${matrix}"
+            echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+            echo "has=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          before="${BEFORE_SHA:-}"
+          # A first push to a branch, or a force-push, reports an all-zero SHA: nothing to diff, and
+          # guessing would be worse than doing nothing.
+          if ! git cat-file -e "$before" 2>/dev/null; then
+            echo "no usable before-SHA ('$before') — nothing to apply"
+            echo "matrix={\"include\": []}" >> "$GITHUB_OUTPUT"
+            echo "has=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-status -M "$before" HEAD -- terraform/clusters/ > /tmp/cluster-diff.txt || true
+          echo "changed:"
+          sed 's/^/  /' /tmp/cluster-diff.txt | head -20
+
+          python3 - > /tmp/cluster-matrix.json <<'PY'
+          import json
+
+          entries = {}
+          for line in open('/tmp/cluster-diff.txt'):
+              parts = line.rstrip('\n').split('\t')
+              if len(parts) < 2:
+                  continue
+              status, path = parts[0], parts[-1]  # a rename carries three fields
+              bits = path.split('/')
+              if len(bits) < 3 or bits[0] != 'terraform' or bits[1] != 'clusters':
+                  continue
+              cluster = bits[2]
+              action = 'destroy' if status.startswith('D') else 'apply'
+              entries[f'{cluster}:{action}'] = {
+                  'cluster': cluster,
+                  'action': action,
+                  'state_key': f'cluster-{cluster}/terraform.tfstate',
+              }
+
+          print(json.dumps({'include': list(entries.values())}))
+          PY
+
+          matrix="$(cat /tmp/cluster-matrix.json)"
+          echo "matrix: ${matrix}"
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+          if [ "$matrix" = '{"include": []}' ]; then
+            echo "has=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # One job per cluster, in whichever direction the merge pointed.
+  # ---------------------------------------------------------------------------
+  reconcile:
+    name: ${{ matrix.action }} · ${{ matrix.cluster }}
+    needs: discover
+    if: needs.discover.outputs.has == 'true'
+    runs-on: [self-hosted, mgmt, tofu]
+    # An apply is a writer and must not be cancelled — but it also must not hold the runner's only slot
+    # forever. A fresh cluster is ~10 min of apply plus a ~1 min bootstrap; the margin covers Proxmox
+    # being slow, not a hang.
+    timeout-minutes: 45
+    # Protected-branch only (this can only run from main) and the scope of the Proxmox write identity.
+    # NOTE: one environment for all clusters. Per-cluster environments would allow approving one
+    # cluster's apply without approving another's, at the cost of configuring each in the UI; if that
+    # matters, rename this to `cluster-${{ matrix.cluster }}-production` and create them.
+    environment: clusters-production
+    # Serialised per cluster: one writer at a time, ever. Different clusters may run independently —
+    # they have separate state objects — and the runner's single slot serialises them in practice.
+    concurrency:
+      group: tf-apply-cluster-${{ matrix.cluster }}
+      cancel-in-progress: false
+    env:
+      TF_STATE_KEY: ${{ matrix.state_key }}
+      PROXMOX_VE_ENDPOINT: ${{ secrets.PROXMOX_VE_ENDPOINT }}
+      PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # a destroy needs the root as it was BEFORE this merge
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.12.6
+          tofu_wrapper: false # no `node` on PATH for the wrapper on this runner image
+
+      # -----------------------------------------------------------------------
+      # DESTROY — the root is gone from this commit, so restore it first.
+      # -----------------------------------------------------------------------
+      - name: Restore the root as it was before the removal
+        if: matrix.action == 'destroy'
+        run: |
+          set -euo pipefail
+          # `tofu destroy` needs the CONFIGURATION, not just the state: the state says what exists, the
+          # config says what to do about it. The removal is what this merge did, so the config comes from
+          # its parent. Without this the job would fail with "no such directory" and leave the VMs up.
+          before="${{ github.event.before }}"
+          if git cat-file -e "$before" 2>/dev/null; then
+            git checkout "$before" -- "terraform/clusters/${{ matrix.cluster }}"
+            echo "restored terraform/clusters/${{ matrix.cluster }} from ${before}"
+          else
+            echo "::error::cannot determine the previous commit — restore the root by hand before destroying"
+            exit 1
+          fi
+
+      - name: Teardown — drain, destroy, sweep
+        if: matrix.action == 'destroy'
+        run: ./scripts/teardown-cluster.sh "${{ matrix.cluster }}" --yes
+        env:
+          BAO_TOKEN: ${{ secrets.BAO_TOKEN }}
+
+      # -----------------------------------------------------------------------
+      # APPLY
+      # -----------------------------------------------------------------------
+      - name: Preflight
+        if: matrix.action == 'apply'
+        id: preflight
+        working-directory: terraform/clusters/${{ matrix.cluster }}
+        run: ../../../scripts/tofu-ci.sh --role=none check
+
+      - name: init · apply
+        if: matrix.action == 'apply'
+        working-directory: terraform/clusters/${{ matrix.cluster }}
+        run: |
+          set -o pipefail
+          ../../../scripts/tofu-ci.sh --role=none init -input=false
+          # An apply TAKES the state lock (unlike a plan): writers are serialised, and that is what
+          # `concurrency` above and `tf-unlock` exist to keep honest.
+          ../../../scripts/tofu-ci.sh --role=none apply -input=false -auto-approve | tee apply.txt
+
+      # The bootstrap runs on every apply rather than only on creation: it is idempotent, and running it
+      # after a REBUILD is what restores the CCM, the CRDs, the join secret and the root Application in
+      # the one order that works. Skipping it on "the cluster already existed" is how a rebuilt cluster
+      # ends up with a stale CA and a join secret from the previous generation.
+      - name: Bootstrap — CCM, CRDs, ArgoCD, join secret
+        if: matrix.action == 'apply'
+        run: ./scripts/bootstrap-cluster.sh "${{ matrix.cluster }}" 2>&1 | tee bootstrap.txt
+
+      - name: Post-apply summary + the kubeconfig
+        if: matrix.action == 'apply'
+        run: |
+          set -euo pipefail
+          cluster="${{ matrix.cluster }}"
+          {
+            echo "## cluster \`${cluster}\` reconciled"
+            echo
+            echo "### bootstrap"
+            echo '```'
+            tail -40 bootstrap.txt 2>/dev/null || echo "(no bootstrap output)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # The credential-free kubeconfig: endpoint, PUBLIC CA, and a kubelogin exec block. Safe to show
+          # — the identity lives in Keycloak — and it is the thing you actually need after a rebuild,
+          # because the CA changes and a stale file fails with a bare x509 error.
+          if ./scripts/kubeconfig.sh "$cluster" >/dev/null 2>&1; then
+            {
+              echo "### SSO kubeconfig"
+              echo
+              echo '```yaml'
+              cat "terraform/clusters/${cluster}/kubeconfig.yaml"
+              echo '```'
+              echo
+              echo "Use it with the \`kubelogin\` plugin; the first call opens a browser for Keycloak SSO."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            if ! git diff --quiet -- "terraform/clusters/${cluster}/kubeconfig.yaml"; then
+              # The committed copy is now stale — after a rebuild the CA differs, and a stale file is
+              # worse than no file. Open a PR rather than committing to main: main is reviewed, and CI
+              # writing to it would quietly break that.
+              branch="bot/kubeconfig-${cluster}-$(date -u +%Y%m%d%H%M%S)"
+              git config user.name 'github-actions[bot]'
+              git config user.email 'github-actions[bot]@users.noreply.github.com'
+              git checkout -b "$branch"
+              git add "terraform/clusters/${cluster}/kubeconfig.yaml"
+              git commit -q -m "chore(${cluster}): refresh the OIDC kubeconfig — the CA changed with the rebuild"
+              git push -q origin "$branch"
+              # GITHUB_TOKEN-created PRs do not trigger other workflows, so the kubeconfig is posted as
+              # a comment HERE rather than left to kubeconfig-comment.yml.
+              api="${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY}"
+              body="$(python3 - "$cluster" "$branch" <<'PY'
+          import json, os, sys
+          cluster, branch = sys.argv[1], sys.argv[2]
+          kc = open(f"terraform/clusters/{cluster}/kubeconfig.yaml").read()
+          pr_body = (
+              f"A rebuild of `{cluster}` produced a new CA, so the committed kubeconfig no longer "
+              "verifies against the cluster. Merging this keeps git truthful.\n\n"
+              f"<details><summary>kubeconfig</summary>\n\n```yaml\n{kc}\n```\n\n</details>\n"
+          )
+          print(json.dumps({
+              "title": f"chore({cluster}): refresh the OIDC kubeconfig",
+              "head": branch,
+              "base": "main",
+              "body": pr_body,
+          }))
+          PY
+          )"
+              pr_url="$(curl -sf -X POST -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                -H 'Accept: application/vnd.github+json' -d "$body" "${api}/pulls" | \
+                python3 -c 'import json,sys; print(json.load(sys.stdin).get("html_url",""))' || true)"
+              {
+                echo
+                echo "### kubeconfig PR"
+                echo
+                echo "The committed copy was stale; a PR was opened: ${pr_url:-<failed to open — commit it by hand>}"
+              } >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "The committed kubeconfig still matches — nothing to update." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "::warning::could not regenerate the kubeconfig (is the state reachable?)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Explain a skipped preflight
+        if: matrix.action == 'apply' && steps.preflight.outcome != 'success'
+        working-directory: terraform/clusters/${{ matrix.cluster }}
+        run: |
+          {
+            echo "### cluster \`${{ matrix.cluster }}\`: prerequisites missing — nothing applied"
+            echo
+            echo "See the preflight log. This is configuration (state bucket/endpoint, the Proxmox write"
+            echo "identity on the \`clusters-production\` environment), not code."
+          } >> "$GITHUB_STEP_SUMMARY"

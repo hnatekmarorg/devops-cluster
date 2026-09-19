@@ -40,6 +40,10 @@ import {
 # The change. Every other attribute is stated because it is what the device already holds — this object
 # has no `comment`, so the reasoning lives here.
 #
+# `broadcast_addresses` is the case that proves the rule: the device reports `0.0.0.0` there, so declaring
+# `""` (the obvious "empty") made the plan want to *clear* the field. The plan caught it; the config now
+# states what the device holds instead.
+#
 # Not done in the same breath: advertising this server through DHCP option 42. The `ntp-none = true` on
 # the DHCP network objects stays until that is a decision rather than a side effect, because for `iot`
 # and `lab` udp/123 to the router is dropped by the enforced input denies — option 42 would hand those
@@ -47,7 +51,7 @@ import {
 resource "routeros_system_ntp_server" "this" {
   auth_key            = "none"
   broadcast           = false
-  broadcast_addresses = ""
+  broadcast_addresses = "0.0.0.0"
   enabled             = true
   local_clock_stratum = 5
   manycast            = false

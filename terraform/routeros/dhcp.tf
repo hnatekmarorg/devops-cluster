@@ -122,6 +122,19 @@ locals {
     # pools (`.20-.99`, `.200-.250`) and clear of every reservation above.
     "dev-cp1" = { mac = "BC:24:11:0D:00:10", address = "172.16.40.100", class = "srv" }
     "dev-w1"  = { mac = "BC:24:11:0D:00:11", address = "172.16.40.101", class = "srv" }
+
+    # The prod cluster's nodes (draft, not applied). Same shape as dev's: clones of template `9000`, so
+    # the MACs are ours to pick and the reservation *is* the address assignment. Three control planes
+    # because etcd wants an odd quorum and prod is the cluster that must survive losing one — the whole
+    # reason it is a different cluster from dev and not a bigger dev.
+    #
+    # `.120-.123` deliberately sits above dev's `.100/.101`, leaving `.102-.119` free so either cluster
+    # can grow without re-addressing the other. Inside srv's free band: outside the pools (`.20-.99`,
+    # `.200-.250`) and clear of every reservation above.
+    "prod-cp1" = { mac = "BC:24:11:0D:00:20", address = "172.16.40.120", class = "srv" }
+    "prod-cp2" = { mac = "BC:24:11:0D:00:21", address = "172.16.40.121", class = "srv" }
+    "prod-cp3" = { mac = "BC:24:11:0D:00:22", address = "172.16.40.122", class = "srv" }
+    "prod-w1"  = { mac = "BC:24:11:0D:00:23", address = "172.16.40.123", class = "srv" }
     # The on-prem OpenBao (PoC: LXC 120 on balteus, 2026-09-17). srv because that is where its consumers
     # are — and the tightest reason is `kubernetes` auth: the vault calls TokenReview on the *cluster's*
     # API server, so intra-class keeps that a LAN call in both directions. It came up on the pool lease

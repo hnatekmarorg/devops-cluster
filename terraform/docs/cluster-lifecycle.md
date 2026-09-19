@@ -103,20 +103,54 @@ reservations are the cluster's fixed identities — keeping them is what makes a
 names and addresses. Removing them is the reverse of the prerequisites PR and belongs in its own reviewed
 PR; deleting the state turns "rebuild" into "discover the VMs still exist".
 
+## What CI needs before it will do anything
+
+The workflows are **unarmed by default** and report what they are missing rather than failing — a PR you
+cannot review because CI is red is worse than one that names the missing piece. In practice the preflight
+is what tells you, but this is the list:
+
+| what | where | why there and not somewhere else |
+|---|---|---|
+| `CLUSTER_CI_ENABLED=true` | repository **variable** | the panic button — set it to anything else and merges stop touching infrastructure |
+| `PROXMOX_VE_ENDPOINT`, `PROXMOX_VE_API_TOKEN` | repository **secrets** | the **plan's** identity, and it must be **READ-ONLY**. A pull-request job can run code from a same-repo branch, so anything it can reach is reachable by unreviewed code |
+| `PROXMOX_VE_ENDPOINT`, `PROXMOX_VE_API_TOKEN` | the **`clusters-production` environment** | the **apply's** identity, which can allocate VMs. Environment-scoped for exactly that reason |
+| `TF_STATE_BUCKET`, `TF_STATE_ENDPOINT`, `TF_STATE_REGION` | repository variables | already present for the device roots |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | repository secrets | the state bucket |
+| `@Hnatekmar` satisfies CODEOWNERS | repository | review is required on `terraform/`, `charts/`, `bootstrap/` and the lifecycle scripts |
+
+The read-only token is a built-in role, so this is two commands:
+
+```bash
+pveum user token add kubernetes@pve terraform-ro --privsep 0
+pveum acl modify / --tokens 'kubernetes@pve!terraform-ro' --roles PVEAuditor
+```
+
+`PVEAuditor` is `VM.Audit`, `Sys.Audit`, `Datastore.Audit` — enough for the provider to refresh the VM
+table, and no `VM.Allocate` / `VM.Config.*` / `VM.PowerMgmt`. If you see `proxmox credentials missing` on
+a plan while the apply can reach Proxmox, this is why: they are two different identities on purpose, and
+the environment's write token is deliberately invisible to a pull request.
+
+**Two ways this bites silently, both measured:**
+
+1. **A cluster whose state is still local.** CI initialises the S3 backend for `cluster-<name>/…`, so a
+   local state is invisible: the plan proposes **creating a second cluster** (same MACs) and a destroy
+   reports "0 destroyed" while the VMs keep running. `scripts/teardown-cluster.sh` now refuses in that
+   situation and offers `--local-state`; before arming, either migrate the state
+   (`tofu init -migrate-state`) or leave that cluster out of CI.
+2. **`check_health`.** The module's health gate cannot pass on any cluster with a hostname override
+   (7 of 8 checks pass; the failing one is the static-pod naming). The roots set it false, and the module
+   now honours it — before that fix it was declared and never wired, so every CI apply would have been
+   red on a healthy cluster.
+
+
+
 ## Known limitations, in the order they will bite
 
-1. **The health gate is off, on purpose** (`check_health = false` in the roots). The module's gate cannot
-   pass on any cluster with a hostname override: Talos looks for the control-plane static pods under the
-   *machine* hostname (`talos-<auto>`) while the kubelet names them after the *node*
-   (`kube-apiserver-dev-cp1`), so "waiting for all control plane static pods to be running" never
-   completes — 7 of 8 checks pass. With the gate off, the **bootstrap's** waits are what catch a cluster
-   that did not come up. The clean fix is cloud-init meta-data carrying `local-hostname`, which needs a
-   snippets-capable datastore; that also removes the log spam this same mismatch causes.
-2. **A three-control-plane cluster has a single-point endpoint.** `prod-k8s` resolves to `prod-cp1`. The
+1. **A three-control-plane cluster has a single-point endpoint.** `prod-k8s` resolves to `prod-cp1`. The
    reserved `172.16.48.0/20` has been earmarked for a service VIP since the dev cluster was built and
    nothing claims it yet.
-3. **Nothing backs up a cluster** and there is no observability stack in `cluster-base`.
-4. **`cluster-base` reports `Application/nginx` and the two `sso-k8s-*` bindings OutOfSync** with an empty
+2. **Nothing backs up a cluster** and there is no observability stack in `cluster-base`.
+3. **`cluster-base` reports `Application/nginx` and the two `sso-k8s-*` bindings OutOfSync** with an empty
    syncResult. Unexplained and pre-existing.
 
 ## The runner

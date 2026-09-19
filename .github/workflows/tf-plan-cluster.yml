@@ -48,8 +48,18 @@ env:
   # credential that can create infrastructure — that one is an environment secret on the apply job.
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  # Proxmox identity for the refresh. The plan reads VMs, and the VM table IS the interesting part of a
-  # cluster diff — a plan that cannot read Proxmox hides exactly what is being reviewed.
+  # THE PROXMOX CREDENTIAL HERE MUST BE READ-ONLY, and that is why it is a repository secret while
+  # the apply's is an environment secret. A pull-request job can run code from a same-repo branch, so
+  # whatever it can reach is reachable by unreviewed code — the same rule the router workflows state
+  # ("a pull request can never reach a write credential"). Mint a token with the built-in PVEAuditor
+  # role (VM.Audit, Sys.Audit, Datastore.Audit — read-only, no VM.Allocate, no VM.Config.*):
+  #
+  #   pveum user token add kubernetes@pve terraform-ro --privsep 0
+  #   pveum acl modify / --tokens 'kubernetes@pve!terraform-ro' --roles PVEAuditor
+  #
+  # and put it in the repository secrets as PROXMOX_VE_API_TOKEN. Without it the preflight reports
+  # "proxmox credentials missing" and the plan is skipped — the environment's write token is
+  # deliberately NOT visible here.
   PROXMOX_VE_ENDPOINT: ${{ secrets.PROXMOX_VE_ENDPOINT }}
   PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
   PROXMOX_VE_INSECURE: ${{ vars.PROXMOX_VE_INSECURE || 'true' }}

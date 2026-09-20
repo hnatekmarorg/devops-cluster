@@ -19,6 +19,12 @@ module "cluster" {
   # `talos_schematic_extensions`, whose defaults carry qemu-guest-agent, iscsi-tools and util-linux-tools.
   # So there is no hash here to drift out of sync with a schematic file.
   #
+  # NOTHING TO SET HERE FOR THE CSI NODE PLUGIN'S /etc/iscsi: the kubelet container's /etc is curated, not
+  # the host's, so a hostPath from it fails the type check however healthy the host is — and the module
+  # binds it (`machine.kubelet.extraMounts`, patches.tf), gated on `iscsi-tools` being in the image list
+  # above. Recorded because the symptom is invisible from here: the driver's controller comes up healthy
+  # and ArgoCD reports the Application Synced while no node can stage a volume.
+  #
   # What the extension list does and does not achieve: a NEW node gets the extensions at install, a
   # Karpenter clone only when the PVE template is rebuilt (it boots the template's installed disk and never
   # reinstalls), and an existing node only when it is rolled. See terraform/docs/cluster-autoscaling.md.

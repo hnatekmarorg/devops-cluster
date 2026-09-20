@@ -14,6 +14,14 @@ named `system:masters` would land verbatim in the token and Kubernetes would hon
 
 Roles are assigned to users in Keycloak (see crossplane/config/keycloak/roles/k8s-*.yaml in
 hetzner-k8s). This chart does not create them — it only says what they mean here.
+
+WHY THESE ARE THE FIRST WAVE. A binding depends on nothing, and it is the object that lets a human
+fix everything else — so it must not sit behind anything that can fail. It did sit at wave 2, behind
+cert-manager, ESO and Karpenter, and ArgoCD health-gates waves: on a cluster whose wave-0 Cloudflare
+ExternalSecret could not read the vault, the sync never reached wave 2, spent its retry limit, and
+ArgoCD then refuses to retry that revision at all. The result was a cluster that authenticated its
+only admin and authorised nothing — recoverable only with the CI's state-derived admin kubeconfig.
+Being first makes the failure mode "a component is missing" instead of "nobody can get in".
 */}}
 {{- $class := .Values.clusterClass | required "clusterClass is required: set it to 'dev' or 'infra' in this cluster's values" }}
 {{- if not (has $class (list "dev" "infra")) }}
@@ -26,7 +34,7 @@ kind: ClusterRoleBinding
 metadata:
   name: sso-k8s-{{ $class }}-viewer
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "-1"
   labels:
     app.kubernetes.io/part-of: cluster-base
     cluster-access/class: {{ $class }}
@@ -45,7 +53,7 @@ kind: ClusterRoleBinding
 metadata:
   name: sso-k8s-{{ $class }}-admin
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "-1"
   labels:
     app.kubernetes.io/part-of: cluster-base
     cluster-access/class: {{ $class }}

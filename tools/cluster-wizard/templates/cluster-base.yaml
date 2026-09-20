@@ -1,0 +1,95 @@
+---
+# cluster-base for the {{.ClusterName}} cluster, as an ArgoCD Application.
+#
+# This directory is what bootstrap-cluster.sh hands to ArgoCD (the root Application recurses over
+# bootstrap/argocd/<cluster>). It is the only per-cluster file the bootstrap needs, and the only place
+# where {{.ClusterName}} states what is about *access*.
+#
+# cluster-base renders one Application per component (cert-manager + its Cloudflare credential, ESO +
+# the secret store, Karpenter + the CCM, nginx, crossplane, and the RBAC bindings).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-base
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    targetRevision: HEAD
+    path: charts/cluster-base
+
+    helm:
+      values: |
+        # THE ONE VALUE THAT MATTERS MOST HERE. It decides which RBAC bindings this cluster gets:
+        #   dev   -> sso:k8s-dev-viewer / sso:k8s-dev-admin
+        #   infra -> sso:k8s-infra-viewer / sso:k8s-infra-admin
+        # The chart refuses to render without it, deliberately: guessing wrong would grant the wrong tier.
+        clusterClass: {{.ClusterClass}}
+
+        clusterName: {{.ClusterName}}
+
+        # Cloudflare credential via ESO, not sops: every cluster that is not the reverse proxy reads it
+        # from the vault, which is what gives it revocation and audit. The vault auth mount is per cluster
+        # and must match what scripts/wire-vault.sh enabled — `auth/kubernetes-{{.ClusterName}}`.
+        certManager:
+          cloudflare:
+            secretSource: eso
+          eso:
+            enabled: true
+            storeName: local-{{.ClusterName}}
+            storeServer: https://bao.srv.hnatekmar.dev
+            vaultPath: secret              # the KV mount; per-cluster isolation is the {{.ClusterName}}/ prefix
+            mountPath: kubernetes-{{.ClusterName}}      # must match what wire-vault.sh enabled
+            vaultRole: local-{{.ClusterName}}
+
+        # The autoscaling budget. Limits are per pool; the instance families are the wide end so one
+        # memory-hungry pod can be served by ONE node instead of a fleet of small ones.
+        karpenter:
+          pools:
+            - name: talos-nocloud-template
+              templateName: talos-nocloud-template
+              instanceFamilies: ["c1", "t1", "s1", "m1", "x1"]
+              limits:
+                cpu: "{{.KarpenterCpu}}"
+                memory: {{.KarpenterMemory}}
+
+        # Service VIPs. Without MetalLB the ingress controller's Service sits at EXTERNAL-IP `<pending>`
+        # forever and every Ingress is unreachable. {{.VIPBase}}.0/24 is this cluster's /24 out of the
+        # estate's reserved 172.16.48.0/20 — see the range comment in charts/cluster-base/values.yaml.
+        metallb:
+          enabled: true
+          pool:
+            addresses:
+              - {{.VIPBase}}.1-{{.VIPBase}}.254
+          ingressVIP: {{.VIPBase}}.1
+
+        # Storage over the air-gapped 10G island; both tiers address the NAS by its *storage* name.
+        storage:
+          nfs:
+            enabled: {{.StorageNfs}}
+          truenasCsi:
+            enabled: {{.StorageTruenasCsi}}
+
+  destination:
+    server: https://kubernetes.default.svc   # in-cluster
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

@@ -32,6 +32,10 @@ Closing a PR without merging provisions nothing and destroys nothing. Fork PRs n
 
 ## Provisioning a new cluster
 
+**Generate both PRs with the wizard.** [`tools/cluster-wizard`](../../tools/cluster-wizard) walks the
+cluster's identity, node table and per-cluster values, then writes and commits the two stacked branches
+described below. What follows is what it is doing; run it from `tools/cluster-wizard` with `go run .`.
+
 **Prerequisites first, as their own PR.** Reservations and DNS records live in `terraform/routeros/`, and
 they must be **applied** (not merely merged) before the cluster is applied: a node with no reservation
 still gets an address — a pool lease, ten minutes long — so the cluster comes up looking fine and then

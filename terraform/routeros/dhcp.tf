@@ -237,6 +237,9 @@ locals {
     # address unless "Private Wi-Fi Address" is off, then this row matches nothing and the device keeps
     # internet at a pool address — fail-safe, and the iot segment is where the WiFi lands either way.
     "mac-dev" = { mac = "18:4A:53:13:FA:7D", address = "172.16.70.116", class = "iot" }
+
+    # cluster-wizard:insert-reservations — new cluster node reservations go ABOVE this line, still
+    # inside `local.dhcp_reservations`. tools/cluster-wizard inserts here; edit around it freely.
   }
 }
 

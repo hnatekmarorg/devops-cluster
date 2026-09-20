@@ -17,6 +17,14 @@ spec:
         valuesObject:
           controller:
             allowSnippetAnnotations: true
+{{- if .Values.metallb.enabled }}
+            # The published VIP, PINNED rather than first-come-first-served: DNS names point at this
+            # address, so an address that moves between resyncs is a DNS record that silently rots.
+            # `metallb.io/loadBalancerIPs` is the annotation MetalLB reads (>= 0.14.6).
+            service:
+              annotations:
+                metallb.io/loadBalancerIPs: {{ required "metallb.ingressVIP is required when metallb is enabled" .Values.metallb.ingressVIP | quote }}
+{{- end }}
   destination:
     server: "https://kubernetes.default.svc"
     namespace: nginx

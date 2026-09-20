@@ -1,0 +1,88 @@
+{{- if and .Values.onprem .Values.metallb.enabled }}
+{{- $vip := required "metallb.ingressVIP is required when metallb is enabled: the published DNS name points at this address, so it cannot be first-come-first-served" .Values.metallb.ingressVIP }}
+{{- $addresses := required "metallb.pool.addresses is required when metallb is enabled: the estate's VIP space is shared with every other cluster, so the range is a per-cluster statement rather than a default" .Values.metallb.pool.addresses }}
+# MetalLB — where a `type: LoadBalancer` Service gets its address on this cluster, which for now means
+# the ingress controller's. Without it that Service is `<pending>` forever and every Ingress in the
+# cluster is unreachable from outside, whatever cert-manager reports about its certificate.
+#
+# L2, not BGP, and deliberately: this cluster's nodes are in srv's /19 (`172.16.40.1/19`) and the pool
+# sits in the reserved VIP block inside that same /19 — so an announcing node and its VIP are in one
+# subnet and no routing protocol is involved. That is the reason the range in values.yaml is the range
+# it is: the placement of the pool is the feature, not the numbering.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metallb
+  namespace: argocd
+  annotations:
+    # Before nginx (wave 2): the ingress Service is a LoadBalancer, so it stays `<pending>` until this
+    # controller exists — ordering it first turns "no external IP yet" into an expected intermediate
+    # state instead of a failed sync somebody has to read.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    - chart: metallb
+      repoURL: https://metallb.github.io/metallb
+      targetRevision: 0.14.9
+      helm:
+        releaseName: metallb
+        valuesObject:
+          controller:
+            tolerations:
+              # Both keys: this estate renames the control-plane taint between versions, and the repo's
+              # convention for cluster components is to tolerate either rather than pick one.
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+                effect: NoSchedule
+              - key: node-role.kubernetes.io/master
+                operator: Exists
+                effect: NoSchedule
+          speaker:
+            tolerations:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+                effect: NoSchedule
+              - key: node-role.kubernetes.io/master
+                operator: Exists
+                effect: NoSchedule
+            # FRR is for BGP mode only. In L2 the speaker answers ARP for the VIP, which needs no
+            # privileged routing stack — so this also keeps the speaker's footprint smaller.
+            frr:
+              enabled: false
+  # The CRDs carry a webhook caBundle that MetalLB's own cert-controller rotates, so ArgoCD would
+  # otherwise report a permanent diff on it. Known upstream (metallb/metallb#1681).
+  ignoreDifferences:
+    - group: "apiextensions.k8s.io"
+      kind: CustomResourceDefinition
+      name: bgppeers.metallb.io
+      jsonPointers:
+        - /spec/conversion/webhook/clientConfig/caBundle
+    - group: "apiextensions.k8s.io"
+      kind: CustomResourceDefinition
+      name: addresspools.metallb.io
+      jsonPointers:
+        - /spec/conversion/webhook/clientConfig/caBundle
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: metallb-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      # The namespace is declared by this chart (resources.yaml) so it can carry the privileged Pod
+      # Security labels the speaker needs. `CreateNamespace=true` would make a plain one.
+      - CreateNamespace=false
+    retry:
+      # The first sync is inherently racy: the IPAddressPool and L2Advertisement in resources.yaml are
+      # ordinary resources of THIS sync, while the CRDs they need arrive with the metallb Application's
+      # own sync. SkipDryRunOnMissingResource plus a retry makes that a delayed success instead of a
+      # red sync somebody has to explain.
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+{{- end }}

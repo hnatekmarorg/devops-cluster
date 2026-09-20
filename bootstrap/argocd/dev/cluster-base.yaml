@@ -73,6 +73,18 @@ spec:
             mountPath: kubernetes-dev      # must match what wire-vault.sh enabled
             vaultRole: local-dev
 
+        # This cluster's Keycloak writer — the identity that creates the clients dev's services consume
+        # (charts/cluster-base/templates/crossplane/keycloak-writer.yaml carries the reasoning).
+        #
+        # ON, and the two things it needs are both per-cluster: the credential at
+        # `secret/dev/keycloak-writer` (seeded once by hand — the hub cannot reach this site's vault), and
+        # the Keycloak client behind it, `crossplane-dev-hnatekmar-xyz` in the hub repo. One writer per
+        # object: the hub keeps the realm, the IdPs, the human clients and the role catalog; this cluster
+        # declares only the clients it consumes.
+        crossplane:
+          keycloak:
+            enabled: true
+
         # Service VIPs for this cluster. Without MetalLB the ingress controller's Service sits at
         # EXTERNAL-IP `<pending>` forever and every Ingress is unreachable, whatever cert-manager says
         # about its certificate. 172.16.48.0/24 is this cluster's /24 out of the estate's reserved VIP

@@ -217,21 +217,35 @@ jobs:
           tofu_wrapper: false # no `node` on PATH for the wrapper on this runner image
 
       # -----------------------------------------------------------------------
-      # DESTROY — the root is gone from this commit, so restore it first.
+      # DESTROY — the root may be gone from this commit, so restore it first if it is.
       # -----------------------------------------------------------------------
       - name: Restore the root as it was before the removal
         if: matrix.action == 'destroy'
         run: |
           set -euo pipefail
+          root="terraform/clusters/${{ matrix.cluster }}"
+
+          # TWO WAYS IN, and only one of them has a root to restore. A dispatch names a cluster that is
+          # still in main — the config is right there in the worktree, so there is nothing to restore and
+          # this step is a no-op. A push that REMOVED the root leaves it absent from HEAD, and that is the
+          # case the checkout below exists for. Deriving which one this is from the event and not from the
+          # filesystem is what broke the dispatch path: `github.event.before` is absent on
+          # workflow_dispatch, so `before` was empty, `git cat-file -e ""` failed, and the job died with
+          # "cannot determine the previous commit" before `tofu` ever ran.
+          if [ -d "$root" ]; then
+            echo "$root is present in this commit — nothing to restore"
+            exit 0
+          fi
+
           # `tofu destroy` needs the CONFIGURATION, not just the state: the state says what exists, the
-          # config says what to do about it. The removal is what this merge did, so the config comes from
-          # its parent. Without this the job would fail with "no such directory" and leave the VMs up.
+          # config says what to do about it. The removal was a merge, so the config comes from its parent.
+          # Without this the job would fail with "no such directory" and leave the VMs up.
           before="${{ github.event.before }}"
           if git cat-file -e "$before" 2>/dev/null; then
-            git checkout "$before" -- "terraform/clusters/${{ matrix.cluster }}"
-            echo "restored terraform/clusters/${{ matrix.cluster }} from ${before}"
+            git checkout "$before" -- "$root"
+            echo "restored ${root} from ${before}"
           else
-            echo "::error::cannot determine the previous commit — restore the root by hand before destroying"
+            echo "::error::${root} is absent from HEAD and the previous commit ('${before}') is unusable — restore the root by hand before destroying"
             exit 1
           fi
 

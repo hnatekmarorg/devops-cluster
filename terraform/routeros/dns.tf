@@ -138,3 +138,33 @@ resource "routeros_ip_dns_record" "estate" {
   ttl     = "5m"
   comment = "${local.managed_by} — internal name"
 }
+
+# ---------------------------------------------------------------------------
+# The dev cluster's *service* names — one wildcard, so a service gets a name by being deployed rather
+# than by an edit here. `.srv` because the nodes are srv-class; `dev-k8s` is the cluster alias.
+#
+# A REGEXP record, not a plain one: RouterOS has no `*` wildcard for static DNS (an entry that does not
+# conform to DNS naming standards is *treated as a regex*, per the docs), and the regex list is matched
+# BEFORE the plain records above. That ordering is why the leading label is spelled out and both ends are
+# anchored — the bare `dev-k8s.srv.hnatekmar.dev` record above is the API endpoint every kubeconfig
+# points at, and a looser pattern (`.*`, or no `$`) would match it and move the API to the ingress VIP.
+#
+# The address is the dev cluster's ingress VIP: the first address of its /24 out of the estate's reserved
+# VIP block (172.16.48.0/20). The pool itself is declared in the cluster's GitOps values
+# (charts/cluster-base, `metallb.pool`) — this record is the LAN's view of the same fact.
+#
+# One consequence worth knowing: these names resolve HERE and upstream does not know them, so a client
+# that does not use this resolver falls through to the public `*.hnatekmar.dev` wildcard and gets the
+# reverse proxy's address instead. That is the design (internal names resolve internally), but it means
+# "it resolves" is not by itself evidence that the client is on the right path.
+resource "routeros_ip_dns_record" "dev_cluster_services" {
+  # Escaped dots on purpose: an un-escaped dot is a single-character wildcard in a regex, and a match
+  # here is a match for a name the API or a host may also be using.
+  # `regexp` carries the pattern itself and is mutually exclusive with `name` (the provider enforces
+  # one-of), which is how RouterOS stores it too: the regex IS the entry.
+  regexp  = "^.+\\.dev-k8s\\.srv\\.hnatekmar\\.dev$"
+  type    = "A"
+  address = "172.16.48.1"
+  ttl     = "5m"
+  comment = "${local.managed_by} — the dev cluster's service names (ingress VIP)"
+}

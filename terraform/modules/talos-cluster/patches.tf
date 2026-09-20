@@ -273,63 +273,29 @@ locals {
     extraArgs  = var.kubelet_extra_args
   })
 
-  # Whether the node image carries iSCSI tooling — the thing that puts /etc/iscsi on the host in the first
-  # place. Suffix match so both `siderolabs/iscsi-tools` (the form the defaults use) and a bare
-  # `iscsi-tools` count.
-  has_iscsi_tools = anytrue([for e in var.talos_schematic_extensions : endswith(e, "iscsi-tools")])
-
-  # THE KUBELET CONTAINER'S /etc IS CURATED, NOT THE HOST'S. Talos binds a fixed set of paths into the
-  # kubelet container, so a directory that exists on the host under /etc but is not on that list is
-  # INVISIBLE to the kubelet — and therefore to any pod with a strict hostPath from it. Measured, on a
-  # node whose host plainly has the file:
+  # THE CSI NODE PLUGIN'S /etc/iscsi CANNOT BE BOUND FROM HERE, and this is where someone will try.
   #
-  #   /etc/iscsi/initiatorname.iscsi   InitiatorName=iqn.2017-11.dev.talos:eb6414f5e8c2624d17977f69308b14fc
+  # The driver mounts hostPath /etc/iscsi with `type: Directory`. Talos' kubelet runs in a DISTRO IMAGE whose
+  # /etc is curated: only /etc/hosts, /etc/resolv.conf, /etc/kubernetes, /etc/cni, /etc/nfsmount.conf and
+  # /etc/machine-id are bound in — measured on dev-w1 by reading /proc/<kubelet-pid>/root/etc and its
+  # mountinfo. So the path is absent from kubelet's view however present it is on the host, the type check
+  # fails, and no volume can ever be staged. (The driver's sibling mounts under /var/lib never complained
+  # for the same reason inverted: /var/lib IS bound wholesale.)
   #
-  # but any pod that mounts it strict fails:
+  # `machine.kubelet.extraMounts` is the obvious answer and it does not exist on Talos v1.14: the GENERATED
+  # config already carries a `KubeletConfig` document, so any .machine.kubelet patch is refused —
+  #   * kubelet config is already set in v1alpha1 config (.machine.kubelet)
+  # measured on both nodes — and patching that document instead is impossible, because its fields are
+  # image/config/extraArgs/clusterDNS/defaultRuntimeSeccompProfileEnabled and its ExtraMounts accessor
+  # returns nil.
   #
-  #   MountVolume.SetUp failed for volume "iscsi-dir" : hostPath type check failed, /etc/iscsi is not a
-  #   directory, unable to determine its type: path "/etc/iscsi" does not exist
+  # WHAT WORKS, measured end to end: make the DaemonSet's OWN hostPath `DirectoryOrCreate`. kubelet then
+  # creates the directory in its own view, which is all that was needed — the volume resolves against the
+  # host's /etc, where the file already is. Proven with a patched copy of the node plugin: both nodes ready,
+  # a PVC bound, a zvol + subsystem + live NVMe-oF session from 192.168.88.203 on the appliance, and 64 MiB
+  # written through the mount reading back with a matching md5.
   #
-  # That is the whole reason the `truenas-csi` NODE PLUGIN cannot start on this cluster: its DaemonSet
-  # mounts hostPath /etc/iscsi with `type: Directory`, so no node can ever stage a volume and the storage
-  # class is unusable. It also explains why the driver's sibling mounts under /var/lib/* never complained:
-  # kubelet's /var/lib IS the host's (verified by writing a marker through one and reading it back on the
-  # host), while /etc is not.
-  #
-  # The path is the chart's to choose, not ours, so bind it in — the mechanism Talos documents for exactly
-  # this, and what the field reports for this driver on Talos recommend (`machine.kubelet.extraMounts`).
-  # Verified against a real 1.14 config BEFORE writing it here: the generated config is document-based
-  # (`kind: KubeletConfig`), and this LEGACY field still merges alongside it, appearing in the output —
-  # patching the document's own form is not possible (its ExtraMounts accessor returns nil).
-  #
-  # GATED ON THE EXTENSION THAT CREATES THE PATH, deliberately: this mount is the kubelet service's own, so
-  # a bind whose source does not exist would take the kubelet — and the node — down with it. It appears only
-  # when the image carries `iscsi-tools`, which is the same variable that defines the image, so the mount
-  # and the cause of the directory cannot drift apart.
-  #
-  # MATCHED BY SUFFIX, because the entries are fully qualified (`siderolabs/iscsi-tools`): a bare
-  # `contains(var.talos_schematic_extensions, "iscsi-tools")` is silently FALSE, and the failure mode is the
-  # worst kind — the plan says `No changes`, so it looks like the mount is already there. (That is exactly
-  # what the first version of this patch did.) `endswith` accepts a bare name too, so a root that overrides
-  # the list with the short form still gates correctly.
-  #
-  # EVERY NODE, not just workers: the CSI node plugin tolerates all taints (it has to run wherever pods
-  # land), and control planes are schedulable here — so on this estate the plugin runs on the control
-  # plane too, and a worker-only patch would leave the DaemonSet not-ready forever.
-  patch_kubelet_extra_mounts = local.has_iscsi_tools ? yamlencode({
-    machine = {
-      kubelet = {
-        extraMounts = [
-          {
-            destination = "/etc/iscsi"
-            type        = "bind"
-            source      = "/etc/iscsi"
-            options     = ["bind", "rshared", "rw"]
-          },
-        ]
-      }
-    }
-  }) : null
+  # So this belongs on the workload side (the truenas-csi chart), not in this module.
 
   # PER NODE: the kubelet patch carries that node's hostname-override, so these can no longer be two
   # shared lists. control-plane vs worker still differs: only the CP carries certSANs and the scheduling flag.
@@ -342,9 +308,6 @@ locals {
         local.patch_kubelet[n.name],
         n.role == "controlplane" ? local.patch_cert_sans : null,
         n.role == "controlplane" ? local.patch_authentication : null,
-        # LAST, deliberately: `config_patches` is a LIST, so inserting in the middle shifts every later
-        # element and the plan renders that as churn on patches that did not change.
-        local.patch_kubelet_extra_mounts,
       ]),
       var.extra_patches,
     )

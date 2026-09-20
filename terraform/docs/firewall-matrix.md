@@ -167,6 +167,58 @@ out of dynamic assignment, for as long as the reservation exists.
 with the file it lives in.
 
 
+## The stories exception (2026-09-20)
+
+`stories.red-ink.hnatekmar.dev` is served by `stories-hermes`, one VM in `srv` at `172.16.40.188`. Three
+measurements decide its shape — the name is a plain A record in the **public** zone pointing at that
+internal address (`proxied=false`), so DNS answers it everywhere and the answer means nothing outside the
+estate; the NAT table has **no `dstnat` rule for `.40.188`**, so the box is not published; and therefore
+who may read it is a LAN question. The policy is destination-scoped, and it lives in
+`terraform/routeros/stories-access.tf`:
+
+| Identity | Reach |
+|---|---|
+| **charon** (the work PC, `172.16.10.200`, mgmt) | **full** — every port |
+| **the reader tablet** (iot, `172.16.70.25`) | **TCP 443 only** |
+| every other device on the estate | **nothing** |
+
+**Why not a class row.** This is the first policy here whose unit is *one destination* rather than a
+class pair, and the class table cannot express it: mgmt → srv is ✓, srv → srv is ✓, `lab → srv` is still
+log-only, and compat's row is "everything" until it drains — so four of the six classes reach this box
+today, and none of those rows is what is being changed. The rules are therefore a **host** destination
+list (`stories-host`, taken from `stories-hermes`'s reservation) with two accepts and one deny, and
+nothing class-level moves.
+
+**The anchor is the policy.** `stories_host_deny` is placed *above* the reader's general web accept
+(`reader_web_allow["SRV"]`) rather than appended like every other matrix drop. Without that, the tablet
+keeps `80,443` to this host through the reader's own rule, and the "443 only" line above would be a
+description the diff does not support. The cost is stated rather than hidden: a bare-hostname request
+from the tablet, which would need the port-80 redirect, is refused; `80,443` is one string away if that
+turns out to matter. The two accepts anchor on the deny, so all three land in one apply in the right
+order — the `iot_router_dhcp` pattern.
+
+**The identity was the harder half.** A one-device exception is keyed on an address, and the address has
+to be owned: `.10.200` was a **dynamic** `dhcp-mgmt` pool lease (measured), so the exception as first
+imagined would have followed whatever device the pool handed that number to. `dhcp.tf` now claims it for
+charon's measured MAC, which is also why `charon.mgmt.hnatekmar.dev` follows its reservation instead of
+carrying a literal. The MAC is randomized (locally-administered bit set — Windows' random hardware
+addresses), so the failure mode is a rotation that unmatches the reservation: charon then takes a
+different pool address and loses the exception, the **closed** direction, with no other device gaining
+it. The durable fix is on the adapter's setting.
+
+**What it costs, and how we will know.** The deny is `log=true` under `MTX-STORIES>DENY `, so the first
+week of counters is the receipt for everything that was reaching this host by falling through the chain
+— measurably: `personal-hermes` (`.10.180`, mgmt — the operator host) answered `200` before this change
+and loses it after; **vpn clients** lose it too, including charon over the tunnel, since the exception is
+its mgmt address and not the identity behind it; `srv` peers and compat lose it as well. Two follow-ups
+belong to whoever reads that log: a report that maps `MTX-<CLASS>><CLASS>` rows to a matrix cell needs a
+row for this prefix, and `iot → <this host>` now counts under it instead of `MTX-IOT>SRV` (the class drop
+still covers the rest of `srv`).
+
+**End state.** A second such service makes this a table (one list, three rules per destination) and the
+honest move then is a *published services* section with its own shape — not a fourth copy of this block.
+
+
 ## What this deliberately leaves alone
 
 - **IPv6** — out of scope for the overhaul; the classes are IPv4, and nothing in the matrix assumes

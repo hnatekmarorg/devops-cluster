@@ -35,9 +35,13 @@ locals {
   # the WAN hairpin every plan and apply currently takes (docs/dns.md).
   dns_records = {
     # mgmt — the plane that administers
-    "router.mgmt.hnatekmar.dev"      = "172.16.10.1"
-    "crs326.mgmt.hnatekmar.dev"      = "172.16.10.2"
-    "charon.mgmt.hnatekmar.dev"      = "172.16.10.200"
+    "router.mgmt.hnatekmar.dev" = "172.16.10.1"
+    "crs326.mgmt.hnatekmar.dev" = "172.16.10.2"
+    # Follows its reservation since 2026-09-20: the address was a dynamic `dhcp-mgmt` pool lease while
+    # this record carried the literal, which made the name a claim on an address nobody owned (and the
+    # address a firewall identity — see `stories-access.tf`, where a `stories_allow_charon` keyed on it
+    # would have followed whatever device the pool handed it to).
+    "charon.mgmt.hnatekmar.dev"      = local.dhcp_reservations["charon"].address
     "crs804.mgmt.hnatekmar.dev"      = local.dhcp_reservations["crs804"].address
     "crs317.mgmt.hnatekmar.dev"      = local.dhcp_reservations["crs317"].address
     "bmc-balteus.mgmt.hnatekmar.dev" = local.dhcp_reservations["balteus-ipmi"].address

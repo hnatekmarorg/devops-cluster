@@ -111,7 +111,8 @@ locals {
     # `srv` address — one host, one port, and no dependence on this interface being right. This
     # reservation is the *claim* on the address the NIC already carries: configured on the NAS, not
     # leased — no lease exists for `BC:24:11:51:DB:60` (measured 2026-09-20) — and from another iot host
-    # that address does not answer ARP, so reachability down this path is the NAS's own to fix.
+    # that address does not answer ARP, so reachability down this path is the NAS's own to fix. No name is
+    # published for it either: the NAS answers to `truenas.srv.hnatekmar.dev`, the plane that serves it.
     #
     # `class = "iot"` because that is the segment the address lives in: a request from this MAC arrives
     # on `vlan70-iot`, and `dhcp-iot` is the only server listening there — `srv` would name a server that

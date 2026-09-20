@@ -87,12 +87,12 @@ locals {
     # claim on the address cannot drift apart.
     "adonai.srv.hnatekmar.dev" = local.dhcp_reservations["adonai"].address
 
-    # The `iot` sub-zone's two names, and they are different kinds of thing. `truenas.iot` is the NAS's
-    # second NIC — the same host in a second class, the way `truenas.storage` is its 10G plane — and it is
-    # not the estate's SMB path: the reader reaches SMB on the `srv` address. `reader.iot` is the tablet
-    # itself, named for the role the firewall already gives it, so lease, rule and name say one word.
-    "truenas.iot.hnatekmar.dev" = local.dhcp_reservations["truenas-iot"].address
-    "reader.iot.hnatekmar.dev"  = local.dhcp_reservations["reader"].address
+    # `iot` gets one name, for the one device in it that anyone needs to name: the reader — named for the
+    # role the firewall already gives it, so lease, rule and name all say the same word. The NAS is *not*
+    # named in this sub-zone even though it has an interface here: it is reached by the name of the plane
+    # that serves it, `truenas.srv.hnatekmar.dev`, and a second name for the same services would only be a
+    # second way to be wrong.
+    "reader.iot.hnatekmar.dev" = local.dhcp_reservations["reader"].address
 
     # The box at `.30` — the estate's **reverse proxy**, and more behind it. Measured on the host: Caddy
     # terminates TLS on 80/443 and is published to the WAN by dstnat; authentik + postgres + redis run

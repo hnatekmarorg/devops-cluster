@@ -222,6 +222,21 @@ locals {
     # is on the device (turn random hardware addresses off on charon's adapter); until then the counters
     # on `stories_host_deny` and a stories request from charon are the detector.
     "charon" = { mac = local.charon.mac, address = local.charon.address, class = "mgmt" }
+
+    # The work Mac (`mac-dev` is the hostname it sends), on the router's `ether3` — the machine that runs
+    # Teams, therefore the one that belongs in iot. There is **no exception to key here**: iot's row already
+    # is "internet only", which is all Teams needs, so this reservation is not a policy handle. It exists for
+    # the *other* direction — mgmt reaches in over ssh/VNC and that target must not move under pool churn
+    # (compat moved it twice, `.101` → `.100.116`). `.116` is where compat was holding it: outside both iot
+    # pools (`.20–.99`, `.200–.250`) so it is not even an in-pool claim, and inside the `.100–.199` band the
+    # fixed identities live in.
+    #
+    # Keyed on a **hardware** MAC: `18:4A:53` is Apple's OUI and bit 1 of the first octet (`0x18 & 0x02`) is
+    # clear, so the client generated nothing — the opposite of the reader's and charon's rows. The caveat is
+    # the same shape, one layer out: if this Mac ever joins over Wi-Fi, macOS presents a private (randomised)
+    # address unless "Private Wi-Fi Address" is off, then this row matches nothing and the device keeps
+    # internet at a pool address — fail-safe, and the iot segment is where the WiFi lands either way.
+    "mac-dev" = { mac = "18:4A:53:13:FA:7D", address = "172.16.70.116", class = "iot" }
   }
 }
 

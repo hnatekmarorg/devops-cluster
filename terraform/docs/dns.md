@@ -47,8 +47,12 @@ the addresses clients care about there are static on the hosts themselves (TrueN
 `192.168.88.25`, MTU 9000). So storage records carry a literal and the host remains the source of truth —
 same naming scheme, different owner of the number.
 
-**`iot` has no records and keeps public DNS.** That class must not be able to resolve an internal name,
-which makes resolution itself a class boundary. The exception is deliberate, not an oversight.
+**`iot` has a record now, and still keeps public DNS.** The boundary is resolution, not naming: the
+segment is handed `8.8.8.8` and may not ask the router, so no record in this list makes an internal name
+resolvable *inside* iot. What the one `iot` record does is let everything else name the segment:
+`reader.iot.hnatekmar.dev` is the reader, whose resolver *is* the router by a per-lease DHCP option (the
+one exempted device — see the reader section of the matrix). The NAS gets no name in this sub-zone: it has
+an interface here, but its services are reached where they are served, as `truenas.srv.hnatekmar.dev`.
 
 **Records are not access control.** Everything in `dns.tf` resolves for any client that can reach the
 resolver; the firewall matrix decides who may reach what.

@@ -143,9 +143,18 @@ storage:
     # CONTROL PLANE — the API over the srv VLAN, which is routable from every cluster class.
     url: wss://truenas.srv.hnatekmar.dev
     # DATA PLANE — the island, for the volume traffic itself.
+    #
+    # NOTE the asymmetry, which is measured rather than stylistic: `nfsServer` may be a NAME (the node
+    # resolves it — verified: a kubelet-mounted NFS volume on dev-w1 came up against
+    # truenas.storage.hnatekmar.dev over the island NIC), but `nvmeofPortal` must be an IPv4/IPv6
+    # LITERAL. The driver does not merely hand the portal to `nvme connect`; it first resolves it to a
+    # port ON THE APPLIANCE and will CREATE one if none matches — and `nvmet.port.create` rejects a
+    # hostname outright: `addr_traddr … value is not a valid IPv4 or IPv6 address`. With a name every
+    # provisioning attempt fails before a zvol is ever made. The appliance's port is
+    # `192.168.88.25:4420`, so this is that, spelled the way the API demands.
     nfsServer: truenas.storage.hnatekmar.dev
-    nvmeofPortal: truenas.storage.hnatekmar.dev:4420
-    iscsiPortal: truenas.storage.hnatekmar.dev:3260
+    nvmeofPortal: 192.168.88.25:4420
+    iscsiPortal: 192.168.88.25:3260
     # The appliance ships a self-signed certificate (CN=localhost): without this the pods never go Ready.
     insecureSkipTLS: true
     pool: data

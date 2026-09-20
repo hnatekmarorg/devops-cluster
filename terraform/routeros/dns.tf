@@ -8,11 +8,12 @@
 #      and never for a host. This resolver is what makes the class sub-zones mean anything.
 #   2. Internal names must resolve when the WAN is down. A public record cannot.
 #
-# Naming: one sub-zone per class (mgmt / srv / lab / iot / vpn), so a hostname states the plane a host
-# belongs to — the same information its address carries (`172.16.30.x` is lab). Machines are
+# Naming: one sub-zone per class (mgmt / srv / lab / storage / iot / vpn), so a hostname states the plane
+# a host belongs to — the same information its address carries (`172.16.30.x` is lab). Machines are
 # `<host>.<class>`; services are `<service>.srv`. A record states the class a host is *intended* for;
 # **its address is its DHCP reservation's** (`dhcp.tf`), so the name follows the host when it moves and
-# nothing that references the name has to change.
+# nothing that references the name has to change. Where a host's address in a class is not served by this
+# router — the storage fabric's statically addressed NAS — the record carries a literal and says why.
 #
 # Records are not access control. Everything here resolves; the firewall matrix decides who may reach what.
 # `iot` is deliberately absent: it keeps public DNS, so that class cannot resolve internal names at all.
@@ -108,6 +109,21 @@ locals {
     "spark2.lab.hnatekmar.dev"    = local.dhcp_reservations["spark2"].address
     "spark3.lab.hnatekmar.dev"    = local.dhcp_reservations["spark3"].address
     "spark4.lab.hnatekmar.dev"    = local.dhcp_reservations["spark4"].address
+
+    # storage — the air-gapped 10G fabric: the CRS317 island, `192.168.88.0/24`, jumbo 9000, no gateway
+    # by design. Its own class because the *plane* is what the name has to state: `truenas.srv` is the
+    # management address (`172.16.40.148`, 1G — the API and the UI), while `truenas.storage` is the fabric
+    # one, and a storage client must use the latter. Both the iSCSI portal and the NVMe-oF port are bound
+    # to `.88.25`, but the same services also listen on the 1G management address (measured: 3260/2049/445
+    # answer there from VLAN 40), so a client that resolves the wrong name silently consumes storage over
+    # 1G instead of failing.
+    #
+    # A literal, unlike every other machine record here: the addresses this module owns are the ones the
+    # router hands out, and the island's DHCP belongs to the CRS317 (`dhcp1`) — a device deliberately not
+    # in IaC, so there is no lease for the name to follow. The NAS's fabric address is static on the
+    # appliance itself (`enp6s20`, MTU 9000), which stays its source of truth; this record names it so
+    # clients can be written against the name rather than the number.
+    "truenas.storage.hnatekmar.dev" = "192.168.88.25"
   }
 }
 

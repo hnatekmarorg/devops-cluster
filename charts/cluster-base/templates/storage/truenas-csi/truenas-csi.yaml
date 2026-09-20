@@ -78,6 +78,18 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Values.storage.truenasCsi.namespace | quote }}
+  labels:
+    # REQUIRED, and this is the second reason the namespace is declared here instead of being left to
+    # CreateNamespace. The node plugin needs hostNetwork + hostPID + hostPath volumes + a privileged
+    # container, and the cluster's default PodSecurity profile is `baseline` — measured on the first
+    # sync: the DaemonSet sat at CURRENT 0 with
+    #   `violates PodSecurity "baseline:latest": host namespaces (hostNetwork=true, hostPID=true,
+    #    hostIPC=true), hostPath volumes …, privileged`
+    # so no node could ever stage a volume. `baseline` is not a formality here; it silently blocks the
+    # whole driver. metallb declares its own namespace for the same class of reason.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 {{- if .Values.certManager.eso.enabled }}

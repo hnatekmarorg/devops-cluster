@@ -58,6 +58,10 @@ shape and a cluster only records which ones it turns on:
   appliance answers NFS/iSCSI/NVMe-oF on the management address too, so the wrong name is a slow-but-
   working data path rather than an error. The **API** URL in contrast is the srv name, because the
   control plane must be reachable from every class.
+- **One field cannot take the name:** `storage.truenasCsi.nvmeofPortal` is an IP literal
+  (`192.168.88.25:4420`). The driver resolves it to a port on the appliance and creates one if it does
+  not match, and `nvmet.port.create` validates an IPv4/IPv6 address — a hostname fails provisioning
+  before any volume exists. `nfsServer` may be (and is) the name, because the node resolves that one.
 - **The CSI driver's API key comes from the vault**, `secret/<cluster>/truenas-csi` (property `api-key`),
   fetched by ESO — seeding is documented in `terraform/docs/openbao-onprem.md`. Nothing secret goes in
   this repo for it.

@@ -101,11 +101,19 @@ locals {
   reader = {
     address = "172.16.70.25"
     mac     = "44:CB:AD:5C:A1:52"
-    # The router on the iot segment — the estate's own resolver (`dns.tf`), which is what makes internal
-    # names resolvable at all. Handing out 8.8.8.8 (the class default) to an internet-less device would
-    # be an address that resolves nothing.
-    resolver = "172.16.70.1"
   }
+
+  # The router on the iot segment — the estate's own resolver (`dns.tf`), which is what makes internal
+  # names resolvable at all. Handing out 8.8.8.8 (the class default) to an internet-less device would
+  # be an address that resolves nothing.
+  reader_resolver = "172.16.70.1"
+
+  # The same address the way DHCP option 6 has to carry it. Option 6 is **binary** — four bytes per
+  # resolver — where the option's `s'…'` form puts the address on the wire as its eleven characters
+  # instead. Derived from `reader_resolver` rather than typed a second time, so the address and its
+  # encoding cannot drift apart. The option resource below carries the measurement that makes this
+  # difference load-bearing rather than cosmetic.
+  reader_resolver_hex = "0x${join("", [for octet in split(".", local.reader_resolver) : format("%02X", tonumber(octet))])}"
 
   # Destinations the reader may browse, each paired with the class drop it has to be placed above.
   # Web ports only: a reader has no business initiating anything else into the estate.
@@ -191,13 +199,29 @@ resource "routeros_ip_firewall_filter" "reader_router_ntp" {
 # The piece that makes the DNS accept mean something: hand this one lease a resolver it can reach.
 # DHCP option 6 (DNS servers), attached to the reader's reservation in `dhcp.tf` via `option_set`.
 # Per-lease, so the class keeps its own "public DNS" policy untouched.
+#
+# OPTION 6 IS BINARY — THE READABLE STRING IS A BROKEN OPTION, NOT A STYLE (measured 2026-09-20)
+# ----------------
+# This was first declared as `s'172.16.70.1'`: a bare address is refused by the device ("Unknown data
+# type!"), so the value takes an explicit type prefix, and `s'…'` is the form the estate's own `ntp`
+# option reads back with. That reasoning is right for option 42 — which is *defined* as ASCII text —
+# and wrong for option 6, whose payload is four raw bytes per resolver. `s'` puts the address on the
+# wire as its eleven characters instead, and a client that parses options strictly discards the packet
+# whole: no lease, no address, no policy to apply.
+#
+# `tcpdump` on the iot segment showed the consequence rather than the theory. Every OFFER for this
+# lease read `opt6 len=11 '172.16.70.1'`, while the working device's reply beside it read
+# `opt6 len=4 '8.8.8.8'`. The reader answered by re-sending DISCOVER indefinitely and never REQUESTed
+# — on the tablet, "Obtaining IP address…" and then the network drops, with the router's own lease
+# stuck at `offered`/`waiting`. No firewall rule was involved; the device never got an address to use.
+#
+# So the value is raw hex, and it comes from `reader_resolver_hex` above (derived from the address, so
+# the two cannot drift). The general lesson: a type prefix is not evidence that the value's *type*
+# matches the option's code — the code is what decides, and only the payload length proves it.
 resource "routeros_ip_dhcp_server_option" "reader_dns" {
-  name = "reader-dns"
-  code = 6
-  # The type prefix is required, not decoration: a bare "172.16.70.1" is rejected by the device with
-  # "Unknown data type!" (measured — it failed the first apply). `s'…'` = string-typed, which is how the
-  # estate's existing `ntp` option reads back. Hex (`0xac104601`) would also work and is less readable.
-  value   = "s'${local.reader.resolver}'"
+  name    = "reader-dns"
+  code    = 6
+  value   = local.reader_resolver_hex
   comment = "${local.managed_by} — the reader's resolver, reachable without internet"
 }
 

@@ -85,6 +85,26 @@ spec:
           # The first address of the block, so cluster -> VIP stays arithmetic rather than a lookup.
           ingressVIP: 172.16.48.1
 
+        # Storage over the air-gapped 10G island. Both tiers live on the NAS and both address it by the
+        # *storage* name (`truenas.storage.hnatekmar.dev` = 192.168.88.25), not the srv one — the
+        # appliance answers NFS/iSCSI/NVMe-oF on the management address too, so the wrong name is a 1G
+        # data path rather than a failure.
+        #
+        # PREREQUISITE, and it is a hard ordering: that name resolves only from the router's resolver,
+        # and the record lands via PR #126 (`terraform/routeros/dns.tf`) + its `apply · routeros` job.
+        # Until that apply runs, the name answers the ingress VIP through the public wildcard, so the
+        # NFS mount and the NVMe-oF connect would both fail in a way that looks like a NAS problem.
+        storage:
+          # RWX: NFS subdirs (`nfs-client`). The NAS path `/mnt/data/k8s/clusters/main` exists and
+          # `/mnt/data/k8s` is exported.
+          nfs:
+            enabled: true
+          # RWO block: NVMe-oF/TCP via the official driver, namespace `truenas-csi`, class
+          # `truenas-nvmeof` (NOT the cluster default — longhorn keeps that). The API key comes from the
+          # vault at `secret/dev/truenas-csi`, which is seeded.
+          truenasCsi:
+            enabled: true
+
   destination:
     server: https://kubernetes.default.svc   # in-cluster
     namespace: argocd

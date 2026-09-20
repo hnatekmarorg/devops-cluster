@@ -42,10 +42,28 @@ Dev cluster has nodes with nvidia gpu for it to work you need to have nvidia gpu
 
 ### Storage
 
-For storage there are two storageclasses ./devops/argocd/nfs/nfs-provisioner.yaml and longhorn
+Three tiers, all declared in `charts/cluster-base` (`storage.*` values) so every cluster gets the same
+shape and a cluster only records which ones it turns on:
 
-- Use NFS when you need shared storage between multiple pods
-- Use longhorn (default storageclass) for fast storage (DBs, etc...)
+| tier | class | for | configured |
+|---|---|---|---|
+| cluster-local block | `longhorn` (**default**) | fast RWO, DBs, scratch — no network dependency | `./devops/argocd/` (per cluster) |
+| NAS block, RWO | `truenas-nvmeof` | durable volumes for state that must outlive a node | `charts/cluster-base/templates/storage/truenas-csi/` — the official `truenas-csi` driver over NVMe-oF/TCP |
+| NAS shared, RWX | `nfs-client` | shared storage between pods | `charts/cluster-base/templates/storage/nfs/nfs-provisioner.yaml` |
+
+- **Use NFS when several pods must share the same data**; use a block class (RWO) for a database or
+  anything with a filesystem that must not be shared.
+- **The NAS tiers ride the air-gapped 10G island and are addressed by the storage name**
+  (`truenas.storage.hnatekmar.dev` = `192.168.88.25`), never the srv one (`172.16.40.148`, 1G). The
+  appliance answers NFS/iSCSI/NVMe-oF on the management address too, so the wrong name is a slow-but-
+  working data path rather than an error. The **API** URL in contrast is the srv name, because the
+  control plane must be reachable from every class.
+- **The CSI driver's API key comes from the vault**, `secret/<cluster>/truenas-csi` (property `api-key`),
+  fetched by ESO — seeding is documented in `terraform/docs/openbao-onprem.md`. Nothing secret goes in
+  this repo for it.
+- NAS prep that the driver assumes (all outside this repo): the NVMe-oF service running with a TCP port
+  on `192.168.88.25:4420`, a parent dataset for volume zvols (`data/nvmeof`, snapshotted daily), and the
+  API key's service user.
 
 ### Ingress
 

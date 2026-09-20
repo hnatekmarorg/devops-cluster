@@ -205,6 +205,23 @@ locals {
     # subnet, same identity — so the weekly digest and the TV harness keep working from wherever the box
     # sits, and the iot segment can be observed from a device inside it.
     "probe-iot" = { mac = "00:E0:4C:2A:2E:C6", address = "172.16.70.125", class = "iot" }
+
+    # charon — Martin's work PC, on the CSS610's mgmt access port, and the one identity that keeps full
+    # access to the stories host (`stories-access.tf`). Measured 2026-09-20: `.10.200` was a **dynamic**
+    # lease from `dhcp-mgmt` (its pool is `.200–.250`), i.e. the address the exception is written against
+    # had no owner — the pool could have handed it to another device, and that device would have inherited
+    # the exception. This reservation is what makes `.10.200` charon's: a static lease holds its address
+    # out of dynamic assignment for as long as it exists, the same property `crs804`'s `.201`, `crs317`'s
+    # `.203`, `adonai`'s `.40.24` and the reader's `.25` already lean on.
+    #
+    # The MAC is a **randomized** one (`E2:01:50:75:5F:39` — the locally-administered bit is set), which
+    # is the normal shape for Windows' random hardware addresses: a property of the adapter's setting, not
+    # of the machine. If it rotates, this reservation stops matching, charon takes a different pool
+    # address, and the stories exception stops matching charon — the direction that fails **closed**, with
+    # no other device gaining the access, unlike the unclaimed pool lease this replaces. The durable fix
+    # is on the device (turn random hardware addresses off on charon's adapter); until then the counters
+    # on `stories_host_deny` and a stories request from charon are the detector.
+    "charon" = { mac = local.charon.mac, address = local.charon.address, class = "mgmt" }
   }
 }
 

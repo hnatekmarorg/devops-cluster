@@ -107,6 +107,18 @@ locals {
     # (`dhcp_reservations["truenas"]`, which is also where `truenas.srv.hnatekmar.dev` gets its address).
     # Bare, no `/32`, for the reason just above.
     "nas-smb" = [local.dhcp_reservations["truenas"].address]
+
+    # `stories-host` — the stories service (`stories-hermes`, `srv`), which is reachable by two named
+    # identities and by nothing else (`stories-access.tf`). A **host** list rather than `srv-nets`, and
+    # that is the point: the policy is about this one service, not about the class it happens to live in.
+    # The address is its reservation's, so it follows the host if it ever re-addresses.
+    "stories-host" = [local.dhcp_reservations["stories-hermes"].address]
+
+    # `charon-nets` — the work PC, the one identity with full access to that destination. One host entry
+    # claimed by a DHCP reservation (`dhcp.tf`), the shape `reader-nets` has: the exception is keyed on an
+    # *address*, and the reservation is what makes that address a stable identity instead of a pool lease
+    # that can move under the rule (it was a dynamic `.10.200` lease until this change).
+    "charon-nets" = [local.charon.address]
   }
 
   address_list_entries = flatten([

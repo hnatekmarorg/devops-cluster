@@ -101,6 +101,12 @@ locals {
     # rewrite it. The class lists above are CIDR blocks and are unaffected; this is the estate's first
     # host-address entry, which is why it only shows up here.
     "reader-nets" = [local.reader.address]
+
+    # The reader's one non-web destination: the NAS's `srv` address, so the SMB accept in
+    # `reader-lan-only.tf` reads as a name while the number keeps one home
+    # (`dhcp_reservations["truenas"]`, which is also where `truenas.srv.hnatekmar.dev` gets its address).
+    # Bare, no `/32`, for the reason just above.
+    "nas-smb" = [local.dhcp_reservations["truenas"].address]
   }
 
   address_list_entries = flatten([

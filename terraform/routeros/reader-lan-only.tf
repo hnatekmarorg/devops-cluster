@@ -4,9 +4,9 @@
 # ----------------
 # The matrix gives iot one row: "internet ✓ only, internal reach is the VPN's job". That is the right
 # default for the WiFi segment and it is enforced (stage 3, phase 2). It is the wrong shape for exactly
-# one device: a tablet used as an e-reader and to browse **internal** web services, where the point is
-# to keep the vendor's telemetry inside the house rather than to give it internet access with nothing to
-# reach.
+# one device: a tablet used as an e-reader, to browse **internal** web services, and to read a share on
+# the NAS — where the point is to keep the vendor's telemetry inside the house rather than to give it
+# internet access with nothing to reach.
 #
 # So this device gets the inverse of the iot row. Both halves are required — a WAN deny alone would
 # leave it able to reach *nothing*, because the class drops below already refuse it every internal
@@ -14,6 +14,7 @@
 #
 #   * `reader_no_wan`      forward, src=reader-nets, out=WAN      → the device keeps no internet
 #   * `reader_web_allow`   forward, src=reader-nets, dst=<class>  → …but may browse internal web ports
+#   * `reader_smb_allow`   forward, src=reader-nets, dst=nas-smb  → …and read one share on the NAS
 #   * `reader_router_dns`  input,   src=reader-nets, port 53      → name resolution without the internet
 #   * `reader_router_ntp`  input,   src=reader-nets, udp 123      → clock without the internet
 #
@@ -126,6 +127,29 @@ resource "routeros_ip_firewall_filter" "reader_web_allow" {
   protocol         = "tcp"
   dst_port         = "80,443"
   comment          = "reader exception: internal web only (${each.key}) — firewall-matrix.md"
+}
+
+# The one destination that is not a web port. The NAS is `srv`-class, `MTX-IOT>SRV` denies that class to
+# the segment wholesale, and this is the narrow accept that admits it: one host (`nas-smb`, the NAS's
+# `srv` address, taken from its reservation) on one port, anchored above that drop exactly the way the web
+# accepts are anchored above theirs.
+#
+# Why a rule rather than letting the reader use the NAS's iot-side NIC: the matrix lets a class reach *its
+# own segment* (`iot → iot`), so an interface inside iot would need no rule at all — but then the reader's
+# reach would be whatever the NAS binds on that interface, and every untrusted device on the segment would
+# have it too. One reviewable rule is the cheaper answer.
+#
+# `445` alone: direct-TCP SMB2/3 is what a tablet's client speaks. `139` (NetBIOS session service) is what
+# an SMB1 client would want, and adding it here is a one-word change if one turns out to need it.
+resource "routeros_ip_firewall_filter" "reader_smb_allow" {
+  chain            = "forward"
+  place_before     = routeros_ip_firewall_filter.iot_deny["SRV"].id
+  action           = "accept"
+  src_address_list = "reader-nets"
+  dst_address_list = "nas-smb"
+  protocol         = "tcp"
+  dst_port         = "445"
+  comment          = "reader exception: SMB to the NAS only — firewall-matrix.md"
 }
 
 # The router itself. Above `iot_router_deny`, the same anchor `iot_router_dhcp` uses, and for the same

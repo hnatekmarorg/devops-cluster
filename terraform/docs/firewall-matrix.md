@@ -111,6 +111,15 @@ internal destinations.**
 because `iot → internal` is already denied. Conversely, the LAN accepts are *narrow*: `src=reader-nets`,
 `dst=<class>`, `tcp 80,443`. No blanket accept, so the guardian's third assertion still holds.
 
+**One destination is not a web port.** The reader also reads a share on the NAS, and SMB is `tcp 445` —
+outside the accepts above, so it gets its own rule: `reader_smb_allow`, one host wide (`nas-smb`, the
+NAS's `srv` address) and one port wide, anchored above `MTX-IOT>SRV` the way the web accepts are anchored
+above theirs. The shape that would need no rule at all is worth naming, because it is the tempting one:
+the NAS has a second NIC inside `iot`, and the matrix lets a class reach **its own segment** (`iot → iot
+✓`). That path makes the reader's reach a property of whatever the NAS binds on that interface, and hands
+the same reach to every untrusted device on the segment — so the reader's SMB goes to the `srv` address
+and this rule is the one that says "samba, one host, and nothing else".
+
 **Two policies are deliberately contradicted, each with one reason.** iot keeps public DNS and public
 pool time *because it has internet* (see `iot_router_deny`). Once the internet is denied, neither
 exists for this device: a resolver and a clock have to come from somewhere, and the router is the only

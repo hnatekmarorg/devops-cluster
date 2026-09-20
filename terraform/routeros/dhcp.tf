@@ -106,8 +106,18 @@ locals {
       class      = "iot"
       option_set = routeros_ip_dhcp_server_option_sets.reader.name
     }
-    # Truenas has IoT access as well
-    "truenas_iot"            = { mac = "BC:24:11:51:DB:60", address = "172.16.70.148", class = "srv" }
+    # The NAS's **iot-side NIC** — a second virtual interface on the same VM (2026-09-20). It is *not*
+    # the reader's SMB path: that is a rule (`reader_smb_allow`, reader-lan-only.tf) against the NAS's
+    # `srv` address — one host, one port, and no dependence on this interface being right. This
+    # reservation is the *claim* on the address the NIC already carries: configured on the NAS, not
+    # leased — no lease exists for `BC:24:11:51:DB:60` (measured 2026-09-20) — and from another iot host
+    # that address does not answer ARP, so reachability down this path is the NAS's own to fix.
+    #
+    # `class = "iot"` because that is the segment the address lives in: a request from this MAC arrives
+    # on `vlan70-iot`, and `dhcp-iot` is the only server listening there — `srv` would name a server that
+    # can never answer it. `.148` sits in the reserved band the pools avoid (`.20–.99`, `.200–.250`).
+    "truenas-iot" = { mac = "BC:24:11:51:DB:60", address = "172.16.70.148", class = "iot" }
+
     # The dedicated CI runner (a ZimaBoard, plugged in by hand). It is on a *compat* port today
     # (`.100.126`) and takes this address as soon as it hangs off a mgmt access port — the router's
     # `ether1`, which is already prepared for exactly this (pvid 10, admit-only-untagged). Mgmt class

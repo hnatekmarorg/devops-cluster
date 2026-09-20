@@ -29,11 +29,12 @@ metadata:
 spec:
   project: default
   sources:
-    - chart: truenas-csi
-      # A Helm repo that is a git path: the project publishes `charts/index.yaml` in-tree, so ArgoCD
-      # reads it without a hosted chart repository.
-      repoURL: https://raw.githubusercontent.com/truenas/truenas-csi/master/charts
-      targetRevision: {{ .Values.storage.truenasCsi.chartVersion | quote }}
+    - # THE VENDORED CHART, in this repository: `charts/truenas-csi`. It is upstream 1.3.0 with two
+      # documented deviations (that directory's VENDORED.md) — one of which is the only reason the node
+      # plugin can start on Talos at all, and which cannot be expressed as a chart value.
+      repoURL: {{ .Values.storage.truenasCsi.chartRepoURL | quote }}
+      targetRevision: {{ .Values.storage.truenasCsi.chartRevision | quote }}
+      path: {{ .Values.storage.truenasCsi.chartPath | quote }}
       helm:
         releaseName: truenas-csi
         valuesObject:

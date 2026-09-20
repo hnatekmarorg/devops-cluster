@@ -273,6 +273,64 @@ locals {
     extraArgs  = var.kubelet_extra_args
   })
 
+  # Whether the node image carries iSCSI tooling — the thing that puts /etc/iscsi on the host in the first
+  # place. Suffix match so both `siderolabs/iscsi-tools` (the form the defaults use) and a bare
+  # `iscsi-tools` count.
+  has_iscsi_tools = anytrue([for e in var.talos_schematic_extensions : endswith(e, "iscsi-tools")])
+
+  # THE KUBELET CONTAINER'S /etc IS CURATED, NOT THE HOST'S. Talos binds a fixed set of paths into the
+  # kubelet container, so a directory that exists on the host under /etc but is not on that list is
+  # INVISIBLE to the kubelet — and therefore to any pod with a strict hostPath from it. Measured, on a
+  # node whose host plainly has the file:
+  #
+  #   /etc/iscsi/initiatorname.iscsi   InitiatorName=iqn.2017-11.dev.talos:eb6414f5e8c2624d17977f69308b14fc
+  #
+  # but any pod that mounts it strict fails:
+  #
+  #   MountVolume.SetUp failed for volume "iscsi-dir" : hostPath type check failed, /etc/iscsi is not a
+  #   directory, unable to determine its type: path "/etc/iscsi" does not exist
+  #
+  # That is the whole reason the `truenas-csi` NODE PLUGIN cannot start on this cluster: its DaemonSet
+  # mounts hostPath /etc/iscsi with `type: Directory`, so no node can ever stage a volume and the storage
+  # class is unusable. It also explains why the driver's sibling mounts under /var/lib/* never complained:
+  # kubelet's /var/lib IS the host's (verified by writing a marker through one and reading it back on the
+  # host), while /etc is not.
+  #
+  # The path is the chart's to choose, not ours, so bind it in — the mechanism Talos documents for exactly
+  # this, and what the field reports for this driver on Talos recommend (`machine.kubelet.extraMounts`).
+  # Verified against a real 1.14 config BEFORE writing it here: the generated config is document-based
+  # (`kind: KubeletConfig`), and this LEGACY field still merges alongside it, appearing in the output —
+  # patching the document's own form is not possible (its ExtraMounts accessor returns nil).
+  #
+  # GATED ON THE EXTENSION THAT CREATES THE PATH, deliberately: this mount is the kubelet service's own, so
+  # a bind whose source does not exist would take the kubelet — and the node — down with it. It appears only
+  # when the image carries `iscsi-tools`, which is the same variable that defines the image, so the mount
+  # and the cause of the directory cannot drift apart.
+  #
+  # MATCHED BY SUFFIX, because the entries are fully qualified (`siderolabs/iscsi-tools`): a bare
+  # `contains(var.talos_schematic_extensions, "iscsi-tools")` is silently FALSE, and the failure mode is the
+  # worst kind — the plan says `No changes`, so it looks like the mount is already there. (That is exactly
+  # what the first version of this patch did.) `endswith` accepts a bare name too, so a root that overrides
+  # the list with the short form still gates correctly.
+  #
+  # EVERY NODE, not just workers: the CSI node plugin tolerates all taints (it has to run wherever pods
+  # land), and control planes are schedulable here — so on this estate the plugin runs on the control
+  # plane too, and a worker-only patch would leave the DaemonSet not-ready forever.
+  patch_kubelet_extra_mounts = local.has_iscsi_tools ? yamlencode({
+    machine = {
+      kubelet = {
+        extraMounts = [
+          {
+            destination = "/etc/iscsi"
+            type        = "bind"
+            source      = "/etc/iscsi"
+            options     = ["bind", "rshared", "rw"]
+          },
+        ]
+      }
+    }
+  }) : null
+
   # PER NODE: the kubelet patch carries that node's hostname-override, so these can no longer be two
   # shared lists. control-plane vs worker still differs: only the CP carries certSANs and the scheduling flag.
   patches = {
@@ -284,6 +342,9 @@ locals {
         local.patch_kubelet[n.name],
         n.role == "controlplane" ? local.patch_cert_sans : null,
         n.role == "controlplane" ? local.patch_authentication : null,
+        # LAST, deliberately: `config_patches` is a LIST, so inserting in the middle shifts every later
+        # element and the plan renders that as churn on patches that did not change.
+        local.patch_kubelet_extra_mounts,
       ]),
       var.extra_patches,
     )

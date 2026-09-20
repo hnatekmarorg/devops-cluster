@@ -45,6 +45,25 @@ certManager:
 sops:
   enabled: false
 
+# Crossplane providers, and the identities they use. Providers are cluster-scoped resources, so the
+# chart renders them directly — the `crossplane` Application above installs the core only.
+crossplane:
+  # THIS CLUSTER's Keycloak writer: the identity that creates the OIDC clients this cluster's services
+  # consume. It replaces the previous arrangement, where the only credential able to create a client was
+  # the realm master admin in the hub repo, so onboarding a service meant authoring a client in a WAN repo
+  # and then carrying its secret onto a LAN cluster by hand.
+  keycloak:
+    # OFF by default, deliberately: enabling it means this cluster WRITES TO A SHARED REALM, which is a
+    # per-cluster statement like metallb's pool — not something a new cluster should inherit silently.
+    enabled: false
+    # The same package the hub runs, so a client manifest moved between the two behaves identically
+    # rather than "mostly".
+    package: xpkg.upbound.io/crossplane-contrib/provider-keycloak:v2.17.0
+    # The path INSIDE the vault mount. Per cluster by default (`<cluster>/keycloak-writer`, which this
+    # cluster's own read policy already covers): the Keycloak client behind it is per cluster too, so
+    # revoking one cluster's automation cannot strand the other's.
+    vaultKey: ""
+
 # The autoscaling idiom — see terraform/docs/cluster-autoscaling.md.
 # Proxmox-specific, so gated on `onprem` above.
 karpenter:

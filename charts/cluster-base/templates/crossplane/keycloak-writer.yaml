@@ -1,0 +1,93 @@
+{{- if and .Values.onprem .Values.crossplane.keycloak.enabled }}
+{{/*
+  The Keycloak writer: THIS cluster's own identity for creating the OIDC clients its services consume.
+
+  WHY IT EXISTS. Until now every client in the realm was declared in the hub repository (hetzner-k8s),
+  which is also where the only credential able to do it lived — the realm master admin. Onboarding a
+  service on this cluster was therefore a cross-boundary errand with two halves: author the client in a WAN
+  repo, then get its secret onto a LAN cluster by hand. `secret/<cluster>/keycloak-writer` in the on-prem
+  vault replaces both: a Keycloak service account scoped to `manage-clients` and nothing else — no users,
+  no realm settings, no identity providers — with this template as the plumbing that consumes it.
+
+  WHY THE PROVIDER RUNS HERE, NOT IN THE HUB. provider-keycloak writes a client's connection secret INTO
+  THE CLUSTER WHERE THE PROVIDER RUNS (`writeConnectionSecretToRef`), so running it here is what makes the
+  secret land locally: there is no copy step and no WAN-to-LAN push to build, which is the whole point. The
+  price is one small provider pod per cluster plus one credential able to create clients in the realm; its
+  scope is reviewable in the hub's PR
+  (crossplane/config/keycloak/clients/crossplane-<cluster>-client.yaml), and revocation is per cluster
+  because both the client and the vault path are.
+
+  THE ONE-WRITER-PER-OBJECT RULE. The hub keeps the realm, its identity providers, the human clients
+  (kubectl*, argocd-bootstrap) and the role catalog this cluster's RBAC binds. This cluster declares only
+  the clients it CONSUMES. Two writers on one object is the failure this rule prevents, and the line is
+  "the cluster that consumes a client secret owns the Client object".
+
+  WHAT IT CANNOT DO, so nobody looks for it here: grant a service account a realm role (k8s-dev-admin and
+  friends). That needs `manage-users`, which this identity deliberately lacks — cluster access is granted in
+  the hub, exactly as kubectl-agent-client.yaml does it.
+*/}}
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: crossplane-contrib-provider-keycloak
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  # The same package the hub runs, so a manifest copied between the two behaves identically rather than
+  # "mostly" — the community provider's CRD surface has moved between minor versions before.
+  package: {{ .Values.crossplane.keycloak.package | quote }}
+{{- if .Values.certManager.eso.enabled }}
+---
+# The credential. This is the ONE hand crossing in the whole arrangement: the hub generates the client
+# secret and cannot reach this site's vault, so it is written here once with
+#
+#   ./scripts/seed-vault.sh keycloak-writer <cluster>
+#
+# after which ESO keeps it in step from this cluster's own prefix.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: keycloak-writer
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: {{ .Values.certManager.eso.storeName | quote }}
+    kind: ClusterSecretStore
+  target:
+    name: keycloak-writer
+    creationPolicy: Owner
+  data:
+    - secretKey: config
+      remoteRef:
+        # NOT the KV mount (`certManager.eso.vaultPath`) — this is the path INSIDE it, on THIS cluster's
+        # prefix. The stored value is the whole provider-config JSON, the same shape the hub's own
+        # sso-hnatekmar-xyz secret uses: {"url", "client_id", "client_secret", "realm"}. Composing that
+        # JSON here would mean an ESO template inside a Helm template, where the same delimiters mean two
+        # different things to two different engines — the seed script owns the composition instead.
+        key: {{ .Values.crossplane.keycloak.vaultKey | default (printf "%s/keycloak-writer" .Values.clusterName) | quote }}
+        property: config
+{{- end }}
+---
+# The ProviderConfig every client manifest in this cluster references. The NAME matches the hub's
+# (`sso-hnatekmar-xyz`) on purpose, so a client can be moved between the two without an edit — the identity
+# behind it is what differs, and it differs deliberately.
+apiVersion: keycloak.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: sso-hnatekmar-xyz
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  credentials:
+    secretRef:
+      name: keycloak-writer
+      key: config
+      namespace: crossplane-system
+    source: Secret
+{{- end }}

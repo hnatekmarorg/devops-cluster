@@ -46,6 +46,15 @@ spec:
             # store itself validated.
             vaultKey: common/cloudflare
 
+        # This cluster's Keycloak writer — see the dev cluster's values for the reasoning, and
+        # charts/cluster-base/templates/crossplane/keycloak-writer.yaml for the mechanism. Per-cluster by
+        # design: the credential at `secret/prod/keycloak-writer` and the Keycloak client
+        # `crossplane-prod-hnatekmar-xyz` are this cluster's own, so its automation is revocable without
+        # touching dev's.
+        crossplane:
+          keycloak:
+            enabled: true
+
         # Prod's autoscaling ceiling. The families are stated EXPLICITLY now that pools live in values,
         # and they stay c1/t1/s1: deliberately no m1/x1 on a box that is also the storage host.
         karpenter:

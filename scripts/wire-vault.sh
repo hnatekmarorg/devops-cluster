@@ -152,11 +152,21 @@ BAO_ADDR="$BAO_ADDR" bao write "auth/${MOUNT}/role/${ROLE}" \
 echo "  role $ROLE -> ${ESO_NS}/${ESO_SA}"
 
 say "vault: read policy"
+# TWO prefixes, and the split is a decision rather than tidiness:
+#   * `common/*`    — values that are identical on every cluster (the Cloudflare cert token, the NAS
+#                     API key). One copy, so there is no per-cluster copy to forget: measured, dev's
+#                     cloudflare path was seeded by hand once and prod's never was, which left prod's
+#                     cert-manager on `SecretSyncedError: Secret does not exist` behind a store that
+#                     reported Valid — the store check exercises the AUTH, not the data path.
+#   * `<cluster>/*` — genuinely per-cluster values only.
+# Read-only either way. Writing the data is scripts/seed-vault.sh, which needs its own token.
 BAO_ADDR="$BAO_ADDR" bao policy write "local-${CLUSTER}-read" - >/dev/null <<POLICY
 path "secret/data/${CLUSTER}/*"    { capabilities = ["read"] }
 path "secret/metadata/${CLUSTER}/*" { capabilities = ["read", "list"] }
+path "secret/data/common/*"    { capabilities = ["read"] }
+path "secret/metadata/common/*" { capabilities = ["read", "list"] }
 POLICY
-echo "  local-${CLUSTER}-read -> secret/${CLUSTER}/*"
+echo "  local-${CLUSTER}-read -> secret/${CLUSTER}/* + secret/common/*"
 
 cat <<EOF
 
@@ -164,7 +174,12 @@ Vault is wired to ${CLUSTER}.
 
   mount: auth/${MOUNT}          (one per cluster: CA and reviewer token differ per cluster)
   role:  ${ROLE}               bound to ${ESO_NS}/${ESO_SA}
-  reads: secret/${CLUSTER}/*
+  reads: secret/${CLUSTER}/* + secret/common/*
+
+NOTHING IS SEEDED HERE. This script wires auth and the policy; the DATA is written separately
+(scripts/seed-vault.sh, whose `check` mode verifies the paths a cluster actually needs). A rebuild
+that skips seeding comes up with a store that validates and ExternalSecrets that fail on
+'Secret does not exist' — the failure this estate already paid for once.
 
 cluster-base's ClusterSecretStore must name the same mount path. Re-run this after every rebuild —
 the CA changes, and a stale CA here fails in a way that looks unrelated.

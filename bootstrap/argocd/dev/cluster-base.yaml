@@ -69,7 +69,7 @@ spec:
             enabled: true
             storeName: local-dev
             storeServer: https://bao.srv.hnatekmar.dev
-            vaultPath: secret              # the KV mount; per-cluster isolation is the dev/ prefix
+            vaultPath: secret              # the KV mount; the KEY below picks common/ vs dev/
             mountPath: kubernetes-dev      # must match what wire-vault.sh enabled
             vaultRole: local-dev
 
@@ -101,7 +101,8 @@ spec:
             enabled: true
           # RWO block: NVMe-oF/TCP via the official driver, namespace `truenas-csi`, class
           # `truenas-nvmeof` (NOT the cluster default — longhorn keeps that). The API key comes from the
-          # vault at `secret/dev/truenas-csi`, which is seeded.
+          # vault at `secret/common/truenas-csi` — shared, because the appliance has one key for the
+          # driver and every cluster uses that one (the chart default; see values.yaml).
           truenasCsi:
             enabled: true
 

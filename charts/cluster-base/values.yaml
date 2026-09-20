@@ -26,9 +26,16 @@ certManager:
     storeName: local
     storeServer: https://bao.srv.hnatekmar.dev     # home clusters; hetzner uses bao.hnatekmar.xyz
     vaultPath: hermes/data/cloudflare-api   # the KV MOUNT (ClusterSecretStore path)
-    # The path INSIDE the mount. Must fall under this cluster's prefix — the vault policy grants
-    # secret/<cluster>/* only. Empty derives <clusterName>/cloudflare.
-    vaultKey: ""
+    # The path INSIDE the mount. A cluster's read policy covers TWO prefixes:
+    #   * `common/*`    — one copy for the whole estate. Use it for anything identical on every
+    #                     cluster (the Cloudflare cert token, the NAS API key): N per-cluster copies
+    #                     are N chances to forget one. Measured — dev's was seeded by hand once and
+    #                     prod's never was, so prod's cert-manager sat on
+    #                     `SecretSyncedError: Secret does not exist` behind a store that validated.
+    #   * `<cluster>/*` — only what is genuinely per-cluster (e.g. `prod/smoke-test`).
+    # Empty derives <clusterName>/cloudflare; the value below is what a cluster gets by default, and a
+    # cluster that needs its own copy sets `<cluster>/cloudflare` here.
+    vaultKey: "common/cloudflare"
     vaultRole: ""
 
 # The sops-secrets-operator, which decrypts SopsSecrets in-cluster (per-repo ciphertext, see
@@ -133,7 +140,7 @@ storage:
     path: /mnt/data/k8s/clusters/main
   # The block tier. Requires TrueNAS 25.10+ with the NVMe-oF service enabled; this estate runs 25.10.7
   # with a TCP port on 192.168.88.25:4420 and the driver's API key in the vault under
-  # `secret/<cluster>/truenas-csi`.
+  # `secret/common/truenas-csi` — one key for one appliance, so one copy.
   truenasCsi:
     enabled: false
     # THE CHART IS VENDORED in this repository (`charts/truenas-csi`), which is what lets it carry a
@@ -169,10 +176,13 @@ storage:
     # Talos' kubelet root. Must match the hostPath the node plugin mounts, or NFS-backed volumes mount
     # inside the plugin and never reach kubelet.
     kubeletDir: /var/lib/kubelet
-    # The API key, produced by ESO from the vault: `secret/<cluster>/truenas-csi` by default.
+    # The API key, produced by ESO from the vault. SHARED by default: the appliance has one key for
+    # the driver and every cluster talks to the same one, so a per-cluster copy would only be a second
+    # thing to rotate. A cluster that ever gets its own key sets `vaultKey: <cluster>/truenas-csi` and
+    # its own prefix covers it — no policy change needed.
     existingSecret: truenas-csi-api
     existingSecretKey: api-key
-    vaultKey: ""
+    vaultKey: "common/truenas-csi"
     metrics:
       enabled: false
     storageClasses:
@@ -198,8 +208,8 @@ storage:
 # The /20 is shared by every cluster and by future three-control-plane API VIPs, so each cluster takes a
 # /24 and STATES it — a pool that defaulted would be a pool two clusters could claim at once:
 #
-#   172.16.48.0/24   dev      this cluster; ingress VIP 172.16.48.1
-#   172.16.49.0/24   spare    the next cluster takes it, same shape
+#   172.16.48.0/24   dev      ingress VIP 172.16.48.1
+#   172.16.49.0/24   prod     ingress VIP 172.16.49.1
 #   the rest         API VIPs for three-control-plane clusters. terraform/modules/talos-cluster/
 #                    variables.tf documents the intent; nothing claims one yet.
 metallb:

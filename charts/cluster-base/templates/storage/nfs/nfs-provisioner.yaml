@@ -1,8 +1,13 @@
 {{/*
-Off by default: the provisioner points at the NAS on the storage LAN, which these clusters cannot
-reach, so it sits ContainerCreating until it times out. Storage is a separate pass — flip
-storage.nfs.enabled once the NAS is reachable from this class, rather than commenting this file out
-and losing the reason.
+The RWX tier: per-PVC subdirectories on the NAS, over NFS.
+
+Off by default, and now for a narrower reason than before: the cluster's class has to reach the storage
+LAN. dev does — its nodes carry a second NIC on the air-gapped island (vmbr2, MTU 9000, addresses from
+the island's own DHCP) and reach the appliance as `truenas.storage.hnatekmar.dev`.
+
+The server is that *storage* name rather than the srv one deliberately. The appliance answers NFS on the
+1G management address as well, so `truenas.srv…` would mount successfully over the wrong plane — exactly
+the failure this name exists to prevent. Reachability is what the class has to provide, not the protocol.
 */}}
 {{- if and .Values.onprem .Values.storage.nfs.enabled }}
 apiVersion: argoproj.io/v1alpha1
@@ -27,7 +32,7 @@ spec:
             pathPattern: "${.PVC.annotations.nfs.io/storage-path}"
             onDelete: delete
           nfs:
-            server: 192.168.88.25
+            server: {{ .Values.storage.nfs.server | quote }}
             mountOptions:
               - hard
               - intr
@@ -36,7 +41,7 @@ spec:
               - noacl
               - nfsvers=4.2
               - noatime
-            path: /mnt/data/k8s/clusters/main
+            path: {{ .Values.storage.nfs.path | quote }}
   destination:
     server: "https://kubernetes.default.svc"
     namespace: nfs

@@ -130,6 +130,42 @@ vault was unsealed with `secret/` mounted, a marker key written *before* the sna
 working, and the snapshot token still able to save. To restore for real: decrypt with the offline age key,
 then run the same command against a running, unsealed instance (unseal first if it is fresh).
 
+## Seeding an application secret (worked example: the CSI driver's API key)
+
+A secret reaches a cluster only through its own prefix. `scripts/wire-vault.sh` writes the per-cluster
+read policy as `secret/data/<cluster>/*` plus `list` on the metadata path, so **the same value is written
+once per cluster that consumes it** — one key per prefix, never one shared path.
+
+Worked example: `secret/dev/truenas-csi`, property `api-key`, read on the cluster side by
+`ExternalSecret/truenas-csi-api` through the `local-dev` store (namespace `truenas-csi`).
+
+```bash
+# On the vault host (LXC 120). The root token is read locally and never crosses the wire; the value is
+# fed over stdin, so it lands in no argv on either side.
+ssh root@172.16.40.33
+export BAO_ADDR=http://127.0.0.1:8200                        # the listener is loopback-only by design
+export BAO_TOKEN=$(python3 -c "import json;print(json.load(open('/root/openbao-init-<stamp>.json'))['root_token'])")
+printf '%s' "$API_KEY" | bao kv put secret/dev/truenas-csi api-key=-
+bao kv list secret/dev                                       # cloudflare  smoke-test  truenas-csi
+```
+
+Verify by **length and hash — never by rendering the value** (the rule from the 2026-09-17 incident above):
+
+```bash
+bao kv get -format=json secret/dev/truenas-csi | python3 -c "
+import sys, json, hashlib
+v = json.load(sys.stdin)['data']['data']['api-key']
+print(len(v), hashlib.sha256(v.encode()).hexdigest()[:12])"
+```
+
+No vault-side change is needed for the cluster to use it: the store and role already cover the prefix, and
+the ExternalSecret names the path *inside* the mount (`dev/truenas-csi`), not the mount itself.
+
+**The key**: appliance API keys are user-linked and expire. This one belongs to the `csi` service user
+(Full Admin, expires 2027-09-20); until ESO owns it, a copy lives in
+`/root/network-migration/credentials/truenas-csi.env` on the operator host. Rotate by minting a new key,
+seeding it, letting ESO refresh (`refreshInterval: 1h`), then revoking the old one on the appliance.
+
 ## Still to do
 
 - [x] **Off-host snapshots — working via a hop.** The blocker was *not* the export: it is `*` again, and

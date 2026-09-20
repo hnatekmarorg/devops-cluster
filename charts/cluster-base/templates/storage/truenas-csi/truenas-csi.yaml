@@ -1,0 +1,149 @@
+{{- if and .Values.onprem .Values.storage.truenasCsi.enabled }}
+{{/*
+  The block tier: NVMe-oF/TCP volumes from the NAS, RWO, one zvol each.
+
+  WHY THIS DRIVER. NVMe-oF is first-class only in the official (first-party, GPL-3.0) `truenas-csi`;
+  with any other driver it means SSH to the appliance, which is the thing this estate avoids. It also
+  removes a node prerequisite rather than adding one: the node plugin needs only the `nvme_tcp` and
+  `nvme_fabrics` kernel modules, which the Talos kernel builds in — against iSCSI, which needs the
+  `iscsi-tools` extension plus the `ISCSIADM_HOST_STRATEGY=nsenter` workaround on Talos.
+
+  WHAT IT NEEDS ON THE APPLIANCE (all prepared and verified 2026-09-20):
+    * TrueNAS 25.10.7 with the NVMe-oF service RUNNING;
+    * a TCP port on the island address — `192.168.88.25:4420` (port id 1). The driver queries ports and
+      associates its subsystems with them; it does not need one created by hand a second time;
+    * a parent dataset for the volume zvols (`data/nvmeof`), which the NAS snapshots daily, recursively;
+    * an API key for it, stored in the vault at `secret/<cluster>/truenas-csi` (property `api-key`).
+
+  Ordering: wave -1 the Application, wave 0 the namespace it declares, wave 1 the ExternalSecret that
+  fills it. The namespace is written out here rather than left to CreateNamespace so the secret cannot
+  be applied before its namespace exists.
+*/}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: truenas-csi
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  sources:
+    - chart: truenas-csi
+      # A Helm repo that is a git path: the project publishes `charts/index.yaml` in-tree, so ArgoCD
+      # reads it without a hosted chart repository.
+      repoURL: https://raw.githubusercontent.com/truenas/truenas-csi/master/charts
+      targetRevision: {{ .Values.storage.truenasCsi.chartVersion | quote }}
+      helm:
+        releaseName: truenas-csi
+        valuesObject:
+          truenas:
+            # CONTROL PLANE — the API, over the srv VLAN. The appliance's certificate is self-signed
+            # (CN=localhost), hence insecureSkipTLS; the alternative is trusting a certificate with the
+            # wrong name inside every pod.
+            url: {{ .Values.storage.truenasCsi.url | quote }}
+            defaultPool: {{ .Values.storage.truenasCsi.pool | quote }}
+            # DATA PLANE — the island name, not the srv one. Both resolve; only this one is 10G.
+            nfsServer: {{ .Values.storage.truenasCsi.nfsServer | quote }}
+            nvmeofPortal: {{ .Values.storage.truenasCsi.nvmeofPortal | quote }}
+            iscsiPortal: {{ .Values.storage.truenasCsi.iscsiPortal | quote }}
+            insecureSkipTLS: {{ .Values.storage.truenasCsi.insecureSkipTLS }}
+            # The Secret ESO produces below; the chart itself never sees the key.
+            existingSecret: {{ .Values.storage.truenasCsi.existingSecret | quote }}
+            existingSecretKey: {{ .Values.storage.truenasCsi.existingSecretKey | quote }}
+          # Talos puts the kubelet here. From the chart's own note: if this disagrees with the hostPath
+          # the node plugin mounts, an NFS-backed volume mounts inside the plugin and never reaches
+          # kubelet, so pods silently see local storage.
+          kubeletDir: {{ .Values.storage.truenasCsi.kubeletDir | quote }}
+          namespace:
+            # cluster-base's Application already creates it (CreateNamespace + this wave).
+            create: false
+          metrics:
+            enabled: {{ .Values.storage.truenasCsi.metrics.enabled }}
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: {{ .Values.storage.truenasCsi.namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # Declared below rather than created here, so the namespace exists before the ExternalSecret in
+      # this same chart lands in it — cert-manager gets away with CreateNamespace=true because the
+      # credential there is retried by selfHeal; this ordering is deterministic instead.
+      - CreateNamespace=false
+      - ServerSideApply=true
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.storage.truenasCsi.namespace | quote }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+{{- if .Values.certManager.eso.enabled }}
+---
+# The API key, fetched from the vault. One value per cluster: the vault policy grants
+# `secret/data/<cluster>/*` only, so this path sits under this cluster's prefix and is NOT shared with
+# the other cluster's copy — even though the appliance currently has a single key for the driver.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ .Values.storage.truenasCsi.existingSecret | quote }}
+  namespace: {{ .Values.storage.truenasCsi.namespace | quote }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    # The ESO CRDs come from the external-secrets Application in this same sync; without this a dry run
+    # can happen before they exist and the wave fails on a missing kind.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: {{ .Values.certManager.eso.storeName | quote }}
+    kind: ClusterSecretStore
+  target:
+    name: {{ .Values.storage.truenasCsi.existingSecret | quote }}
+    creationPolicy: Owner
+  data:
+    - secretKey: {{ .Values.storage.truenasCsi.existingSecretKey | quote }}
+      remoteRef:
+        # NOT the KV mount (`certManager.eso.vaultPath`) — this is the path INSIDE the mount. The mount
+        # is `secret`, so `dev/truenas-csi` addresses `secret/data/dev/truenas-csi`.
+        key: {{ .Values.storage.truenasCsi.vaultKey | default (printf "%s/truenas-csi" .Values.clusterName) | quote }}
+        property: {{ .Values.storage.truenasCsi.existingSecretKey | quote }}
+{{- end }}
+{{- if .Values.storage.truenasCsi.storageClasses.nvmeof.enabled }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storage.truenasCsi.storageClasses.nvmeof.name | quote }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    {{- if .Values.storage.truenasCsi.storageClasses.nvmeof.default }}
+    storageclass.kubernetes.io/is-default-class: "true"
+    {{- end }}
+provisioner: csi.truenas.io
+parameters:
+  protocol: "nvmeof"
+  pool: {{ .Values.storage.truenasCsi.pool | quote }}
+  # Relative to the pool: a volume becomes <pool>/<datasetPath>/<pvc-name>. Keep this in step with the
+  # NAS-side snapshot task's dataset — that task is what actually protects the volumes.
+  datasetPath: {{ .Values.storage.truenasCsi.datasetPath | quote }}
+  volblocksize: {{ .Values.storage.truenasCsi.storageClasses.nvmeof.volblocksize | quote }}
+  # Thin, like every zvol already on this appliance. With the pool around 67% the risk is a full pool,
+  # which is watched; thick would instead reserve the space up front and fail at creation time.
+  sparse: {{ .Values.storage.truenasCsi.storageClasses.nvmeof.sparse | quote }}
+  # NO `nvmeof.hostNQN`: it authorises exactly ONE initiator NQN, and Talos derives a per-node NQN from
+  # machine identity, so a single value is wrong for every node but one. The subsystem is therefore open
+  # to any host ON THE AIR-GAPPED ISLAND; DH-CHAP (`nvmeof.dhchapKey` + hostNQN) is the hardening
+  # available if that fabric ever stops being isolated.
+  #
+  # NO `snapshot.schedule` either: the NAS runs a daily recursive task over this dataset, so a
+  # driver-side schedule would snapshot every volume twice.
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+# A block volume must be provisioned where the pod will run, not on whichever node the scheduler names
+# first — the classic reason a block StorageClass sets this.
+volumeBindingMode: WaitForFirstConsumer
+{{- end }}
+{{- end }}

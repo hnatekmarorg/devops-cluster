@@ -116,11 +116,58 @@ clusterAccess:
   subjectPrefix: "sso:"
 
 storage:
-  # The NFS subdir provisioner points at the NAS on the storage LAN (192.168.88.25), which clusters on
-  # other classes cannot reach — it would sit ContainerCreating and time out. Storage is its own pass;
-  # enable this once the NAS is reachable from the cluster's class.
+  # Both tiers live on the NAS; what differs is the protocol and, by design, the plane:
+  #   * block (RWO)  — NVMe-oF/TCP via the official `truenas-csi` driver (`truenasCsi` below)
+  #   * shared (RWX) — NFS via the subdir provisioner (`nfs` below)
+  # Both use the *storage* name (`truenas.storage.hnatekmar.dev` = 192.168.88.25 on the air-gapped 10G
+  # island) rather than the srv one (172.16.40.148, 1G management). The two are deliberately NOT
+  # interchangeable: the appliance answers NFS/iSCSI/NVMe-oF on the management address too, so the
+  # wrong name is a 1G data path rather than an error. The API in contrast stays on the srv name.
   nfs:
+    # Off by default: it needs the cluster's class to reach the storage LAN. dev's nodes carry a second
+    # NIC on the island (vmbr2, MTU 9000) and lease their island addresses from the island's own DHCP.
     enabled: false
+    server: truenas.storage.hnatekmar.dev
+    # The base path must exist and be exported on the appliance: `/mnt/data/k8s` is exported, and the
+    # per-PVC path comes from the PVC's `nfs.io/storage-path` annotation.
+    path: /mnt/data/k8s/clusters/main
+  # The block tier. Requires TrueNAS 25.10+ with the NVMe-oF service enabled; this estate runs 25.10.7
+  # with a TCP port on 192.168.88.25:4420 and the driver's API key in the vault under
+  # `secret/<cluster>/truenas-csi`.
+  truenasCsi:
+    enabled: false
+    # Pinned deliberately: the chart is young, and an unpinned `targetRevision` would let a driver
+    # release land in the cluster with no PR to review.
+    chartVersion: "1.3.0"
+    namespace: truenas-csi
+    # CONTROL PLANE — the API over the srv VLAN, which is routable from every cluster class.
+    url: wss://truenas.srv.hnatekmar.dev
+    # DATA PLANE — the island, for the volume traffic itself.
+    nfsServer: truenas.storage.hnatekmar.dev
+    nvmeofPortal: truenas.storage.hnatekmar.dev:4420
+    iscsiPortal: truenas.storage.hnatekmar.dev:3260
+    # The appliance ships a self-signed certificate (CN=localhost): without this the pods never go Ready.
+    insecureSkipTLS: true
+    pool: data
+    # Volume datasets land at <pool>/<datasetPath>/<pvc-name>. The NAS snapshots this parent daily and
+    # recursively, which is why the StorageClass sets no snapshot.schedule of its own.
+    datasetPath: nvmeof
+    # Talos' kubelet root. Must match the hostPath the node plugin mounts, or NFS-backed volumes mount
+    # inside the plugin and never reach kubelet.
+    kubeletDir: /var/lib/kubelet
+    # The API key, produced by ESO from the vault: `secret/<cluster>/truenas-csi` by default.
+    existingSecret: truenas-csi-api
+    existingSecretKey: api-key
+    vaultKey: ""
+    metrics:
+      enabled: false
+    storageClasses:
+      nvmeof:
+        enabled: true
+        name: truenas-nvmeof
+        default: false
+        volblocksize: 16K
+        sparse: "true"
 
 # Service VIPs. MetalLB hands out the addresses `type: LoadBalancer` Services get, which on this cluster
 # means the ingress controller's — without it that Service is `<pending>` forever and every Ingress is

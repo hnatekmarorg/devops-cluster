@@ -24,12 +24,28 @@ carries (`172.16.30.x` is lab):
 
 | form | example | for |
 |---|---|---|
-| `<host>.<class>.hnatekmar.dev` | `spark1.lab.hnatekmar.dev` | machines, in `mgmt` / `srv` / `lab` / `iot` / `vpn` |
+| `<host>.<class>.hnatekmar.dev` | `spark1.lab.hnatekmar.dev` | machines, in `mgmt` / `srv` / `lab` / `storage` / `iot` / `vpn` |
 | `<service>.srv.hnatekmar.dev` | `gitea.srv.hnatekmar.dev` | services, which belong to a class by definition |
 
 A record states the class a host is **intended** for. While the estate migrates, the address may still be
 the old one; only the address changes when the host moves, and nothing that references the name has to
 change. `ttl` is deliberately short (`5m`) until the carve is done.
+
+## The `storage` class, and why its records are literals
+
+`storage` is the air-gapped 10G fabric — the CRS317 island, `192.168.88.0/24`, jumbo 9000, no gateway by
+design. The class exists so the *plane* is sayable in a name: the NAS answers both as
+`truenas.srv.hnatekmar.dev` (`172.16.40.148`, 1G management — API, UI) and as
+`truenas.storage.hnatekmar.dev` (`192.168.88.25`, 10G), and a storage client has to use the second.
+Nothing fails loudly if it does not: iSCSI `3260`, NFS `2049` and SMB `445` also answer on the 1G
+management address (measured from VLAN 40), so the wrong name means traffic over the wrong plane rather
+than a refused connection.
+
+Every other machine record in `dns.tf` takes its address from a DHCP reservation because the router owns
+those addresses. The island's DHCP belongs to the CRS317 (`dhcp1`), which is deliberately not in IaC, and
+the addresses clients care about there are static on the hosts themselves (TrueNAS `enp6s20` =
+`192.168.88.25`, MTU 9000). So storage records carry a literal and the host remains the source of truth —
+same naming scheme, different owner of the number.
 
 **`iot` has no records and keeps public DNS.** That class must not be able to resolve an internal name,
 which makes resolution itself a class boundary. The exception is deliberate, not an oversight.

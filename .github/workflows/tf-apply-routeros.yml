@@ -59,7 +59,7 @@ jobs:
     # connection during the login for a source outside that list *and logs nothing*, so the fault looked
     # like a runner problem while the runner was innocent. Resolved 2026-09-16; the allow-list now lives
     # in `terraform/routeros/services.tf` so it cannot hide on the device again. See
-    # terraform/docs/ci-runner.md § "Resolved".
+    # terraform/docs/agent/ci-runner.md § "Resolved".
     runs-on: [self-hosted, mgmt, tofu]
     # Bounded: an apply is a writer and must not be cancelled, but it also must not be able to occupy the
     # runner's only slot forever if the device stops answering mid-apply. 20 minutes was the old number

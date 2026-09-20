@@ -4,20 +4,24 @@ The RB5009's configuration is declared here and applied by GitHub Actions on mer
 model: **CI-run OpenTofu** (decision Q13), not Crossplane — a reviewed plan plus a CI apply gives
 the same guarantee with a trail you can read.
 
-**Depth lives elsewhere.** Measured wiring and the VLAN design:
-[`docs/network-wiring.md`](docs/network-wiring.md) (with
-[`network-wiring.svg`](docs/network-wiring.svg) and
-[`network-map-current.svg`](docs/network-map-current.svg), as-is vs proposed). Port-by-port
-assignment: [`docs/vlan-port-assignment.md`](docs/vlan-port-assignment.md). The steps only a human
-can do: [`docs/router-bootstrap-runbook.md`](docs/router-bootstrap-runbook.md). The plan, decision
-register and traps: the notes vault, `home-production-overhaul/`.
+**Read the human layer first.** [`docs/human/README.md`](docs/human/README.md) has the readable
+map, the network schema and the runbooks, written in Simplified Technical English. The measured
+working notes are the archive in [`docs/agent/`](docs/agent/) — start with the wiring and the VLAN
+design: [`docs/agent/network-wiring.md`](docs/agent/network-wiring.md) (with
+[`network-wiring.svg`](docs/agent/network-wiring.svg) and
+[`network-map-current.svg`](docs/agent/network-map-current.svg), as-is vs proposed). Port-by-port
+assignment: [`docs/agent/vlan-port-assignment.md`](docs/agent/vlan-port-assignment.md). The steps
+only a human can do:
+[`docs/agent/router-bootstrap-runbook.md`](docs/agent/router-bootstrap-runbook.md). The plan,
+decision register and traps: the notes vault, `home-production-overhaul/`.
 
 ## Layout
 
 | Path | What |
 |---|---|
 | `routeros/` | the RB5009 module — stage 1 is additive groundwork only (see its README) |
-| `docs/` | wiring, VLAN carve, port table, bootstrap runbook, maps |
+| `docs/human/` | the readable layer — map, schema, runbooks (Simplified Technical English) |
+| `docs/agent/` | the measured working notes — wiring, VLAN carve, port table, runbook, maps |
 | `secrets/` | the state-key policy; the sops delivery path (unused today) |
 | `../scripts/tofu-ci.sh` | the wrapper: role → credentials, backend config, nothing else |
 
@@ -123,7 +127,8 @@ in the module, not router state to accept. Today's plan: `11 to import` (the ado
 
 ## Not here yet, on purpose
 
-Switch configuration (CRS326/CRS804/CSS610), Cloudflare DNS, VM lifecycle via `bpg/proxmox`, and the
-netmap collector — separate modules, separate PRs. Stage 2+ (bridge VLAN filtering, tagged ports,
-DHCP, firewall) is absent because each of those can cut connectivity and each needs its own plan,
-review and window.
+Switch configuration beyond the CRS326 (CRS804, CSS610, CRS317), Cloudflare DNS, VM lifecycle via
+`bpg/proxmox`, and the netmap collector — separate modules, separate PRs. The remaining migration
+waves (device moves, firewall policy, compat retirement) each need their own plan, review and
+window, because each can cut connectivity. The manual steps are in
+[`docs/human/runbooks/`](docs/human/runbooks/).

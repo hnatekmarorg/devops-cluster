@@ -199,7 +199,7 @@ jobs:
             {
               echo "### \`${{ matrix.cluster }}\`: the plan hit the module's health gate"
               echo
-              echo "Expected on any cluster with a hostname override — see \`terraform/docs/cluster-lifecycle.md\`."
+              echo "Expected on any cluster with a hostname override — see \`terraform/docs/agent/cluster-lifecycle.md\`."
               echo "7 of the gate's 8 checks pass; the failing one is the static-pod naming."
             } >> "$GITHUB_STEP_SUMMARY"
           fi

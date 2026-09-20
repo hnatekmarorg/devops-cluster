@@ -95,7 +95,7 @@ spec:
       # A GPU pool is this shape plus a taint (so only GPU workloads land there) and a `templateName`
       # pointing at a GPU template. It also needs a PVE PCI resource mapping — PVE picks the FIRST FREE
       # device from the mapping at VM start, which is what lets two GPU nodes hold two different cards —
-      # and the NVIDIA extensions in the node image. See terraform/docs/cluster-autoscaling.md.
+      # and the NVIDIA extensions in the node image. See terraform/docs/agent/cluster-autoscaling.md.
 {{- with .taints }}
       taints:
 {{ toYaml . | indent 8 }}

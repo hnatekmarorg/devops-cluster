@@ -11,7 +11,7 @@
 # the storage island's switch (CRS317) gained a management link: that device is deliberately denied a
 # default route, so it cannot reach the public pool, and it is the first device on the estate whose
 # clock has no other way to be right. A switch whose clock drifts makes every log, backup filename and
-# certificate check lie (docs/network-wiring.md).
+# certificate check lie (docs/agent/network-wiring.md).
 #
 # So the router becomes the estate's time source. It is already synchronized to the pool, which is what
 # makes this a one-line change; `use_local_clock = false` keeps it honest — it serves the clock it has

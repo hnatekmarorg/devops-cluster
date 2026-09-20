@@ -270,7 +270,7 @@ resource "routeros_ip_dhcp_server_network" "class" {
   gateway = each.value.gateway
   # The router's address *in that class* is the resolver, so resolution never leaves the VLAN and the
   # dependency on the router is explicit. `iot` keeps public DNS deliberately: that class must not be able
-  # to resolve an internal name, which makes resolution itself a class boundary. See docs/dns.md.
+  # to resolve an internal name, which makes resolution itself a class boundary. See docs/agent/dns.md.
   dns_server = each.key == "iot" ? ["8.8.8.8"] : [each.value.gateway]
   # Explicit, not implied: no option 42 from these scopes.
   ntp_none = true

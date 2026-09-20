@@ -1,6 +1,6 @@
 # Router bootstrap runbook — the one-time steps only you can do
 
-Companion to `README.md` (contracts) and `docs/network-wiring.md` (measured state). Every
+Companion to `README.md` (contracts) and `docs/agent/network-wiring.md` (measured state). Every
 step here is a **bootstrap exception**: it exists because the credential or the console
 access it creates cannot be created by the thing it protects. Each one names its
 verification, and each is deleted from here once it becomes automatable.

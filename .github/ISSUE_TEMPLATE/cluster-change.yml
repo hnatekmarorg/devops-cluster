@@ -1,0 +1,32 @@
+name: Request Cluster Change
+description: Request the creation or destruction of a Kubernetes cluster.
+title: "[Cluster] Create or Destroy Cluster"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Provide details for the cluster operation.
+  - type: input
+    attributes:
+      label: Cluster Name
+      placeholder: "e.g. devops"
+    required: true
+  - type: dropdown
+    attributes:
+      label: Action
+      options:
+        - create
+        - destroy
+    required: true
+  - type: textarea
+    attributes:
+      label: Purpose
+      description: Why is this action needed?
+    required: true
+  - type: checkboxes
+    attributes:
+      label: Prerequisites Status
+      options:
+        - Router reservations are applied.
+        - DNS records are created.
+    required: true

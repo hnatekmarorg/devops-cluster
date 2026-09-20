@@ -63,7 +63,7 @@ shape and a cluster only records which ones it turns on:
   not match, and `nvmet.port.create` validates an IPv4/IPv6 address — a hostname fails provisioning
   before any volume exists. `nfsServer` may be (and is) the name, because the node resolves that one.
 - **The CSI driver's API key comes from the vault**, `secret/<cluster>/truenas-csi` (property `api-key`),
-  fetched by ESO — seeding is documented in `terraform/docs/openbao-onprem.md`. Nothing secret goes in
+  fetched by ESO — seeding is documented in `terraform/docs/agent/openbao-onprem.md`. Nothing secret goes in
   this repo for it.
 - NAS prep that the driver assumes (all outside this repo): the NVMe-oF service running with a TCP port
   on `192.168.88.25:4420`, a parent dataset for volume zvols (`data/nvmeof`, snapshotted daily), and the

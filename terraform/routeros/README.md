@@ -2,7 +2,7 @@
 
 Stage 1: **additive groundwork, zero behavioural change.** Contracts (runner, credentials, state,
 workflows) live in [`../README.md`](../README.md); the measured wiring and the VLAN design in
-[`../docs/network-wiring.md`](../docs/network-wiring.md).
+[`../docs/agent/network-wiring.md`](../docs/agent/network-wiring.md).
 
 ## What stage 1 creates
 

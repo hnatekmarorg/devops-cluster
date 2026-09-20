@@ -22,7 +22,7 @@ resource "routeros_ip_dns" "resolver" {
   allow_remote_requests = true
   servers               = ["8.8.8.8", "1.1.1.1"]
   # Safe to enable: the router's input chain drops everything that is not from the LAN (defconf), so this
-  # does not become an open resolver on the WAN side. See docs/dns.md.
+  # does not become an open resolver on the WAN side. See docs/agent/dns.md.
 }
 
 locals {
@@ -32,7 +32,7 @@ locals {
   # addressed infrastructure, and aliases — keep a literal.
   #
   # `minio` is the Terraform state backend: using this name instead of the public one is what removes
-  # the WAN hairpin every plan and apply currently takes (docs/dns.md).
+  # the WAN hairpin every plan and apply currently takes (docs/agent/dns.md).
   dns_records = {
     # mgmt — the plane that administers
     "router.mgmt.hnatekmar.dev" = "172.16.10.1"

@@ -61,7 +61,7 @@ jobs:
     # (`could not login: EOF`): the router's `api` service carried `available-from` set to the compat
     # subnets, and RouterOS closes the connection during the login for a source outside that list *and
     # logs nothing*. Resolved 2026-09-16 — the allow-list lives in `terraform/routeros/services.tf` now,
-    # so it cannot hide on the device again. See terraform/docs/ci-runner.md § "Resolved".
+    # so it cannot hide on the device again. See terraform/docs/agent/ci-runner.md § "Resolved".
     runs-on: [self-hosted, mgmt, tofu]
     # Bounded like the plan job: `tofu` has no client-side timeout, and a wedged call would hold the
     # runner's only slot until someone noticed by hand.

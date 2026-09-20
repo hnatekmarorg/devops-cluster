@@ -131,7 +131,7 @@ resource "routeros_ip_firewall_filter" "reader_no_wan" {
   src_address_list   = "reader-nets"
   out_interface_list = "WAN"
   log_prefix         = "MTX-READER>WAN "
-  comment            = "reader: internet denied by design (e-reader + internal browsing) — docs/firewall-matrix.md"
+  comment            = "reader: internet denied by design (e-reader + internal browsing) — docs/agent/firewall-matrix.md"
 }
 
 # Placed above each class drop it contradicts. Without these the reader reaches nothing: the iot row

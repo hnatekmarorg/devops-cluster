@@ -1,0 +1,37 @@
+name: Report Drift or Incident
+description: Report observed configuration drift or a system incident.
+title: "[Incident/Drift] Report Issue"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Provide details about the observed issue.
+  - type: textarea
+    attributes:
+      label: What is wrong?
+      description: Describe the issue.
+    required: true
+  - type: input
+    attributes:
+      label: Where?
+      description: Which device or cluster is affected?
+    required: true
+  - type: textarea
+    attributes:
+      label: Evidence
+      description: Provide logs, screenshots, or commands that show the issue.
+    required: true
+  - type: textarea
+    attributes:
+      label: Impact
+      description: How does this affect the estate?
+    required: true
+  - type: dropdown
+    attributes:
+      label: Urgency
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+    required: true

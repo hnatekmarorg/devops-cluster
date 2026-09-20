@@ -217,52 +217,18 @@ jobs:
           tofu_wrapper: false # no `node` on PATH for the wrapper on this runner image
 
       # -----------------------------------------------------------------------
-      # DESTROY — the root may be gone from this commit, so restore it first if it is.
-      # -----------------------------------------------------------------------
-      - name: Restore the root as it was before the removal
-        if: matrix.action == 'destroy'
-        run: |
-          set -euo pipefail
-          root="terraform/clusters/${{ matrix.cluster }}"
-
-          # TWO WAYS IN, and only one of them has a root to restore. A dispatch names a cluster that is
-          # still in main — the config is right there in the worktree, so there is nothing to restore and
-          # this step is a no-op. A push that REMOVED the root leaves it absent from HEAD, and that is the
-          # case the checkout below exists for. Deriving which one this is from the event and not from the
-          # filesystem is what broke the dispatch path: `github.event.before` is absent on
-          # workflow_dispatch, so `before` was empty, `git cat-file -e ""` failed, and the job died with
-          # "cannot determine the previous commit" before `tofu` ever ran.
-          if [ -d "$root" ]; then
-            echo "$root is present in this commit — nothing to restore"
-            exit 0
-          fi
-
-          # `tofu destroy` needs the CONFIGURATION, not just the state: the state says what exists, the
-          # config says what to do about it. The removal was a merge, so the config comes from its parent.
-          # Without this the job would fail with "no such directory" and leave the VMs up.
-          before="${{ github.event.before }}"
-          if git cat-file -e "$before" 2>/dev/null; then
-            git checkout "$before" -- "$root"
-            echo "restored ${root} from ${before}"
-          else
-            echo "::error::${root} is absent from HEAD and the previous commit ('${before}') is unusable — restore the root by hand before destroying"
-            exit 1
-          fi
-
-      - name: Teardown — drain, destroy, sweep
-        if: matrix.action == 'destroy'
-        run: ./scripts/teardown-cluster.sh "${{ matrix.cluster }}" --yes
-        env:
-          BAO_TOKEN: ${{ secrets.BAO_TOKEN }}
-
-      # -----------------------------------------------------------------------
-      # APPLY
+      # TOOLING — first, because BOTH paths below need it.
       # -----------------------------------------------------------------------
       # The bootstrap and the teardown drive `kubectl` (19 references) and `helm` (9), and this runner
       # image ships NEITHER — measured inside the container, not assumed. `tofu` is the one tool that IS
-      # provided, by setup-opentofu. Without this step the bootstrap dies inside
-      # `kubectl get --raw /healthz`, whose stderr is discarded, so a missing binary reads as an
-      # unreachable API server and the step sits out its whole wait budget before saying so.
+      # provided, by setup-opentofu. Without this the bootstrap dies inside `kubectl get --raw /healthz`,
+      # whose stderr is discarded, so a missing binary reads as an unreachable API server and the step
+      # sits out its whole wait budget before saying so.
+      #
+      # THIS MUST PRECEDE BOTH PATHS. It was ordered under the APPLY header, which meant the destroy
+      # path reached `teardown-cluster.sh` before anything installed `kubectl` — the script guards its
+      # own tools and refused with exit 69, so a destroy could never run. The install serves the
+      # teardown exactly as much as the bootstrap; the header it sits under is not a scope.
       - name: Install the tools the runner image lacks
         if: matrix.action == 'apply' || matrix.action == 'destroy'
         run: |
@@ -311,6 +277,49 @@ jobs:
             exit 1
           fi
           echo "all present: $(for t in tofu kubectl helm bao jq curl git python3; do printf '%s ' "$t"; done)"
+
+      # -----------------------------------------------------------------------
+      # DESTROY — the root may be gone from this commit, so restore it first if it is.
+      # -----------------------------------------------------------------------
+      - name: Restore the root as it was before the removal
+        if: matrix.action == 'destroy'
+        run: |
+          set -euo pipefail
+          root="terraform/clusters/${{ matrix.cluster }}"
+
+          # TWO WAYS IN, and only one of them has a root to restore. A dispatch names a cluster that is
+          # still in main — the config is right there in the worktree, so there is nothing to restore and
+          # this step is a no-op. A push that REMOVED the root leaves it absent from HEAD, and that is the
+          # case the checkout below exists for. Deriving which one this is from the event and not from the
+          # filesystem is what broke the dispatch path: `github.event.before` is absent on
+          # workflow_dispatch, so `before` was empty, `git cat-file -e ""` failed, and the job died with
+          # "cannot determine the previous commit" before `tofu` ever ran.
+          if [ -d "$root" ]; then
+            echo "$root is present in this commit — nothing to restore"
+            exit 0
+          fi
+
+          # `tofu destroy` needs the CONFIGURATION, not just the state: the state says what exists, the
+          # config says what to do about it. The removal was a merge, so the config comes from its parent.
+          # Without this the job would fail with "no such directory" and leave the VMs up.
+          before="${{ github.event.before }}"
+          if git cat-file -e "$before" 2>/dev/null; then
+            git checkout "$before" -- "$root"
+            echo "restored ${root} from ${before}"
+          else
+            echo "::error::${root} is absent from HEAD and the previous commit ('${before}') is unusable — restore the root by hand before destroying"
+            exit 1
+          fi
+
+      - name: Teardown — drain, destroy, sweep
+        if: matrix.action == 'destroy'
+        run: ./scripts/teardown-cluster.sh "${{ matrix.cluster }}" --yes
+        env:
+          BAO_TOKEN: ${{ secrets.BAO_TOKEN }}
+
+      # -----------------------------------------------------------------------
+      # APPLY
+      # -----------------------------------------------------------------------
 
       - name: Preflight
         if: matrix.action == 'apply'

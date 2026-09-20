@@ -65,8 +65,8 @@ resource "routeros_ip_address" "lan" {
 resource "routeros_interface_bridge_vlan" "compat" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["1"]
-  untagged = ["bridge", "ether2", "ether3", "ether4", "ether6", "ether7", "ether8", "sfp-sfpplus1"]
-  comment  = "compat — everything not yet migrated; does not include ether1 (the escape port)"
+  untagged = ["bridge", "ether2", "ether4", "ether6", "ether7", "ether8", "sfp-sfpplus1"]
+  comment  = "compat — everything not yet migrated; does not include ether1 (the escape port) or ether3 (the Mac's iot access port)"
 }
 
 resource "routeros_interface_bridge_vlan" "mgmt" {
@@ -145,11 +145,18 @@ resource "routeros_interface_bridge_vlan" "vpn_trunk" {
   comment  = "vpn — transport to the switch and balteus's guests; L3 is vlan60-vpn here"
 }
 
+# `ether3` is this class's second access port (the first is the CRS326's `ether16`, the WiFi/TV
+# segment) and it is declared **in this row, extended in place**: RouterOS allows exactly one static
+# bridge-VLAN row per VLAN ID per bridge, and a second one is refused *at apply time* (`vlan already
+# added`) even though the plan shows a clean create. The port's own `pvid` (bridge.tf) is what classifies
+# its untagged ingress; this row is what makes the bridge agree that `ether3` belongs to 70 — and the
+# compat row above is the other half of the same move, which is why it no longer lists `ether3`.
 resource "routeros_interface_bridge_vlan" "iot_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["70"]
   tagged   = ["ether4"]
-  comment  = "iot — carried toward ether16 (the WiFi/TV segment); L3 is vlan70-iot here"
+  untagged = ["ether3"]
+  comment  = "iot — tagged on the uplink (ether4) toward ether16, untagged on ether3 (the Mac); L3 is vlan70-iot here"
 }
 
 # ---------------------------------------------------------------------------

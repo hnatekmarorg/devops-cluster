@@ -28,8 +28,11 @@ module "cluster" {
   cluster_name     = "prod"
   cluster_endpoint = "https://prod-k8s.srv.hnatekmar.dev:6443"
 
-  talos_schematic_id = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
-  talos_version      = "v1.14.1"
+  # No schematic ID here any more: the module registers the image from `talos_schematic_extensions`
+  # (`qemu-guest-agent`, `iscsi-tools`, `util-linux-tools`) and uses the ID the factory returns, so there
+  # is no hash to keep in sync. This root HAD to change when that variable was removed — a root referencing
+  # a variable the module no longer declares does not validate.
+  talos_version = "v1.14.1"
 
   proxmox_node     = "balteus"
   template_vm_id   = 9000

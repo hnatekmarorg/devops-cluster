@@ -32,18 +32,42 @@ variable "kubernetes_version" {
 
 # ---------------------------------------------------------------- the image
 
-variable "talos_schematic_id" {
+variable "talos_schematic_extensions" {
   description = <<-EOT
-    Factory schematic ID. It must include `siderolabs/qemu-guest-agent` or Proxmox cannot read the
-    guest's addresses — which the CCM needs to correlate a node to its VM.
+    Official Talos extensions the node image must carry. The module REGISTERS this as a schematic with the
+    Image Factory (`talos_image_factory_schematic`) and uses the ID it returns, so this list *is* the
+    definition of the node image — there is no hand-minted hash to keep in sync, and editing the list is
+    what changes the image.
+
+    Why each default entry is here:
+      qemu-guest-agent   Proxmox cannot report a guest's addresses without it, and the CCM has nothing to
+                         correlate a node with if it cannot — the node stays uninitialised and nothing
+                         schedules.
+      iscsi-tools        `iscsiadm`, `lsblk` and friends: what a CSI node plugin calls to attach a block
+                         volume. Without it the storage tiers cannot mount anything.
+      util-linux-tools   a real `mount`, plus the NFS helpers — the RWX storage tier is NFS, and the
+                         minimal default userland is not enough for it.
+
+    THE LIST IS NECESSARY BUT NOT SUFFICIENT, which is the trap: it decides what the *installer* image
+    contains, so a new extension reaches
+      - a NEW static node       automatically — it installs from `machine.install.image`;
+      - a Karpenter clone       only when the PVE TEMPLATE is rebuilt: a clone boots the template's
+                                already-installed disk and never reinstalls itself;
+      - an EXISTING static node only when it is rolled (`talosctl upgrade` with the new installer image).
+    See terraform/docs/cluster-autoscaling.md.
   EOT
-  type        = string
+  type        = list(string)
+  default = [
+    "siderolabs/qemu-guest-agent",
+    "siderolabs/iscsi-tools",
+    "siderolabs/util-linux-tools",
+  ]
 }
 
 variable "install_image" {
   description = <<-EOT
     The installer image used when a node installs itself. Leave null to derive
-    `factory.talos.dev/nocloud-installer/<schematic>:<version>`.
+    `factory.talos.dev/nocloud-installer/<registered schematic id>:<version>`.
 
     **nocloud, not metal.** The stock `UnattendedInstallConfig` inherits `machine.install.image`, whose
     default is the *metal* installer — wrong platform for these VMs, and the reason an install attempt
@@ -120,12 +144,45 @@ variable "nodes" {
     # Workers are the opposite case: images want space, and a worker losing its API connection does not take
     # the cluster with it, so they stay on iscsi.
     storage = optional(string)
+
+    # MAC for the second (storage) NIC, used only when `storage_bridge` is set. Leave null and Proxmox
+    # generates one: the island runs DHCP, so it does not need a reservation, and a reservation on a MAC
+    # that PVE regenerates at clone time would be worse than none.
+    storage_mac = optional(string)
   }))
 
   validation {
     condition     = length([for n in var.nodes : n if n.role == "controlplane"]) >= 1
     error_message = "At least one node must have role = \"controlplane\"."
   }
+}
+
+variable "storage_bridge" {
+  description = <<-EOT
+    The SECOND NIC: the Proxmox bridge carrying the storage LAN — the air-gapped `192.168.88.0/24` island
+    (`vmbr2` on balteus). Null, the default, adds no second NIC.
+
+    Why a cluster wants one: every Kubernetes node is meant to have a 10 Gbps link into the storage
+    network, which is where the NAS lives. The island is its own bridge at jumbo MTU, **untagged**, and it
+    runs DHCP — so nothing per-node is needed here, because the machine config's interface selector
+    already matches every physical NIC (`physical = true`) and asks each one for DHCP.
+
+    ORDER IS LOAD-BEARING, which is why this is a second `network_device` block rather than a list input:
+    Proxmox names the interfaces net0, net1, … in declaration order, and the class VLAN tag belongs on
+    net0.
+
+    Applying this to a RUNNING node adds the device to the VM, but the guest only sees it after a reboot —
+    Talos enumerates network interfaces at boot. That is the one-off cost of moving an existing cluster
+    onto the storage network.
+  EOT
+  type        = string
+  default     = null
+}
+
+variable "storage_mtu" {
+  description = "MTU for the storage NIC. The island runs jumbo frames (9000) and the template's net1 says the same; a mismatch shows up as failures that read like a broken NAS rather than a network."
+  type        = number
+  default     = 9000
 }
 
 variable "vlan_id" {

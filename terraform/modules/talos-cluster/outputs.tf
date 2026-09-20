@@ -98,3 +98,23 @@ output "oidc_kubeconfig" {
   # `tofu output oidc_kubeconfig` still prints it when asked for by name.
   sensitive = true
 }
+
+output "schematic_id" {
+  description = <<-EOT
+    The node image's schematic ID, as the provider registered it — read it with
+    `tofu output -raw schematic_id`. Not secret, and worth having on hand: it is what
+    `factory.talos.dev/image/<id>/<version>/nocloud-amd64.raw.xz` is built from.
+  EOT
+  value       = talos_image_factory_schematic.this.id
+}
+
+output "template_image_url" {
+  description = <<-EOT
+    The image a PVE template is built from: `factory.talos.dev/image/<schematic>/<version>/nocloud-amd64.raw.xz`.
+
+    This is the half of the image story a cluster root cannot do by itself — a Karpenter clone boots the
+    TEMPLATE's already-installed disk and never reinstalls, so a new extension reaches burst nodes only
+    when the template has been rebuilt from this URL. See terraform/docs/cluster-autoscaling.md.
+  EOT
+  value       = local.template_image_url
+}

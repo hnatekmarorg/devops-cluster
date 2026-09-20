@@ -49,8 +49,23 @@ roles into the `groups` array.
 
 - `cpu=x86-64-v2-AES` (or the clone panics)
 - the class VLAN tag on its NIC
-- `agent: enabled=1`, and a schematic including `siderolabs/qemu-guest-agent`
+- `agent: enabled=1`, and an image built from the extensions the module registers
+  (`talos_schematic_extensions` — `qemu-guest-agent`, `iscsi-tools`, `util-linux-tools`)
 - a single storage — a cloud-init drive on a second storage gives `Multiple storage IDs found for template`
+- **`net1` on the storage bridge** (jumbo MTU, untagged) when the cluster's nodes are to reach the NAS: a
+  Karpenter clone inherits this NIC, while a static node gets its second one from `storage_bridge`, so the
+  two must name the same bridge
+
+## The second NIC (`storage_bridge`)
+
+`storage_bridge` (default `null`) adds a second `network_device` to every node the factory creates — the
+storage LAN's bridge (`vmbr2` on balteus), at `storage_mtu` (default 9000). Nothing per-node is needed: the
+island runs DHCP and the machine config asks every physical NIC for an address. It is declared *after*
+`net0` because Proxmox numbers interfaces in declaration order and the class VLAN tag belongs on `net0`.
+
+Leave it null and the module is byte-for-byte the previous behaviour — verified with a real plan
+(`Plan: No changes`). Set it on a cluster that is already running and the VMs are reconfigured in place,
+but Talos only sees the new NIC after a reboot.
 
 ## What it hands back
 
@@ -61,6 +76,8 @@ roles into the `groups` array.
 | `join_config` | Karpenter's `ProxmoxNodeClass` secret — rendered **without** a hostname so each clone names itself after its claim |
 | `talosconfig`, `client_configuration` | operations |
 | `nodes` | which address each node landed on |
+| `schematic_id` | the node image's definition, as the factory registered it |
+| `template_image_url` | building the PVE template a Karpenter clone boots — the only place a new extension reaches a burst node |
 
 ## Repairing a broken cluster
 

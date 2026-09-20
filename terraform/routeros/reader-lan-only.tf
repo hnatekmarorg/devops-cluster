@@ -66,6 +66,30 @@
 #     appended accept would sit *below* those drops and never match. Same pattern as `iot_router_dhcp`.
 #     Anchoring a brand-new rule costs nothing; anchoring a live rule would force its replacement.
 #
+# THE IDENTITY IS STILL ONE ADDRESS AND ONE MAC — THE CAVEAT SHRANK, IT DID NOT VANISH
+# ----------------
+# What this file used to confess: the reservation was keyed on a MAC Android **randomizes**, so the
+# reader's entire policy hung on the SSID's private-MAC setting. That is closed — measured 2026-09-20,
+# the device presents `44:CB:AD:5C:A1:52`, locally-administered bit clear, i.e. its own hardware
+# address.
+#
+# What is left is the shape of any mismatch, and it is quiet by construction: a factory reset or a
+# forget-and-rejoin puts Android back on a randomized MAC by default, the reservation stops matching,
+# `reader-nets` matches nothing, and the device silently gets the iot row back — internet, no LAN.
+# Measured 2026-09-20, that is the state this file was found in: the reservation `waiting` with
+# `last-seen=never`, the address list still on the old number, and **zero packets on all seven** reader
+# rules with the device in use. So verification is the counter on `reader_no_wan`: zero packets on a
+# device that is in use means the device is no longer matching.
+#
+# `.25` IS INSIDE THE iot POOL, ON PURPOSE
+# ----------------
+# It is where the device's dynamic lease had already settled, so adopting it re-addresses nothing — and
+# the pool is not a hazard, because a static lease keeps its address *busy*, out of dynamic assignment,
+# for as long as the reservation exists ("the static lease becomes busy until the client reacquires the
+# address"; statically assigned addresses are not probed). `dhcp.tf` leans on the same property for
+# `adonai` (`.40.24`), `openbao` (`.40.33`) and `crs804` (`.10.201`), each inside its class's pool.
+# Re-check it the next time a fresh iot client appears: it should take the next free number, not this.
+#
 # END STATE: if a second reader device appears, this file is the wrong answer — the honest move is a
 # `reader` class (its own VLAN + SSID + DHCP scope + a matrix row), and this file is deleted with it.
 

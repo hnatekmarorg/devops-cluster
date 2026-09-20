@@ -96,7 +96,7 @@ locals {
     #
     # BARE address, no `/32`: RouterOS normalises a single-host address-list entry and stores it
     # without the prefix, so declaring `/32` never converges — `plan` compares the device's
-    # `172.16.70.123` against the config's `172.16.70.123/32` and reports an in-place update on every
+    # `172.16.70.25` against the config's `172.16.70.25/32` and reports an in-place update on every
     # single run. Measured: #112's apply created it and the follow-up plan immediately wanted to
     # rewrite it. The class lists above are CIDR blocks and are unaffected; this is the estate's first
     # host-address entry, which is why it only shows up here.

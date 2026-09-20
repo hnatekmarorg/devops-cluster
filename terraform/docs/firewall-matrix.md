@@ -97,7 +97,7 @@ matrix therefore no longer means *public* resolvers for classes that are allowed
 ## The reader exception (2026-09-19)
 
 One device — a tablet used as an e-reader and to browse internal services — gets the **inverse of its
-class row**: internet denied, internal web allowed. It lives in iot (`172.16.70.123`), whose row is
+class row**: internet denied, internal web allowed. It lives in iot (`172.16.70.25`), whose row is
 "internet ✓ only", so this is a per-device exception in the sense of the last section: a rule with a
 comment and a class reason, reviewed like code (`terraform/routeros/reader-lan-only.tf`).
 
@@ -139,11 +139,19 @@ which is how iot keeps its internet today, and what an appended deny pre-empts. 
 appended (the convention for matrix drops) while the accepts carry `place_before` anchors on the class
 drop they contradict; an appended accept would sit *below* it and never match.
 
-**Fail-open, stated.** The identity is an address claimed by a DHCP reservation keyed on a MAC this
-tablet **randomizes** (locally-administered bit set). Reset the private MAC and the reservation matches
-nothing, the list matches nothing, and the device quietly reverts to the iot row — internet back, LAN
-gone. The durable fix is on the device: *Wi-Fi → the network → Privacy → "Use device MAC"*. Until then,
-the byte counter on the WAN deny is the check: a device in use with zero packets is no longer matching.
+**Fail-open, stated — narrower than it was, not gone.** The identity is still one address claimed by a
+reservation keyed on one MAC, but that MAC is now the device's own (locally-administered bit clear), so
+this no longer rides on the SSID's private-MAC setting. The residual: a factory reset or a
+forget-and-rejoin returns Android to a randomized MAC by default, the reservation then matches nothing,
+the list matches nothing, and the device quietly reverts to the iot row — internet back, LAN gone. Not
+hypothetical: measured 2026-09-20, that is the state this exception was *found* in — reservation
+`waiting`/`last-seen=never`, address list still on the old number, zero packets on all seven reader
+rules, device in use. The check is therefore the byte counter on the WAN deny: a device in use with zero
+packets is no longer matching.
+
+The address (`.25`) sits *inside* the iot pool, deliberately: it is where the device's dynamic lease had
+already settled, so claiming it re-addresses nothing — and a static lease keeps its address busy, i.e.
+out of dynamic assignment, for as long as the reservation exists.
 
 **End state.** A second reader device makes this file the wrong answer. The honest move then is a
 `reader` class — own VLAN, own SSID, own DHCP scope, its own row above — and this exception is deleted

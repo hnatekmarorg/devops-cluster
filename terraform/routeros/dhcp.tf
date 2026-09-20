@@ -83,9 +83,17 @@ locals {
     "inference"    = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
     "balteus-ipmi" = { mac = "3C:EC:EF:73:09:9D", address = "172.16.10.46", class = "mgmt" }
 
-    # The reader — a Redmi Pad 2 Pro used as an e-reader and for internal web browsing (2026-09-19).
-    # It keeps its last octet as its suffix (`.23` → `.123`), the way the Sparks and the BMC keep
-    # theirs, and moves out of the dynamic pool (`.20–.99`) into the band where fixed identities live.
+    # The reader — a Redmi Pad 2 Pro used as an e-reader and for internal web browsing (2026-09-19,
+    # re-keyed 2026-09-20). It keeps the address its own lease had already settled on (`.25`), so
+    # nothing re-addresses: this reservation, `main.tf`'s `reader-nets` entry and the firewall rules in
+    # `reader-lan-only.tf` all take the number from the one `local.reader`.
+    #
+    # `.25` sits INSIDE the iot pool (`.20–.99`) — the opposite of the `.123` it replaced, and not an
+    # oversight: a static lease keeps its address **busy**, i.e. out of dynamic assignment, for as long
+    # as the reservation exists (RouterOS DHCP: "the static lease becomes busy until the client
+    # reacquires the address"; statically assigned addresses are not probed). That is the same claim
+    # `adonai` (`.40.24`), `openbao` (`.40.33`) and `crs804` (`.10.201`) already make, all of them
+    # inside their own class's pool.
     #
     # This reservation is not cosmetic: the firewall identity for the device *is* this address
     # (`reader-nets`, from `local.reader` in reader-lan-only.tf). A dynamic lease would move, and the
@@ -96,10 +104,14 @@ locals {
     # estate's own resolver instead. A resource reference, not the string "reader", so Terraform orders
     # the option set before the lease that names it.
     #
-    # CAVEAT, measured: this MAC is **randomized** by Android (the locally-administered bit is set), so
-    # it is a property of the SSID's private-MAC setting, not of the hardware. If the private MAC is
-    # reset the reservation matches nothing and the device falls back to the iot row — internet back,
-    # LAN gone. The durable fix is on the device: Wi-Fi → the network → Privacy → "Use device MAC".
+    # The MAC is now the device's own — the locally-administered bit is clear, so unlike the randomized
+    # `46:FC:89:…` this used to be keyed on, the reservation rests on hardware and not on the SSID's
+    # private-MAC setting. What did not change is the shape of a mismatch: a factory reset or a
+    # forget-and-rejoin puts Android back on a randomized MAC, the reservation then matches nothing, and
+    # the device falls back to the iot row — internet back, LAN gone. `reader-lan-only.tf` names the
+    # detector for that (`reader_no_wan`'s counter), and it is not theoretical: measured 2026-09-20, this
+    # reservation sat `waiting`/`last-seen=never` while the device held `.25` dynamically, with every
+    # reader rule at zero packets.
     "reader" = {
       mac        = local.reader.mac
       address    = local.reader.address

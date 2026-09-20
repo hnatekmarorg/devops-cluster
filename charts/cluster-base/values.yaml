@@ -136,9 +136,14 @@ storage:
   # `secret/<cluster>/truenas-csi`.
   truenasCsi:
     enabled: false
-    # Pinned deliberately: the chart is young, and an unpinned `targetRevision` would let a driver
-    # release land in the cluster with no PR to review.
+    # THE CHART IS VENDORED in this repository (`charts/truenas-csi`), which is what lets it carry a
+    # hostPath fix that no chart value can express — see that directory's VENDORED.md for the two
+    # deviations and the re-sync recipe. `chartVersion` records which upstream release was copied, so a
+    # re-sync diffs against a known point instead of against nothing.
     chartVersion: "1.3.0"
+    chartRepoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    chartRevision: HEAD
+    chartPath: charts/truenas-csi
     namespace: truenas-csi
     # CONTROL PLANE — the API over the srv VLAN, which is routable from every cluster class.
     url: wss://truenas.srv.hnatekmar.dev

@@ -87,6 +87,9 @@ locals {
     # claim on the address cannot drift apart.
     "adonai.srv.hnatekmar.dev" = local.dhcp_reservations["adonai"].address
 
+    # IoT addresss block
+    "truenas.iot.hnatekmar.dev"            = local.dhcp_reservations["truenas_iot"].address
+    "reader.iot.hnatekmar.dev"            = local.dhcp_reservations["reader"].address
     # The box at `.30` — the estate's **reverse proxy**, and more behind it. Measured on the host: Caddy
     # terminates TLS on 80/443 and is published to the WAN by dstnat; authentik + postgres + redis run
     # behind it as the identity provider; and `lmproxy` behind it routes this agent's model traffic to the

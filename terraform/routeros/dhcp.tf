@@ -106,7 +106,8 @@ locals {
       class      = "iot"
       option_set = routeros_ip_dhcp_server_option_sets.reader.name
     }
-
+    # Truenas has IoT access as well
+    "truenas_iot"            = { mac = "BC:24:11:51:DB:60", address = "172.16.70.148", class = "srv" }
     # The dedicated CI runner (a ZimaBoard, plugged in by hand). It is on a *compat* port today
     # (`.100.126`) and takes this address as soon as it hangs off a mgmt access port — the router's
     # `ether1`, which is already prepared for exactly this (pvid 10, admit-only-untagged). Mgmt class

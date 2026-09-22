@@ -10,22 +10,30 @@ body:
     attributes:
       label: What is wrong?
       description: Describe the issue.
-    required: true
+    validations:
+      required: true
+
   - type: input
     attributes:
       label: Where?
       description: Which device or cluster is affected?
-    required: true
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Evidence
       description: Provide logs, screenshots, or commands that show the issue.
-    required: true
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Impact
       description: How does this affect the estate?
-    required: true
+    validations:
+      required: true
+
   - type: dropdown
     attributes:
       label: Urgency
@@ -34,4 +42,5 @@ body:
         - Medium
         - High
         - Critical
-    required: true
+    validations:
+      required: true

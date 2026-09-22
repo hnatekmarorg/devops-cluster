@@ -15,31 +15,42 @@ body:
         - crs804
         - crs317
         - css610
-    required: true
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Change Summary
       description: Describe the change.
       placeholder: "e.g. Update VLAN 10 subnet"
-    required: true
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Reason
       description: Why is this change needed?
-    required: true
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Risk
       description: What could go wrong?
-    required: true
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Rollback
       description: How to revert the change?
-    required: true
+    validations:
+      required: true
+
   - type: input
     attributes:
       label: Desired Window
       description: Preferred date and time (UTC).
       placeholder: "2026-09-21 14:00 UTC"
-    required: true
+    validations:
+      required: true

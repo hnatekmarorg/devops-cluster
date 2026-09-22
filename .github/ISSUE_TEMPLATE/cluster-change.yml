@@ -10,23 +10,30 @@ body:
     attributes:
       label: Cluster Name
       placeholder: "e.g. devops"
-    required: true
+    validations:
+      required: true
+
   - type: dropdown
     attributes:
       label: Action
       options:
         - create
         - destroy
-    required: true
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Purpose
       description: Why is this action needed?
-    required: true
+    validations:
+      required: true
+
   - type: checkboxes
     attributes:
       label: Prerequisites Status
       options:
-        - Router reservations are applied.
-        - DNS records are created.
-    required: true
+        - label: Router reservations are applied.
+        - label: DNS records are created.
+    validations:
+      required: true

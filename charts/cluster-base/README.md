@@ -105,7 +105,10 @@ amtool check-config <<<"$amber"
 
 ### First install of the stack (order matters once)
 
-1. `./scripts/seed-vault.sh telegram` — the bot token (needs an operator vault token, not CI's).
+1. `./scripts/seed-vault.sh telegram` — the bot token (needs an operator vault token, not CI's). It writes
+   the estate's existing bot, and the destination must already be reachable *by that bot*: a bot cannot
+   start a chat, so talk to it once (or add it to the group) first, or every send fails with
+   `chat not found` while the cluster side looks perfectly healthy.
 2. Set `monitoring.alertmanager.telegram.chatId` in this cluster's values.
 3. **prod only:** apply the cluster's service-name DNS record (`terraform/routeros/dns.tf`,
    `prod_cluster_services`). Dev's wildcard already exists; without prod's, `grafana.prod-k8s...` answers

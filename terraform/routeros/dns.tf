@@ -192,3 +192,22 @@ resource "routeros_ip_dns_record" "dev_cluster_services" {
   ttl     = "5m"
   comment = "${local.managed_by} — the dev cluster's service names (ingress VIP)"
 }
+
+# ---------------------------------------------------------------------------
+# The prod cluster's *service* names — the same shape as dev's above, and the same reasoning for both the
+# regexp form and the leading label. What differs is the alias and the address: `prod-k8s`, and 172.16.49.1
+# as the first address of this cluster's /24 out of the reserved 172.16.48.0/20.
+#
+# Added with the monitoring stack, because `grafana.prod-k8s.srv.hnatekmar.dev` is the first internal
+# service name on this cluster that is meant to be opened in a browser. Without this record the name falls
+# through to the public `*.hnatekmar.dev` wildcard and answers 172.16.100.15 — the reverse proxy, which
+# does not serve this cluster and cannot, since the LAN name is what carries the cluster's certificate.
+# The failure that produces is a login page that loads from the wrong host or not at all, which reads like
+# an ingress or SSO fault rather than a missing record.
+resource "routeros_ip_dns_record" "prod_cluster_services" {
+  regexp  = "^.+\\.prod-k8s\\.srv\\.hnatekmar\\.dev$"
+  type    = "A"
+  address = "172.16.49.1"
+  ttl     = "5m"
+  comment = "${local.managed_by} — the prod cluster's service names (ingress VIP)"
+}

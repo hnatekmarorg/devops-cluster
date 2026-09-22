@@ -1,0 +1,348 @@
+{{- if .Values.monitoring.enabled }}
+{{- $cluster := required "clusterName is required when monitoring.enabled: it labels every alert and names the Grafana OIDC client" .Values.clusterName }}
+{{- $class := required "clusterClass is required when monitoring.enabled: it decides which SSO role maps to Grafana Admin" .Values.clusterClass }}
+{{- if not .Values.crossplane.keycloak.enabled }}
+{{- fail "monitoring.enabled requires crossplane.keycloak.enabled: Grafana is SSO-only here and the OIDC client it logs in with is created by this cluster's own Keycloak writer (templates/crossplane/keycloak-writer.yaml). Enable the writer, or turn monitoring off — a dashboard nobody can reach is worse than no dashboard." }}
+{{- end }}
+{{- $m := .Values.monitoring }}
+{{- $release := $m.releaseName }}
+{{- $host := $m.grafana.host | default (printf "grafana.%s-k8s.srv.hnatekmar.dev" $cluster) }}
+{{- $tg := $m.alertmanager.telegram.enabled }}
+{{- $tgSecret := "alertmanager-telegram" }}
+{{- $heartbeat := and $tg $m.alertmanager.watchdogHeartbeat.enabled }}
+{{/*
+  `required` and not a bare `| int64`: the receiver's `chat_id` is an int64 in Alertmanager's config, so a
+  quoted value has to be converted — and a conversion of the EMPTY string yields 0, i.e. an alert path that
+  renders, syncs, and posts into no chat at all. Failing the render is the only version of this that does
+  not look healthy while doing nothing.
+*/}}
+{{- $chatId := 0 }}
+{{- if $tg }}
+{{- $chatId = required "monitoring.alertmanager.telegram.chatId is required when monitoring.alertmanager.telegram.enabled: it is the Telegram chat the bot posts into" $m.alertmanager.telegram.chatId | int64 }}
+{{- end }}
+{{/*
+  Grafana's URL goes INTO the Alertmanager message templates, which are Go templates and live in
+  `files/` rather than here. Two reasons, and the second is the one that bites:
+
+    1. The message is a real Go template (it iterates `.Alerts`, branches on `.Status`), so it deserves
+       to be a file rather than six escaped lines of YAML.
+    2. A Go template and a Helm template use the SAME delimiters. Put the message body inline in this
+       chart and Helm renders it first — it would try to evaluate the alert loop as a Helm expression
+       and fail the render. A file under `files/` is not processed by Helm at all, so the delimiters
+       arrive at Alertmanager intact; the only thing this chart substitutes is the placeholder below.
+*/}}
+{{- $amMessage := .Files.Get "files/alertmanager-telegram.tmpl" | replace "__GRAFANA_URL__" (printf "https://%s/alerting/list" $host) }}
+{{- $amHeartbeat := .Files.Get "files/alertmanager-heartbeat.tmpl" | replace "__GRAFANA_URL__" (printf "https://%s/alerting/list" $host) }}
+# The monitoring stack: Prometheus + Alertmanager + Grafana and their exporters, as one Application.
+#
+# WHY IT IS ONE APPLICATION AND NOT FOUR. These components are useless apart (Grafana with no datasource,
+# an Alertmanager nothing routes to, exporters nothing scrapes), they share one set of CRDs, and
+# kube-prometheus-stack already ships them as one chart: more Applications would mean more Helm releases
+# managing the same CRDs. The pieces that are NOT in that chart — the scrapers for cert-manager and the
+# External Secrets Operator, and this estate's own alert rules — live next to this file at a later sync
+# wave, because they are `monitoring.coreos.com` resources and can only be applied once the CRDs exist.
+#
+# THE GRAFANA CREDENTIAL IS NOT IN THIS FILE, and that is the interesting part: this cluster's Keycloak
+# writer creates the OIDC client (templates/monitoring/grafana-oidc.yaml) and writes the connection
+# secret straight into the monitoring namespace, so nothing is carried by hand and there is no secret in
+# git. The chart then reads it as an env var —
+#
+#   GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET <- Secret monitoring/grafana-oidc, key attribute.client_secret
+#
+# NOTE the key: the provider writes `attribute.client_secret`, not `client_secret` (measured against the
+# live cluster on 2026-09-22 — a wrong key here is a Grafana that starts and then fails every login with
+# "invalid client secret", which reads like a Keycloak problem rather than a key-name one).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ $release }}
+  namespace: argocd
+  annotations:
+    # Before the scrapers and rules that reference its CRDs (see the note above).
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  ignoreDifferences:
+    # kube-prometheus-stack's CRDs are large and carry an admission caBundle the operator rotates, so
+    # ArgoCD would otherwise report a permanent diff on the annotations alone. Same class of fix as the
+    # metallb Application's.
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jqPathExpressions:
+        - .metadata.annotations
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: {{ $m.chartVersion | quote }}
+    helm:
+      releaseName: {{ $release }}
+      valuesObject:
+        # The chart's CRDs (Prometheus, Alertmanager, ServiceMonitor, PodMonitor, PrometheusRule) come
+        # from a `crds` subchart gated on this key. Stated explicitly for the same reason cert-manager's
+        # is: a chart that installs no CRDs leaves every CR below it unappliable, and the failure looks
+        # like a missing-resource error rather than a missing flag.
+        crds:
+          enabled: true
+
+        prometheus:
+          prometheusSpec:
+            # EVERY alert carries cluster=<name>, from here rather than from each rule: one place to be
+            # right, and it is also the label a remote-written sample gets. It is what makes
+            # `group_by: [cluster, ...]` below mean anything.
+            externalLabels:
+              cluster: {{ $cluster }}
+            retention: {{ $m.prometheus.retention | quote }}
+            retentionSize: {{ $m.prometheus.retentionSize | quote }}
+            # Accept Remote Write from machines this cluster cannot scrape (the 3090 and Spark boxes).
+            # The endpoint is cluster-internal and unauthenticated; publishing it needs an ingress and an
+            # auth decision of its own, which this PR does not take.
+            enableRemoteWriteReceiver: {{ $m.prometheus.remoteWriteReceiver }}
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: {{ $m.prometheus.storageClassName | quote }}
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: {{ $m.prometheus.storageSize | quote }}
+            resources:
+{{ toYaml $m.prometheus.resources | indent 14 }}
+            tolerations:
+{{ toYaml $m.tolerations | indent 14 }}
+
+        alertmanager:
+          alertmanagerSpec:
+            {{- if $tg }}
+            # Mounts Secret monitoring/{{ $tgSecret }} at /etc/alertmanager/secrets/{{ $tgSecret }}/, so the
+            # bot token is a FILE (`bot_token_file`) and never a value: Alertmanager has no file variant of
+            # `chat_id`, which is why that one is a chart value and not a secret.
+            secrets:
+              - {{ $tgSecret }}
+            {{- end }}
+            storage:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: {{ $m.alertmanager.storageClassName | quote }}
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: {{ $m.alertmanager.storageSize | quote }}
+            resources:
+{{ toYaml $m.alertmanager.resources | indent 14 }}
+            tolerations:
+{{ toYaml $m.tolerations | indent 14 }}
+          # THE ALERT PATH. Read this top-down with the file `files/alertmanager-telegram.tmpl` beside it.
+          #
+          # WHAT IS NOT HERE: the rules. They are the chart's own default set (139 alerts, tuned upstream)
+          # plus this estate's additions in templates/monitoring/rules.yaml. What is here is only the part
+          # that decides whether a human is woken up, and how often.
+          #
+          # WHY TELEGRAM AND NOT THE ESTATE'S OWN ntfy. The clusters are in the **srv** class and the
+          # firewall matrix gives srv `responses only` towards mgmt — while ntfy lives on the mgmt plane
+          # (172.16.10.180). So an in-cluster Alertmanager cannot post to it, and building the alert path
+          # on that direction would be building on a row the matrix intends to close. srv -> internet is
+          # allowed, and Telegram is a native Alertmanager receiver: no relay container, no extra service
+          # to keep alive, nothing to break between the alert and the phone. The matrix-legal route to
+          # ntfy is a PULL from mgmt (it may initiate to srv for "monitoring scrape"): something on the
+          # admin plane reading this Alertmanager's /api/v2/alerts — a different design, not taken here.
+          config:
+            global:
+              resolve_timeout: 5m
+            route:
+              receiver: {{ if $tg }}telegram{{ else }}null{{ end }}
+              # Grouped per alertname per namespace so one node outage is a handful of messages rather
+              # than one per pod.
+              group_by: [cluster, alertname, namespace]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 12h
+              routes:
+                # InfoInhibitor is the chart's mechanism for keeping info-level alerts quiet (it fires
+                # whenever a namespace has an info alert and nothing worse, and inhibits that info alert).
+                # Routed to a null receiver, exactly as upstream intends — without this route it would
+                # arrive as a Telegram message, because its own severity is `none` and this route list
+                # replaces the chart's default one.
+                - matchers:
+                    - alertname = "InfoInhibitor"
+                  receiver: "null"
+                {{- if $heartbeat }}
+                - matchers:
+                    - alertname = "Watchdog"
+                  receiver: telegram-heartbeat
+                  group_wait: 1m
+                  group_interval: 10m
+                  # The heartbeat's whole value is its regularity: if this message stops arriving, the
+                  # alert path is broken and nothing else would have said so.
+                  repeat_interval: {{ $m.alertmanager.watchdogHeartbeat.repeatInterval | quote }}
+                {{- end }}
+                {{- if $tg }}
+                - matchers:
+                    - severity = "critical"
+                  receiver: telegram-critical
+                  # A critical alert is re-sent every hour until it resolves. `send_resolved: true` on the
+                  # receiver closes the loop.
+                  group_wait: 10s
+                  repeat_interval: 1h
+                {{- end }}
+            # A critical alert silences the warnings it explains (same alertname, same namespace) — and
+            # the second rule does the same for warning-over-info. The InfoInhibitor rule is upstream's,
+            # restated here because this list REPLACES the chart's default one rather than extending it.
+            #
+            # Not included, deliberately: node-down inhibiting its derived pod alerts. The pod-level rules
+            # do not carry the `node` label the node-level ones do, so a rule written to `equal` on it
+            # would silently never match — a rule that looks like coverage and is none.
+            inhibit_rules:
+              - source_matchers:
+                  - severity = "critical"
+                target_matchers:
+                  - severity =~ "warning|info"
+                equal: [alertname, cluster, namespace]
+              - source_matchers:
+                  - severity = "warning"
+                target_matchers:
+                  - severity = "info"
+                equal: [alertname, cluster, namespace]
+              - source_matchers:
+                  - alertname = "InfoInhibitor"
+                target_matchers:
+                  - severity = "info"
+                equal: [namespace]
+            receivers:
+              - name: "null"
+              {{- if $tg }}
+              - name: telegram
+                telegram_configs:
+                  - bot_token_file: /etc/alertmanager/secrets/{{ $tgSecret }}/bot-token
+                    chat_id: {{ $chatId }}
+                    # HTML, so the message template can use <b> and an <a href> link back to Grafana.
+                    parse_mode: HTML
+                    send_resolved: true
+                    message: |-
+{{ $amMessage | indent 22 }}
+              - name: telegram-critical
+                telegram_configs:
+                  - bot_token_file: /etc/alertmanager/secrets/{{ $tgSecret }}/bot-token
+                    chat_id: {{ $chatId }}
+                    parse_mode: HTML
+                    send_resolved: true
+                    message: |-
+{{ $amMessage | indent 22 }}
+              {{- if $heartbeat }}
+              - name: telegram-heartbeat
+                telegram_configs:
+                  - bot_token_file: /etc/alertmanager/secrets/{{ $tgSecret }}/bot-token
+                    chat_id: {{ $chatId }}
+                    parse_mode: HTML
+                    send_resolved: false
+                    message: |-
+{{ $amHeartbeat | indent 22 }}
+              {{- end }}
+              {{- end }}
+
+        grafana:
+          enabled: true
+          tolerations:
+{{ toYaml $m.tolerations | indent 12 }}
+          persistence:
+            enabled: true
+            storageClassName: {{ $m.grafana.storageClassName | quote }}
+            size: {{ $m.grafana.storageSize | quote }}
+          resources:
+{{ toYaml $m.grafana.resources | indent 12 }}
+          ingress:
+            enabled: true
+            # The repo's ingress convention, not kong's: *.hnatekmar.dev, ALWAYS TLS, ALWAYS the
+            # letsencrypt-cloudflare issuer (DNS-01, so a name outside the wildcard would still issue).
+            ingressClassName: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+            hosts:
+              - {{ $host }}
+            tls:
+              - hosts:
+                  - {{ $host }}
+                secretName: grafana-tls
+          # The OIDC client secret, written into this namespace by the cluster's own Keycloak writer.
+          # `attribute.client_secret` is the provider's key name (see the header comment).
+          envValueFrom:
+            GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
+              secretKeyRef:
+                name: grafana-oidc
+                key: attribute.client_secret
+          # NOTE the nested key: `grafana.grafana.ini` is the subchart's own path for the ini file (its
+          # values carry a key literally named `grafana.ini`), NOT `grafana.ini` here. Measured against
+          # chart 91.4.1: the shorter form renders without error and lands in no ConfigMap at all, so SSO
+          # silently does not exist while Grafana looks healthy. Rendering a key path you have not seen in
+          # the output is how that class of mistake ships.
+          grafana.ini:
+            server:
+              root_url: https://{{ $host }}
+            security:
+              # SSO only: no local login form and no admin/admin to forget about. The price is that a
+              # broken OIDC config locks the UI — recovery is flipping `disable_login_form` in this file
+              # and letting ArgoCD sync, which is a reviewable change rather than a shared password.
+              disable_initial_admin_creation: true
+            auth:
+              disable_login_form: true
+            auth.generic_oauth:
+              enabled: true
+              name: SSO
+              allow_sign_up: true
+              client_id: grafana-{{ $cluster }}
+              # Grafana reads the secret from the env var set above; this line is the indirection.
+              client_secret: $__env{GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET}
+              # microprofile-jwt is what puts the realm's roles into the token's `groups` claim, which is
+              # the only reason the role mapping below can see them at all.
+              scopes: openid profile email microprofile-jwt
+              # The realm the estate's other services use (the hub's Keycloak). This cluster's writer holds
+              # a service account in it with manage-clients and nothing else.
+              auth_url: https://sso.hnatekmar.xyz/realms/master/protocol/openid-connect/auth
+              token_url: https://sso.hnatekmar.xyz/realms/master/protocol/openid-connect/token
+              api_url: https://sso.hnatekmar.xyz/realms/master/protocol/openid-connect/userinfo
+              # WHO IS AN ADMIN is the same question as who may administer the cluster: the SSO roles the
+              # RBAC bindings in templates/rbac/cluster-access.yaml already use. A dev cluster therefore
+              # maps sso:k8s-dev-*, an infra cluster sso:k8s-infra-* — derived from `clusterClass`, so the
+              # two cannot drift apart, and an infra cluster literally cannot emit the dev mapping.
+              role_attribute_path: "contains(groups[*], 'k8s-{{ $class }}-admin') && 'Admin' || contains(groups[*], 'k8s-{{ $class }}-viewer') && 'Viewer'"
+              # Deny anyone the mapping did not name. Without it Grafana signs the user in as Viewer,
+              # which quietly hands every Keycloak account in the realm a dashboard.
+              role_attribute_strict: true
+          # NOT declared here: the Alertmanager datasource. The chart provisions it already — its
+          # `kube-prometheus-stack-grafana-datasource` ConfigMap carries both Prometheus and Alertmanager,
+          # pointed at this release's Services in this namespace — which is what makes *Silences* and
+          # *Alerts* work in the UI during an incident. Declaring it again is not harmless: it is the same
+          # `uid`, and Grafana rejects the second one at provisioning time, so the visible result is a
+          # datasource that exists twice in the values and once in the UI.
+
+        # Control-plane tolerations, both keys, as everywhere else in this chart: this estate renames the
+        # taint between versions and the components below are the ones that must run somewhere.
+        kube-state-metrics:
+          tolerations:
+{{ toYaml $m.tolerations | indent 12 }}
+        prometheus-node-exporter:
+          tolerations:
+{{ toYaml $m.tolerations | indent 12 }}
+        prometheusOperator:
+          tolerations:
+{{ toYaml $m.tolerations | indent 12 }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # REQUIRED: the prometheus-operator CRDs are far past the 262144-byte annotation limit the
+      # client-side apply would use (the same wall the cert-manager and ESO CRDs hit before).
+      - ServerSideApply=true
+      # The Namespace is declared by this chart (templates/monitoring/namespace.yaml) so it can carry the
+      # privileged Pod Security labels node-exporter needs; `CreateNamespace=true` would make a plain one.
+      - CreateNamespace=false
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+{{- end }}

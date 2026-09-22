@@ -1,0 +1,8 @@
+{{- if eq .Status "firing" }}🔥 <b>FIRING</b>{{ else }}✅ <b>RESOLVED</b>{{ end }} — {{ .CommonLabels.alertname }}
+severity: {{ .CommonLabels.severity }}{{ if .CommonLabels.cluster }} · cluster: {{ .CommonLabels.cluster }}{{ end }}{{ if .CommonLabels.namespace }} · ns: {{ .CommonLabels.namespace }}{{ end }}
+{{ range $i, $a := .Alerts }}{{ if lt $i 8 }}
+{{ if $a.Annotations.summary }}• {{ $a.Annotations.summary }}{{ else }}• {{ $a.Labels.alertname }}{{ end }}{{ if $a.Annotations.description }}
+  {{ $a.Annotations.description }}{{ end }}{{ end }}{{ end }}
+{{ if gt (len .Alerts) 8 }}
+… showing 8 of {{ len .Alerts }} alerts in this group — open Grafana for the rest{{ end }}
+<a href="__GRAFANA_URL__">Grafana — alerting</a>

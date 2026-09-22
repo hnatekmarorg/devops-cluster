@@ -103,6 +103,42 @@ spec:
             enabled: true
             vaultKey: common/truenas-csi
 
+        # Monitoring: Prometheus + Alertmanager + Grafana — the same stack as dev, the same Telegram
+        # chat, this cluster's own OIDC client (`grafana-prod` in the shared master realm) and the infra
+        # tier for the dashboards: k8s-infra-admin -> Admin, k8s-infra-viewer -> Viewer.
+        #
+        # WHY IT IS HERE AND NOT ONLY ON DEV: the four things this stack watches — certificates that must
+        # renew, ExternalSecrets that must stay synced, node and volume headroom, and the API server's
+        # error budget — are all things whose failure is invisible until it is an outage. Dev having them
+        # says nothing about prod.
+        #
+        # PREREQUISITES, both real:
+        #   * `secret/common/telegram` in the vault (shared with dev: one bot, one chat).
+        #   * DNS, and it is the reason this PR also touches terraform/routeros/dns.tf: prod has no
+        #     `*.prod-k8s.srv.hnatekmar.dev` record yet, so `grafana.prod-k8s.srv.hnatekmar.dev` falls
+        #     through to the public `*.hnatekmar.dev` wildcard and answers 172.16.100.15 — the reverse
+        #     proxy, which does not serve this cluster. The record is added alongside the stack.
+        monitoring:
+          enabled: true
+          # Roomier than dev on purpose: four nodes, and a week of retention on a cluster whose incidents
+          # want to still be visible after the weekend. Still short of a month, because the value of the
+          # TSDB here is the last few days, not the quarter.
+          prometheus:
+            retention: 15d
+            retentionSize: 24GB
+            storageSize: 30Gi
+            # The same ceiling as dev's, doubled: four nodes and a wider scrape surface, still bounded so
+            # that a cardinality explosion is a pod restart rather than a node losing its memory.
+            resources:
+              limits:
+                memory: 2Gi
+          grafana:
+            storageSize: 2Gi
+          alertmanager:
+            storageSize: 1Gi
+            telegram:
+              chatId: "8640318180"
+
   destination:
     server: https://kubernetes.default.svc   # in-cluster
     namespace: argocd

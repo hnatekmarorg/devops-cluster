@@ -1,0 +1,24 @@
+{{- if .Values.monitoring.enabled }}
+{{- $release := .Values.monitoring.releaseName }}
+# This estate's alert rules, as one PrometheusRule. The rule set itself is
+# files/estate-rules.yaml — a real Prometheus rules file, so `promtool check rules` validates it on its
+# own, and so its Go-template annotations survive Helm's delimiter pass (see that file's header).
+#
+# A PrometheusRule is only evaluated if the Prometheus picks it up, and that is a LABEL match:
+# `ruleSelectorNilUsesHelmValues` defaults to true in kube-prometheus-stack, so the rule set must carry
+# `release: <releaseName>`. Unlabelled, this file applies cleanly, appears in `kubectl get prometheusrules`
+# and is evaluated by nothing — the same silent class of failure as the scrapers in scrapers.yaml.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cluster-base-estate
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    release: {{ $release }}
+    app.kubernetes.io/part-of: cluster-base
+spec:
+{{ .Files.Get "files/estate-rules.yaml" | indent 2 }}
+{{- end }}

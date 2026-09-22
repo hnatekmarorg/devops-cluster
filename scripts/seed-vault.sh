@@ -2,6 +2,7 @@
 # Seed the vault DATA that wire-vault.sh's policies exist for.
 #
 #   BAO_TOKEN=... CF_API_TOKEN=... TRUENAS_CSI_API_KEY=... ./scripts/seed-vault.sh common
+#   BAO_TOKEN=... TELEGRAM_BOT_TOKEN=... ./scripts/seed-vault.sh telegram
 #   BAO_TOKEN=... KEYCLOAK_WRITER_CLIENT_ID=... KEYCLOAK_WRITER_CLIENT_SECRET=... \
 #                ./scripts/seed-vault.sh keycloak-writer <cluster>
 #   BAO_TOKEN=... ./scripts/seed-vault.sh check dev prod
@@ -22,7 +23,7 @@
 # NOT the one wire-vault.sh uses in CI.
 set -euo pipefail
 
-MODE="${1:?usage: BAO_TOKEN=... seed-vault.sh common [--force] | keycloak-writer <cluster> [--force] | check <cluster> [<cluster>...]}"
+MODE="${1:?usage: BAO_TOKEN=... seed-vault.sh common [--force] | telegram [--force] | keycloak-writer <cluster> [--force] | check <cluster> [<cluster>...]}"
 shift
 
 BAO_ADDR="${BAO_ADDR:-https://bao.srv.hnatekmar.dev}"
@@ -133,6 +134,47 @@ hub, by whichever manifest needs them.
 EOF
     ;;
 
+  telegram)
+    # The Alertmanager bot token — the credential behind the estate's only alert path.
+    #
+    # ONE bot for the whole estate, at `secret/common/telegram`: the destination is one place, and
+    # `monitoring.alertmanager.telegram.vaultKey` points here on every cluster, so there is no per-cluster
+    # copy to forget and one thing to rotate. The token is mounted as a FILE (`bot_token_file`), so it
+    # never appears in the rendered Alertmanager config.
+    #
+    # THE CHAT ID IS NOT HERE, deliberately: Alertmanager's telegram receiver takes `chat_id` as a plain
+    # config value with no file variant, so it is a per-cluster value in bootstrap/argocd/<cluster>/.
+    #
+    # The bot must already be able to see the destination BEFORE the first alert: a bot cannot start a
+    # chat, so the operator talks to it once (or adds it to the group) — otherwise every send fails with
+    # "chat not found" and the alert path reads as broken from the cluster's side.
+    FORCE=false
+    if [ "${1:-}" = "--force" ]; then
+      FORCE=true
+    fi
+    printf '\n== the alert path -> secret/common/telegram\n'
+    : "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is not set — the BotFather token Alertmanager posts with}"
+    if exists common/telegram && [ "$FORCE" = false ]; then
+      echo "  secret/common/telegram exists — left alone (--force to overwrite)"
+    else
+      put common/telegram bot-token "$TELEGRAM_BOT_TOKEN"
+    fi
+
+    cat <<'EOF'
+
+Seeded. Alertmanager mounts it at:
+
+  /etc/alertmanager/secrets/alertmanager-telegram/bot-token
+
+The chat id (an id, not a secret) is a per-cluster chart value:
+  * a private chat — the user's own numeric id, the same one the estate's other bots already use
+  * a group        — the `-100...` id, and the bot must already be a member of it
+
+Verify what a cluster will actually find:
+  ./scripts/seed-vault.sh check dev prod
+EOF
+    ;;
+
   common)
     FORCE=false
     if [ "${1:-}" = "--force" ]; then
@@ -181,6 +223,11 @@ EOF
           rc=1
         fi
       done
+      if exists common/telegram; then
+        echo "  ok      secret/common/telegram (the alert path's bot token)"
+      else
+        echo "  note    secret/common/telegram absent — needed only if this cluster sets monitoring.enabled"
+      fi
       if exists "${c}/keycloak-writer"; then
         echo "  ok      secret/${c}/keycloak-writer (the cluster's Keycloak writer)"
       else

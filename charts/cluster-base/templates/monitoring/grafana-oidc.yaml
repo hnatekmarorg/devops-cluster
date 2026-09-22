@@ -1,0 +1,108 @@
+{{- if .Values.monitoring.enabled }}
+{{- $cluster := required "clusterName is required when monitoring.enabled" .Values.clusterName }}
+{{- $class := required "clusterClass is required when monitoring.enabled" .Values.clusterClass }}
+{{- $host := .Values.monitoring.grafana.host | default (printf "grafana.%s-k8s.srv.hnatekmar.dev" $cluster) }}
+{{/*
+  Grafana's OIDC client, created BY THIS CLUSTER, for the cluster it runs on.
+
+  This is the one-writer-per-object rule from templates/crossplane/keycloak-writer.yaml applied to a
+  dashboard: the cluster that consumes a client secret declares the Client object. So there is nothing in
+  the hub to author, nothing to carry across the LAN, and the secret `writeConnectionSecretToRef` points
+  at lands in this cluster's own monitoring namespace, where the Grafana chart reads it.
+
+  THE IDENTITY CAN DO THIS AND ONLY THIS: `manage-clients` + `view-realm` in the realm
+  (crossplane/config/keycloak/clients/crossplane-<cluster>-client.yaml in the hub). Assigning client
+  scopes to a client — what the two resources below do — is part of manage-clients, which is why the
+  groups claim can be arranged from here at all.
+
+  NAME: `grafana-<cluster>`, matching the `forgejo-dev` precedent rather than a bare `grafana`, because
+  the realm is SHARED — the hub and the Hetzner cluster have their own Grafana clients in it, and the
+  master realm must not end up with three clients answering to one id.
+*/}}
+apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+kind: Client
+metadata:
+  name: grafana-{{ $cluster }}
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  deletionPolicy: Delete
+  providerConfigRef:
+    name: sso-hnatekmar-xyz
+  writeConnectionSecretToRef:
+    # Into the namespace Grafana runs in, as key `attribute.client_secret` (the provider's own key name).
+    name: grafana-oidc
+    namespace: monitoring
+  forProvider:
+    realmId: master
+    clientId: grafana-{{ $cluster }}
+    name: Grafana ({{ $cluster }})
+    accessType: CONFIDENTIAL
+    standardFlowEnabled: true
+    # No password grant: it would bypass the GitHub identity providers and MFA, which is the same reason
+    # the repo's kubectl client refuses it.
+    directAccessGrantsEnabled: false
+    serviceAccountsEnabled: false
+    # Absolute, and it matters: Keycloak validates these URL fields server-side and rejects a relative
+    # value outright (`rootUrl: /` answers 400 "Root URL is not a valid URL"), while the Crossplane
+    # resource still applies and reports Synced — the client simply never appears in the realm.
+    rootUrl: https://{{ $host }}
+    baseUrl: https://{{ $host }}
+    webOrigins:
+      - https://{{ $host }}
+    validRedirectUris:
+      - https://{{ $host }}/login/generic_oauth
+    validPostLogoutRedirectUris:
+      - https://{{ $host }}/login/logout
+---
+# The default scopes are what makes the role mapping possible at all: `microprofile-jwt` is the scope
+# that carries the realm's roles in the token's `groups` claim, and Grafana's `role_attribute_path` reads
+# exactly that. It is not among a realm's default client scopes by default, so a client that relies on
+# `fullScopeAllowed` alone gets a token with no groups — and with `role_attribute_strict: true` that is a
+# login that succeeds and grants nothing.
+apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+kind: ClientDefaultScopes
+metadata:
+  name: grafana-{{ $cluster }}-default-scopes
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  deletionPolicy: Delete
+  providerConfigRef:
+    name: sso-hnatekmar-xyz
+  forProvider:
+    realmId: master
+    clientIdRef:
+      name: grafana-{{ $cluster }}
+    defaultScopes:
+      - acr
+      - email
+      - profile
+      - roles
+      - web-origins
+      - microprofile-jwt
+---
+apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+kind: ClientOptionalScopes
+metadata:
+  name: grafana-{{ $cluster }}-optional-scopes
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  deletionPolicy: Delete
+  providerConfigRef:
+    name: sso-hnatekmar-xyz
+  forProvider:
+    realmId: master
+    clientIdRef:
+      name: grafana-{{ $cluster }}
+    optionalScopes:
+      - phone
+      - address
+{{- end }}

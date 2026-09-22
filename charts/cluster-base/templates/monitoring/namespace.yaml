@@ -1,0 +1,25 @@
+{{- if .Values.monitoring.enabled }}
+# The monitoring namespace, declared here rather than created by its Applications (all of which set
+# `CreateNamespace=false`, the same arrangement as metallb-system and truenas-csi).
+#
+# WHY IT CARRIES `privileged`: node-exporter runs as a DaemonSet with hostNetwork, hostPID and hostPath
+# mounts of /proc and /sys — it reports on the node, so it has to be able to see it, and the `baseline`
+# Pod Security profile refuses host namespaces outright. This cluster enforces nothing cluster-wide today,
+# so these labels change nothing now; they are what keeps the stack working on the day it does. The
+# failure they prevent is a quiet one: the DaemonSet's controller looks healthy, ArgoCD says Synced, and
+# no pods ever appear.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    app.kubernetes.io/part-of: cluster-base
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/warn-version: latest
+{{- end }}

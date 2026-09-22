@@ -241,3 +241,107 @@ metallb:
   # The ingress VIP. Pinned, not first-come-first-served: published DNS names point at this address, and
   # an address that could move between resyncs is a DNS record that silently rots.
   ingressVIP: ""
+
+# Monitoring: Prometheus + Alertmanager + Grafana, plus the alert path off the cluster.
+#
+# OFF by default, and that is the same kind of statement as metallb's pool: a monitoring stack is where a
+# cluster says what "healthy" means for IT, and a cluster that must keep working does not want a sandbox's
+# scrape surface. A cluster turns it on in its own values (bootstrap/argocd/<cluster>/cluster-base.yaml).
+#
+# WHAT IT DEPLOYS. kube-prometheus-stack as one ArgoCD Application (Prometheus, Alertmanager, Grafana, the
+# operator, kube-state-metrics, node-exporter), plus the pieces that only make sense against this estate:
+# scrapers for cert-manager and the External Secrets Operator, alert rules for the two failure classes
+# this estate has actually had, and the Alertmanager receiver that reaches a human.
+#
+# ALERTING, AND WHY IT POINTS THE WAY IT DOES. The clusters sit in the **srv** class (172.16.40.0/19) and
+# the firewall matrix gives srv `responses only` towards mgmt — while the estate's own push channel, ntfy,
+# lives on the mgmt plane (172.16.10.180). An in-cluster Alertmanager therefore cannot post to it, and
+# building the alert path on that direction would be building on a row the matrix intends to close.
+# srv -> internet is allowed, and Telegram is a *native* Alertmanager receiver: no relay container, no
+# second service to keep alive, nothing to break between the alert and the phone. If ntfy is wanted as the
+# durable record later, the matrix-legal shape is a PULL from mgmt (mgmt -> srv is explicitly allowed as
+# "monitoring scrape"): something on the admin plane reading this Alertmanager's /api/v2/alerts.
+#
+# DEPENDENCIES, both hard and both enforced by the chart failing rather than by documentation:
+#   * crossplane.keycloak.enabled — Grafana is SSO-only and its OIDC client is created by this cluster's
+#     own Keycloak writer, so nothing here is carried over by hand.
+#   * certManager.eso.* — the Telegram bot token is read from the vault, through the cluster's
+#     ClusterSecretStore, at the path below.
+monitoring:
+  enabled: false
+  # Also the `release:` label every scraper and the rule set carry, and the prefix the Services get. Not
+  # decorative: kube-prometheus-stack's Prometheus selects ServiceMonitors/PodMonitors/PrometheusRules by
+  # that label, so a mismatched value is a stack that scrapes nothing and evaluates nothing while looking
+  # entirely healthy.
+  releaseName: kube-prometheus-stack
+  # Pinned rather than floating; Renovate bumps it.
+  chartVersion: 91.4.1
+  # Both control-plane taint keys, as everywhere else in this chart: this estate renames the taint between
+  # versions, and these are the components that have to run somewhere.
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+
+  prometheus:
+    retention: 7d
+    # A size bound as well as a time window: the TSDB lives on the volume declared below, and a Prometheus
+    # that fills its volume fails in a way that reads like a storage fault.
+    retentionSize: 12GB
+    # THE BLOCK TIER, NOT NFS. Prometheus keeps a WAL and fsyncs it; an NFS mount with the provisioner's
+    # `async` options is the wrong plane for that, and the failure it produces is a corrupted TSDB rather
+    # than a slow one. `truenas-nvmeof` is RWO block over NVMe-oF/TCP — WaitForFirstConsumer, so the PVC
+    # stays Pending until the Prometheus pod exists, which is expected and not a fault.
+    storageClassName: truenas-nvmeof
+    storageSize: 20Gi
+    # Accept Remote Write from machines this cluster cannot scrape (the 3090 and Spark boxes, anything
+    # behind NAT). The endpoint is cluster-internal and unauthenticated: publishing it is a separate
+    # decision (ingress + auth), not taken here.
+    remoteWriteReceiver: true
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+  grafana:
+    # Empty derives `grafana.<clusterName>-k8s.srv.hnatekmar.dev`, which is the name the cluster's wildcard
+    # DNS record answers for (dev: *.dev-k8s.srv.hnatekmar.dev -> 172.16.48.1, the MetalLB ingress VIP).
+    # State it when a cluster needs a different name.
+    host: ""
+    storageClassName: truenas-nvmeof
+    storageSize: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 192Mi
+
+  alertmanager:
+    storageClassName: truenas-nvmeof
+    storageSize: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+
+    telegram:
+      # See the block comment above: srv reaches the internet, and Telegram is a native receiver.
+      enabled: true
+      # The chat the bot posts into. An id, not a secret — and stated per cluster so it can be pointed
+      # elsewhere without touching the chart. Empty fails the render rather than sending alerts nowhere:
+      # the receiver's `chat_id` is required and has no file variant.
+      chatId: ""
+      # The bot token, from the vault. `common/` because one bot serves every cluster (the same reasoning
+      # as the Cloudflare token), which also means no per-cluster secret to forget. Seeded once with
+      # `./scripts/seed-vault.sh telegram`.
+      vaultKey: common/telegram
+
+    # A once-a-day "the alert path is alive" message, riding Alertmanager's own Watchdog alert (always
+    # firing, shipped by the chart). Silence of THIS message is the alert: a delivery path that has stopped
+    # is otherwise indistinguishable from a quiet week, and nothing else notices. Set enabled: false to
+    # turn it off.
+    watchdogHeartbeat:
+      enabled: true
+      repeatInterval: 24h

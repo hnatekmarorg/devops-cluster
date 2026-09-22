@@ -118,6 +118,51 @@ spec:
           truenasCsi:
             enabled: true
 
+        # Monitoring: Prometheus + Alertmanager + Grafana, and the alert path to Telegram. The reasoning —
+        # including why alerts go to Telegram rather than the estate's own ntfy — is in the block comment
+        # on `monitoring` in charts/cluster-base/values.yaml. What is here is what THIS cluster decides.
+        #
+        # Grafana is SSO-only and logs in with `grafana-dev`, a client THIS cluster creates in the shared
+        # master realm (its writer holds manage-clients + view-realm and nothing else). Roles follow the
+        # same SSO groups the RBAC bindings above use: k8s-dev-admin -> Admin, k8s-dev-viewer -> Viewer,
+        # and anybody the mapping does not name is refused rather than defaulted to Viewer.
+        #
+        # PREREQUISITES, one of which is done by hand once:
+        #   * `secret/common/telegram` in the vault — the bot token (./scripts/seed-vault.sh telegram).
+        #     And the bot must already have a chat with the destination, because a bot cannot start one.
+        #   * The hostname needs no DNS work: `*.dev-k8s.srv.hnatekmar.dev` is a regexp record on the
+        #     router that answers every service name on this cluster with its ingress VIP (172.16.48.1).
+        monitoring:
+          enabled: true
+          # Sized for two 4-vCPU/8Gi nodes: small requests on purpose and a short retention. Both volumes
+          # go on the BLOCK tier — a TSDB on NFS-async is how a WAL gets corrupted, and while Grafana's
+          # own state is less sensitive there is no reason to put it on a different plane.
+          prometheus:
+            retention: 7d
+            retentionSize: 12GB
+            storageSize: 20Gi
+            # A LIMIT here, unusually for this repo, because of what this cluster is: two 8Gi nodes, and a
+            # Prometheus with no ceiling is the one pod that can take a node down with it. 1Gi is ~3x what
+            # a cluster this size actually holds, so hitting it means something is wrong (cardinality
+            # explosion) rather than that the stack is busy — and an OOMKill of Prometheus is loud
+            # (`KubePodCrashLooping`) and survivable, unlike the node going away.
+            resources:
+              limits:
+                memory: 1Gi
+          grafana:
+            storageSize: 2Gi
+          alertmanager:
+            storageSize: 1Gi
+            # THE CHAT THE BOT POSTS INTO. A private chat's id is the user's own numeric id, so this is the
+            # same value the estate's other bots already use — and the chart refuses to render without it,
+            # because a `chat_id` of 0 (what an empty value would become) is an alert path that syncs
+            # cleanly and posts into nothing.
+            #
+            # For more than one reader, change this to the id of a GROUP the bot is a member of: it carries
+            # the `-100...` form, which is why this is a string in the values and converted in the chart.
+            telegram:
+              chatId: "8640318180"
+
   destination:
     server: https://kubernetes.default.svc   # in-cluster
     namespace: argocd

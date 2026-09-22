@@ -1,0 +1,49 @@
+{{- if .Values.monitoring.enabled }}
+{{- $m := .Values.monitoring }}
+{{- if $m.alertmanager.telegram.enabled }}
+{{- if not .Values.certManager.eso.enabled }}
+{{- fail "monitoring.alertmanager.telegram.enabled needs a credential source: the bot token is read from the vault through ClusterSecretStore, which certManager.eso renders. Enable certManager.eso (the default) or set monitoring.alertmanager.telegram.enabled=false." }}
+{{- end }}
+{{- $store := required "certManager.eso.storeName is required: it is the ClusterSecretStore the bot token is read through" .Values.certManager.eso.storeName }}
+# The Telegram bot token, from the vault. Alertmanager mounts this Secret as a FILE
+# (`bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram/bot-token`), because that is the only
+# form the receiver offers — and it is also the one that keeps the token out of the rendered Alertmanager
+# config, which lives in a ConfigMap-adjacent Secret that anybody with a read on the monitoring namespace
+# can decode. The `chat_id` next to it has no file variant, which is why that one is a chart value.
+#
+# `common/` AND NOT `<cluster>/`, deliberately: it is one bot, one chat, and the same value on every
+# cluster. Every cluster's read policy already grants `secret/common/*` (scripts/wire-vault.sh), so this
+# needed no policy change — and a per-cluster copy would be two things to rotate instead of one.
+#
+# SEEDED BY HAND, once, per estate:
+#
+#   BAO_TOKEN=... TELEGRAM_BOT_TOKEN=<token> ./scripts/seed-vault.sh telegram
+#
+# WAVE 0 — BEFORE the stack at wave 1, not after it. This Secret is a file Alertmanager mounts, so a
+# Secret that does not exist when the pod is created leaves Alertmanager waiting to start; applying it
+# after the Application would make the first sync wait on a pod that is itself waiting on this Secret.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: alertmanager-telegram
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/part-of: cluster-base
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: {{ $store | quote }}
+    kind: ClusterSecretStore
+  target:
+    name: alertmanager-telegram
+    creationPolicy: Owner
+  data:
+    - secretKey: bot-token
+      remoteRef:
+        key: {{ $m.alertmanager.telegram.vaultKey | quote }}
+        property: bot-token
+{{- end }}
+{{- end }}

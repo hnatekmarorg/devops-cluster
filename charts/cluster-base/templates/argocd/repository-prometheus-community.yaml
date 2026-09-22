@@ -1,0 +1,22 @@
+{{- if .Values.monitoring.enabled }}
+# The Prometheus community Helm repository, registered with ArgoCD — WITHOUT THIS THE STACK NEVER SYNCS.
+#
+# Same trap as repository-nginx.yaml, and same silence: ArgoCD resolves `oci://` sources through the OCI
+# registration, while an `https://` source is an ordinary Helm repo that needs its own registration
+# Secret. With only the OCI repo registered, the kube-prometheus-stack Application is declared by
+# cluster-base and never created, leaving cluster-base OutOfSync on exactly one resource —
+# `Application/kube-prometheus-stack` — and nothing else to go on.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-prometheus-community
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+stringData:
+  name: prometheus-community
+  type: helm
+  url: https://prometheus-community.github.io/helm-charts
+{{- end }}

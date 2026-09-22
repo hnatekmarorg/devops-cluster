@@ -142,6 +142,11 @@ EOF
     # copy to forget and one thing to rotate. The token is mounted as a FILE (`bot_token_file`), so it
     # never appears in the rendered Alertmanager config.
     #
+    # The bot itself is the estate's EXISTING one rather than a freshly created BotFather bot, so there is
+    # one chat to look at and one credential to keep. Accept the coupling knowingly: rotating this token
+    # takes down every cluster's alerts and everything else that posts through that bot at the same
+    # moment, and it is the credential to treat as load-bearing.
+    #
     # THE CHAT ID IS NOT HERE, deliberately: Alertmanager's telegram receiver takes `chat_id` as a plain
     # config value with no file variant, so it is a per-cluster value in bootstrap/argocd/<cluster>/.
     #

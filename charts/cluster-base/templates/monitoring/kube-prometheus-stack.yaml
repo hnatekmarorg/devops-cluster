@@ -84,6 +84,21 @@ spec:
         crds:
           enabled: true
 
+        # Talos exposes no metrics endpoint for these three, so scraping them can only ever produce
+        # "down" — and with it the chart's InstanceUnreachable rules. See `controlPlaneScrapes` in
+        # values.yaml for what was measured and why TargetDown is deliberately left alone.
+        kubeControllerManager:
+          enabled: {{ $m.controlPlaneScrapes }}
+        kubeScheduler:
+          enabled: {{ $m.controlPlaneScrapes }}
+        kubeProxy:
+          enabled: {{ $m.controlPlaneScrapes }}
+        defaultRules:
+          rules:
+            kubeControllerManager: {{ $m.controlPlaneScrapes }}
+            kubeProxy: {{ $m.controlPlaneScrapes }}
+            kubeSchedulerAlerting: {{ $m.controlPlaneScrapes }}
+
         prometheus:
           prometheusSpec:
             # EVERY alert carries cluster=<name>, from here rather than from each rule: one place to be
@@ -323,6 +338,29 @@ spec:
           tolerations:
 {{ toYaml $m.tolerations | indent 12 }}
         prometheusOperator:
+          admissionWebhooks:
+            # THE OPERATOR'S OWN WEBHOOK CERTS, ISSUED BY CERT-MANAGER RATHER THAN BY THE CHART'S
+            # GENERATOR. Not a preference: the generator works through two Jobs and a ServiceAccount that
+            # the chart marks as Helm hooks for all four phases
+            # (`helm.sh/hook: pre-install,pre-upgrade,post-install,post-upgrade`) with a
+            # `hook-succeeded` delete policy. ArgoCD maps those onto its own hook phases and then
+            # ping-pongs: measured on the first sync of this stack, the child Application sat at
+            # retryCount 2 reporting `waiting for completion of hook batch/Job/...-admission-create` while
+            # that Job was already `Complete 1/1` — it never reached Synced, and burned its whole retry
+            # budget over the stack it had already applied.
+            #
+            # cert-manager mode renders a self-signed Issuer and two Certificates instead: no Jobs, no
+            # hooks, nothing for ArgoCD to wait on, and cainjector puts the CA into the webhook configs the
+            # same way it already does for everything else in this estate. The webhook itself stays ON —
+            # it is what refuses an invalid PrometheusRule, and a rules file Prometheus rejects wholesale
+            # is a far worse outcome than a webhook whose cert needs renewing.
+            #
+            # THIS KEY MUST LIVE IN THIS BLOCK. A second `prometheusOperator:` key further up the same
+            # values object is not an error to Helm or to YAML — it is a duplicate key, and the LAST one
+            # wins silently, which is how this setting was first written and then simply discarded while
+            # the render looked perfectly healthy.
+            certManager:
+              enabled: true
           tolerations:
 {{ toYaml $m.tolerations | indent 12 }}
   destination:

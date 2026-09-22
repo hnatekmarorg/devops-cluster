@@ -286,6 +286,24 @@ monitoring:
       operator: Exists
       effect: NoSchedule
 
+  # Scrapes for the three control-plane components Talos does not expose at all. Measured on dev, with
+  # them on: 4 of 24 targets were down, every one of them control-plane
+  # (kube-controller-manager:10257, kube-scheduler:10259, kube-proxy:10249), and the chart's own
+  # `KubeControllerManager/Scheduler/ProxyInstanceUnreachable` rules were pending within minutes.
+  #
+  # A target that can only ever report "down" is worse than no target: it is noise that trains the reader
+  # to ignore the channel, and it lands in the same place as the alerts that matter. So the scrapes are off
+  # and the rules that read them are off with them — the Alerts that would have fired are exactly the ones
+  # whose input no longer exists.
+  #
+  # Note what is deliberately NOT done here: `general.rules`' `TargetDown` stays enabled (it is gated by
+  # `defaultRules.disabled.TargetDown`, not by this flag). Its expression is a per-job *share of targets
+  # down*, so with the scrapes gone the series are gone and it simply has nothing to say about these three
+  # — while still catching a target that really does fall over, my own scrapers included.
+  #
+  # Turn on per cluster if a cluster ever runs a distribution that exposes them.
+  controlPlaneScrapes: false
+
   prometheus:
     retention: 7d
     # A size bound as well as a time window: the TSDB lives on the volume declared below, and a Prometheus

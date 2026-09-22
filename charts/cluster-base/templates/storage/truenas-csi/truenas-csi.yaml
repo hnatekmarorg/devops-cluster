@@ -13,7 +13,8 @@
     * a TCP port on the island address — `192.168.88.25:4420` (port id 1). The driver queries ports and
       associates its subsystems with them; it does not need one created by hand a second time;
     * a parent dataset for the volume zvols (`data/nvmeof`), which the NAS snapshots daily, recursively;
-    * an API key for it, stored in the vault at `secret/<cluster>/truenas-csi` (property `api-key`).
+    * an API key for it, stored in the vault at `secret/common/truenas-csi` (property `api-key`) —
+      shared, because the appliance has one key for the driver and every cluster uses that one.
 
   Ordering: wave -1 the Application, wave 0 the namespace it declares, wave 1 the ExternalSecret that
   fills it. The namespace is written out here rather than left to CreateNamespace so the secret cannot
@@ -95,9 +96,10 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 {{- if .Values.certManager.eso.enabled }}
 ---
-# The API key, fetched from the vault. One value per cluster: the vault policy grants
-# `secret/data/<cluster>/*` only, so this path sits under this cluster's prefix and is NOT shared with
-# the other cluster's copy — even though the appliance currently has a single key for the driver.
+# The API key, fetched from the vault. SHARED by default: the appliance has a single key for the
+# driver, so one copy lives at `secret/common/truenas-csi`, which the cluster's read policy grants
+# alongside `secret/data/<cluster>/*`. A cluster that ever gets its own key overrides `vaultKey` to
+# `<cluster>/truenas-csi` and its own prefix covers it.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:

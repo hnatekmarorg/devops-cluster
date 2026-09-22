@@ -166,17 +166,30 @@ resource "routeros_interface_bridge_port" "ether2" {
   unknown_unicast_flood   = true
 }
 
-# no link — spare.
+# iot access port — the work Mac (`mac-dev` on the wire, `18:4A:53:13:FA:7D`), measured 2026-09-20.
+#
+# This port was a spare with no link. The machine that runs Teams is cabled here, and the port changed
+# class rather than the cable moving — the same one-attribute move every other device migration in this
+# estate makes. iot's row is the *whole* policy it needs ("internet only, internal reach is the VPN's
+# job"), so there is no exception to write and no reservation is needed to key one: a work-managed machine
+# is exactly what the untrusted class is for, and Teams lives entirely in the cloud.
+#
+# The two attributes are the same ones every access port in the estate carries
+# (`docs/agent/vlan-port-assignment.md`): `pvid` names the class, `frame-types` refuses anything tagged, so the
+# device cannot inject itself into another VLAN. `ingress_filtering` was already on.
+#
+# `ether3` is not the router's escape port — `ether1` is (the `mgmt` row's untagged member) — so no
+# documented reachability hatch is spent here. `ether2`/`ether6`/`ether7`/`ether8` remain free.
 resource "routeros_interface_bridge_port" "ether3" {
   auto_isolate            = false
   bpdu_guard              = false
   bridge                  = "bridge"
   broadcast_flood         = true
-  comment                 = "defconf"
+  comment                 = "iot access port — mac-dev (work Mac, Teams)"
   disabled                = false
   edge                    = "auto"
   fast_leave              = false
-  frame_types             = "admit-all"
+  frame_types             = "admit-only-untagged-and-priority-tagged"
   horizon                 = "none"
   hw                      = true
   ingress_filtering       = true
@@ -189,7 +202,7 @@ resource "routeros_interface_bridge_port" "ether3" {
   path_cost               = "10"
   point_to_point          = "auto"
   priority                = "0x80"
-  pvid                    = 1
+  pvid                    = 70
   restricted_role         = false
   restricted_tcn          = false
   tag_stacking            = false

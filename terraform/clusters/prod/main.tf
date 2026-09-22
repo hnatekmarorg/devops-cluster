@@ -39,6 +39,17 @@ module "cluster" {
   template_storage = "iscsi"
   vlan_id          = 40
 
+  # The storage LAN (`192.168.88.0/24`, `vmbr2` on balteus, jumbo MTU, untagged, DHCP): every node gets
+  # its own 10 Gbps link to the NAS, which is the rule both storage tiers are built on. Without it
+  # nothing on this cluster can reach the island, and the failure is a Pending NFS PVC and a
+  # `truenas-nvmeof` provision error — both of which read like a NAS fault rather than a missing NIC.
+  #
+  # NO per-node input is needed: the module's interface selector matches every physical NIC and asks each
+  # one for DHCP, and the island needs no MAC reservation. The cost of turning this on for a RUNNING
+  # cluster is one roll (Proxmox adds the device, Talos only enumerates it at boot) — which is why it is
+  # here from the start rather than added later to a cluster that already carries workloads.
+  storage_bridge = "vmbr2"
+
   # THE DECISION TO REVIEW: sizing and node count. Three control planes because etcd wants an odd quorum
   # and prod is the cluster that must survive losing one. One worker to start, with Karpenter covering
   # peaks — if prod's steady state needs more than one node, that is an argument for a second worker, not

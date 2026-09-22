@@ -37,9 +37,23 @@ spec:
             enabled: true
             storeName: local-prod
             storeServer: https://bao.srv.hnatekmar.dev
-            vaultPath: secret              # the KV mount; per-cluster isolation is the prod/ prefix
+            vaultPath: secret              # the KV mount; the KEY below picks common/ vs prod/
             mountPath: kubernetes-prod     # must match what wire-vault.sh enabled
             vaultRole: local-prod
+            # SHARED, and that is the chart default now: one Cloudflare token for one zone, so one copy
+            # in the vault. A per-cluster copy is what failed here first — `secret/prod/*` never
+            # existed, so cert-manager sat on `SecretSyncedError: Secret does not exist` while the
+            # store itself validated.
+            vaultKey: common/cloudflare
+
+        # This cluster's Keycloak writer — see the dev cluster's values for the reasoning, and
+        # charts/cluster-base/templates/crossplane/keycloak-writer.yaml for the mechanism. Per-cluster by
+        # design: the credential at `secret/prod/keycloak-writer` and the Keycloak client
+        # `crossplane-prod-hnatekmar-xyz` are this cluster's own, so its automation is revocable without
+        # touching dev's.
+        crossplane:
+          keycloak:
+            enabled: true
 
         # Prod's autoscaling ceiling. The families are stated EXPLICITLY now that pools live in values,
         # and they stay c1/t1/s1: deliberately no m1/x1 on a box that is also the storage host.
@@ -51,6 +65,79 @@ spec:
               limits:
                 cpu: "32"
                 memory: 128Gi
+
+        # Service VIPs for this cluster: prod takes 172.16.49.0/24 out of the estate's reserved
+        # 172.16.48.0/20 (the table in charts/cluster-base/values.yaml). The `svc-vips` address list in
+        # terraform/routeros/main.tf carries the whole /20, so this range needed no firewall change.
+        # The /20 sits inside srv's /19 on purpose — VIP and announcing node share a subnet, so MetalLB
+        # stays in L2 mode with no routing protocol involved.
+        #
+        # Needed for parity before anything is deployed: without it the ingress controller's Service is
+        # `<pending>` forever and every Ingress is unreachable, however healthy its certificate looks.
+        # (This cluster came up without it: nginx was declared, had no address to sit on, and its
+        # Application never got created.)
+        metallb:
+          enabled: true
+          pool:
+            addresses:
+              - 172.16.49.1-172.16.49.254
+          ingressVIP: 172.16.49.1
+
+        # Storage over the air-gapped 10G island — the same two tiers as dev, against the same
+        # appliance, addressed by the *storage* name (192.168.88.25) rather than the srv one: the
+        # appliance answers NFS/iSCSI/NVMe-oF on the management address too, so the wrong name is a 1G
+        # data path rather than an error.
+        #
+        # PREREQUISITE, and it is provisioning rather than values: prod's nodes need the island NIC.
+        # terraform/clusters/dev/main.tf sets `storage_bridge = "vmbr2"`; prod's does not, so nothing on
+        # this cluster can reach 192.168.88.0/24 yet. Until that lands an NFS PVC stays Pending and a
+        # `truenas-nvmeof` PVC fails at provision time — both of which read like a NAS fault.
+        storage:
+          # RWX over NFS (`nfs-client`).
+          nfs:
+            enabled: true
+          # RWO block over NVMe-oF/TCP (class `truenas-nvmeof`). The API key is SHARED at
+          # `secret/common/truenas-csi`; the control plane (`wss://truenas.srv.hnatekmar.dev`) is
+          # already reachable from this class.
+          truenasCsi:
+            enabled: true
+            vaultKey: common/truenas-csi
+
+        # Monitoring: Prometheus + Alertmanager + Grafana — the same stack as dev, the same Telegram
+        # chat, this cluster's own OIDC client (`grafana-prod` in the shared master realm) and the infra
+        # tier for the dashboards: k8s-infra-admin -> Admin, k8s-infra-viewer -> Viewer.
+        #
+        # WHY IT IS HERE AND NOT ONLY ON DEV: the four things this stack watches — certificates that must
+        # renew, ExternalSecrets that must stay synced, node and volume headroom, and the API server's
+        # error budget — are all things whose failure is invisible until it is an outage. Dev having them
+        # says nothing about prod.
+        #
+        # PREREQUISITES, both real:
+        #   * `secret/common/telegram` in the vault (shared with dev: one bot, one chat).
+        #   * DNS, and it is the reason this PR also touches terraform/routeros/dns.tf: prod has no
+        #     `*.prod-k8s.srv.hnatekmar.dev` record yet, so `grafana.prod-k8s.srv.hnatekmar.dev` falls
+        #     through to the public `*.hnatekmar.dev` wildcard and answers 172.16.100.15 — the reverse
+        #     proxy, which does not serve this cluster. The record is added alongside the stack.
+        monitoring:
+          enabled: true
+          # Roomier than dev on purpose: four nodes, and a week of retention on a cluster whose incidents
+          # want to still be visible after the weekend. Still short of a month, because the value of the
+          # TSDB here is the last few days, not the quarter.
+          prometheus:
+            retention: 15d
+            retentionSize: 24GB
+            storageSize: 30Gi
+            # The same ceiling as dev's, doubled: four nodes and a wider scrape surface, still bounded so
+            # that a cardinality explosion is a pod restart rather than a node losing its memory.
+            resources:
+              limits:
+                memory: 2Gi
+          grafana:
+            storageSize: 2Gi
+          alertmanager:
+            storageSize: 1Gi
+            telegram:
+              chatId: "8640318180"
 
   destination:
     server: https://kubernetes.default.svc   # in-cluster

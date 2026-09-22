@@ -1,0 +1,86 @@
+# This estate's own alert rules — the ones the chart's defaults (139 of them, tuned upstream) do not
+# cover. Kept as a FILE rather than inline in the PrometheusRule template for two reasons:
+#
+#   1. It is a valid Prometheus rules file, so `promtool check rules files/estate-rules.yaml` validates it
+#      standalone — the same reason the Alertmanager message templates live in files/.
+#   2. The annotations are Go templates naming the affected object ({{ $labels.name }} and friends). A Go
+#      template and a Helm template use the SAME delimiters, so inline in the chart Helm would evaluate
+#      them first and fail the render. Files under files/ are not processed by Helm at all.
+#
+# WHAT IS DELIBERATELY NOT HERE: anything the chart's defaults already cover. Node not ready, pods
+# crash-looping, filesystems filling, PVCs filling, the API server's error budget, etcd, the
+# Prometheus/Alertmanager self-checks — all upstream, all enabled. Adding a second copy would mean two
+# alerts for one fault and a rule set nobody trusts. To see what coverage already exists:
+#
+#   helm template kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     --version <chartVersion> | python3 -c "$(cat)..."   # or simply read the chart's values.yaml
+groups:
+  - name: estate.certificates
+    rules:
+      # Every published name in this estate is TLS'd by cert-manager through DNS-01 against Cloudflare, so
+      # a Certificate that stops renewing takes a hostname out of service with no other symptom. Nothing
+      # upstream covers cert-manager's own Certificate objects (the default rules cover kubelet and
+      # client certs, which are a different thing).
+      - alert: CertManagerCertificateExpiringSoon
+        # 21 days because these are Let's Encrypt 90-day certificates and cert-manager renews at 30 days
+        # remaining: reaching 21 means renewal has already failed and been retried, while there is still
+        # time to look. An alert at 7 days would be a fire, not a warning.
+        expr: |
+          (certmanager_certificate_expiration_timestamp_seconds - time()) < 21 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Certificate {{ $labels.name }} in {{ $labels.namespace }} expires in under 21 days"
+          description: >-
+            Suspect the issuing path rather than the certificate: the Cloudflare API token at
+            `secret/common/cloudflare` in the vault, or the ACME account. A renewal that worked shows in
+            `certmanager_certificate_renewal_timestamp_seconds`.
+      - alert: CertManagerCertificateNotReady
+        expr: |
+          max by (name, namespace) (certmanager_certificate_ready_status{condition="False"}) == 1
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Certificate {{ $labels.name }} in {{ $labels.namespace }} is not ready"
+          description: >-
+            A Certificate that cannot be issued means an Ingress is serving the wrong TLS or none at all.
+            The reason is in the Certificate's own conditions — `kubectl -n {{ $labels.namespace }}
+            describe certificate {{ $labels.name }}` — and it is usually a DNS-01 challenge that could not
+            be published, not a problem with the name it is for.
+
+  - name: estate.external-secrets
+    rules:
+      # THE ESTATE'S RECURRING FAILURE, and the reason this rule exists at all. A ClusterSecretStore
+      # reports Valid while the path inside it does not exist — the store's check exercises the AUTH, not
+      # the data — and every consumer downstream (cert-manager's token, the CSI driver's API key) quietly
+      # loses its value. This is the alert that would have caught it.
+      - alert: ExternalSecretNotSynced
+        expr: |
+          max by (name, namespace) (externalsecret_status_condition{condition="Ready",status="False"}) == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ExternalSecret {{ $labels.namespace }}/{{ $labels.name }} is not Ready"
+          description: >-
+            Check the PATH, not the store. The store's status is the auth path and will say Valid either
+            way; the error on the ExternalSecret (`kubectl -n {{ $labels.namespace }} describe
+            externalsecret {{ $labels.name }}`) says whether the key exists and whether this cluster's
+            read policy covers it.
+      - alert: ExternalSecretSyncErrors
+        # A counter, so this reads the INCREASE over the window and not the running total: these are
+        # recurring failures right now, not the historical count from a past incident. (Measured: the
+        # Cloudflare ExternalSecret on dev carries a permanent non-zero total from a long-fixed outage —
+        # a bare `> 0` would have alerted forever.)
+        expr: |
+          increase(externalsecret_sync_calls_error[15m]) > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ExternalSecret {{ $labels.namespace }}/{{ $labels.name }} is erroring on sync"
+          description: >-
+            Usually the vault is unreachable from this cluster, the auth role's token has expired, or the
+            path moved outside what the cluster's read policy covers.

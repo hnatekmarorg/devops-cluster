@@ -1,0 +1,66 @@
+{{- if .Values.monitoring.enabled }}
+{{- $release := .Values.monitoring.releaseName }}
+# Scrapers for the two components this estate's alert rules read metrics from. kube-prometheus-stack
+# already scrapes itself, kube-state-metrics, node-exporter and the API server; these two are outside it,
+# and both are in it because of things that have already gone wrong here: a certificate that did not
+# renew, and an ExternalSecret that stopped syncing while its secret store still reported Valid.
+#
+# THE `release:` LABEL IS LOAD-BEARING. kube-prometheus-stack's Prometheus selects ServiceMonitors and
+# PodMonitors by label (`serviceMonitorSelectorNilUsesHelmValues` defaults to true, which means "select
+# what this Helm release labels"), so a monitor with any other label is applied, looks right in `kubectl
+# get servicemonitor`, and is scraped by nothing. The same applies to the PrometheusRule in rules.yaml.
+#
+# WAVE 3, NOT 1: these are monitoring.coreos.com CRs, and the CRDs arrive with the kube-prometheus-stack
+# Application at wave 1. ArgoCD health-gates waves, so wave 3 is applied once that Application is
+# Healthy; the SyncOption below is belt-and-braces for the same first sync.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cert-manager
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    release: {{ $release }}
+    app.kubernetes.io/part-of: cluster-base
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cert-manager
+      app.kubernetes.io/instance: cert-manager
+  namespaceSelector:
+    matchNames:
+      - cert-manager
+  endpoints:
+    # The Service's port name, verified on the live cluster: `tcp-prometheus-servicemonitor` -> 9402.
+    - port: tcp-prometheus-servicemonitor
+      interval: 30s
+      path: /metrics
+---
+# ESO is a PodMonitor and not a ServiceMonitor because its controller has no Service to scrape — measured:
+# the only Service in its namespace is the webhook, on 443. The controller's metrics are on the pod, on a
+# port literally named `metrics` (8080).
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: external-secrets
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    release: {{ $release }}
+    app.kubernetes.io/part-of: cluster-base
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: external-secrets
+  namespaceSelector:
+    matchNames:
+      - external-secrets
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+{{- end }}

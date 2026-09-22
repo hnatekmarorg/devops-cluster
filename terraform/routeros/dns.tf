@@ -91,12 +91,25 @@ locals {
     # claim on the address cannot drift apart.
     "adonai.srv.hnatekmar.dev" = local.dhcp_reservations["adonai"].address
 
-    # `iot` gets one name, for the one device in it that anyone needs to name: the reader — named for the
-    # role the firewall already gives it, so lease, rule and name all say the same word. The NAS is *not*
-    # named in this sub-zone even though it has an interface here: it is reached by the name of the plane
-    # that serves it, `truenas.srv.hnatekmar.dev`, and a second name for the same services would only be a
-    # second way to be wrong.
+    # `iot` gets a name only where the rest of the estate has to say the device, and the reader is the
+    # first: named for the role the firewall already gives it, so lease, rule and name all say the same
+    # word. The NAS is *not* named in this sub-zone even though it has an interface here: it is reached by
+    # the name of the plane that serves it, `truenas.srv.hnatekmar.dev`, and a second name for the same
+    # services would only be a second way to be wrong.
     "reader.iot.hnatekmar.dev" = local.dhcp_reservations["reader"].address
+
+    # The second: the work Mac (`mac-dev` in `dhcp.tf`, `ether3`). It is the one machine in iot that is
+    # reached *into* — mgmt ssh/VNC to it, and the port flip is only verified by somebody getting there —
+    # so the name exists for the other direction, not for the device. It follows its reservation for the
+    # reason the reservation exists: a static lease holds the address out of dynamic assignment, so the
+    # name resolves to the address that is *claimed* rather than to whatever the pool last handed out.
+    #
+    # What this record deliberately does not do is make the name resolve *on* the Mac: iot is handed
+    # `8.8.8.8` and may not ask the router (docs/agent/dns.md), so the device cannot resolve even its own name.
+    # A `dig` from the Mac proves nothing about this entry. As the header says, a record is not access
+    # control either — everything here resolves for any client that can reach the resolver, and the
+    # firewall matrix decides who may then reach `172.16.70.116`.
+    "mac-dev.iot.hnatekmar.dev" = local.dhcp_reservations["mac-dev"].address
 
     # The box at `.30` — the estate's **reverse proxy**, and more behind it. Measured on the host: Caddy
     # terminates TLS on 80/443 and is published to the WAN by dstnat; authentik + postgres + redis run
@@ -178,4 +191,23 @@ resource "routeros_ip_dns_record" "dev_cluster_services" {
   address = "172.16.48.1"
   ttl     = "5m"
   comment = "${local.managed_by} — the dev cluster's service names (ingress VIP)"
+}
+
+# ---------------------------------------------------------------------------
+# The prod cluster's *service* names — the same shape as dev's above, and the same reasoning for both the
+# regexp form and the leading label. What differs is the alias and the address: `prod-k8s`, and 172.16.49.1
+# as the first address of this cluster's /24 out of the reserved 172.16.48.0/20.
+#
+# Added with the monitoring stack, because `grafana.prod-k8s.srv.hnatekmar.dev` is the first internal
+# service name on this cluster that is meant to be opened in a browser. Without this record the name falls
+# through to the public `*.hnatekmar.dev` wildcard and answers 172.16.100.15 — the reverse proxy, which
+# does not serve this cluster and cannot, since the LAN name is what carries the cluster's certificate.
+# The failure that produces is a login page that loads from the wrong host or not at all, which reads like
+# an ingress or SSO fault rather than a missing record.
+resource "routeros_ip_dns_record" "prod_cluster_services" {
+  regexp  = "^.+\\.prod-k8s\\.srv\\.hnatekmar\\.dev$"
+  type    = "A"
+  address = "172.16.49.1"
+  ttl     = "5m"
+  comment = "${local.managed_by} — the prod cluster's service names (ingress VIP)"
 }

@@ -47,12 +47,15 @@ the addresses clients care about there are static on the hosts themselves (TrueN
 `192.168.88.25`, MTU 9000). So storage records carry a literal and the host remains the source of truth —
 same naming scheme, different owner of the number.
 
-**`iot` has a record now, and still keeps public DNS.** The boundary is resolution, not naming: the
+**`iot` has records now, and still keeps public DNS.** The boundary is resolution, not naming: the
 segment is handed `8.8.8.8` and may not ask the router, so no record in this list makes an internal name
-resolvable *inside* iot. What the one `iot` record does is let everything else name the segment:
+resolvable *inside* iot. What the `iot` records do is let everything else name the segment:
 `reader.iot.hnatekmar.dev` is the reader, whose resolver *is* the router by a per-lease DHCP option (the
-one exempted device — see the reader section of the matrix). The NAS gets no name in this sub-zone: it has
-an interface here, but its services are reached where they are served, as `truenas.srv.hnatekmar.dev`.
+one exempted device — see the reader section of the matrix), and `mac-dev.iot.hnatekmar.dev` is the work
+Mac on `ether3` — the one host in the class that mgmt reaches *into*, which is the direction the name is
+for. Neither name resolves on the device itself; a `dig` from it is not a test of these records. The NAS
+gets no name in this sub-zone: it has an interface here, but its services are reached where they are
+served, as `truenas.srv.hnatekmar.dev`.
 
 **Records are not access control.** Everything in `dns.tf` resolves for any client that can reach the
 resolver; the firewall matrix decides who may reach what.

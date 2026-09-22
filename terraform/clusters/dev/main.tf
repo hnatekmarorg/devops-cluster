@@ -30,12 +30,13 @@ module "cluster" {
   template_storage = "iscsi"
   vlan_id          = 40
 
-  # The storage LAN (`192.168.88.0/24`, vmbr2 on balteus, jumbo MTU, DHCP). Uncomment to give every node
-  # in this cluster its own 10 Gbps link to the NAS — the rule the storage tiers are built on.
+  # The storage LAN (`192.168.88.0/24`, vmbr2 on balteus, jumbo MTU, DHCP): every node has its own
+  # 10 Gbps link to the NAS, which is the rule both storage tiers are built on.
   #
-  # OFF, deliberately: applying it reconfigures both running VMs, and Talos only sees a new NIC after a
-  # reboot, so enabling this rolls the cluster once. The NIC is inert until a CSI node plugin wants to
-  # mount something, which is the point at which to pay for the reboot.
+  # ON, and the comment used to describe it as deliberately off — it was enabled when the storage tiers
+  # went in, and the one-off cost was a roll: applying this reconfigures the running VMs and Talos
+  # enumerates a NIC only at boot, so the reboot is what binds the interface. A NEW cluster pays that
+  # cost at build time instead, which is why prod sets it from the start.
   storage_bridge = "vmbr2"
 
   # Addresses and MACs come from the router's reservations (terraform/routeros/dhcp.tf), so a rebuild

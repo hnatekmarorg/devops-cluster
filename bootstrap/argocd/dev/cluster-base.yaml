@@ -58,6 +58,8 @@ spec:
           pools:
             - name: talos-nocloud-template
               templateName: talos-nocloud-template
+              bootDevice:
+                storage: ssd-fast
               instanceFamilies: ["c1", "t1", "s1", "m1", "x1"]
               limits:
                 cpu: "128"

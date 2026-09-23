@@ -130,20 +130,41 @@ variable "nodes" {
     disk_gb   = number
     # Where this node's disk lives. Defaults to template_storage (iscsi) when unset.
     #
-    # SET IT TO LOCAL STORAGE FOR CONTROL PLANES. etcd's write path is fsync-bound, and on network block
-    # storage that latency is measurable: on the dev cluster's CP (disk on iscsi, LVM over iSCSI)
+    # A CONTROL PLANE'S DISK MUST BE ON THE FASTEST TIER THAT EXISTS — and "local" is not a synonym for
+    # fast. etcd's write path is fsync-bound: when the CP's WAL fsync stalled, the damage was
     #
-    #   etcd: "apply request took too long"  took=118ms / 138ms / 350ms   (expected-duration 100ms)
+    #   etcd: "slow fdatasync" took=1.19s / 1.51s / 7.81s        (warn threshold 1s)
+    #   etcd: "apply request took too long"  took=100..405ms, 646 warns (expected-duration 100ms)
     #   apiserver -> etcd-client: "rpc error: code = Unavailable desc = etcdserver: request timed out"
     #
     # and once the API cannot answer for longer than a lease deadline, EVERY lease holder exits at once:
-    # kube-controller-manager, kube-scheduler, the CCM and Karpenter (which panics with
-    # "leader election lost"). The visible damage is a half-built VM — Karpenter had cloned it, then died
-    # before resizing the disk, attaching the cloud-init ISO and starting it.
+    # kube-controller-manager, kube-scheduler, the CCM and Karpenter (which panics with "leader election
+    # lost"). The visible damage is a restart storm, not a slow cluster.
     #
+    # Both tiers have now been the wrong answer here, in opposite ways. On iscsi the CP measured those
+    # 118/138/350ms applies. Moved to local-lvm it measured WORSE stalls, because balteus' only local
+    # device is a single consumer NVMe that also carries pve-data and the NAS VM's disks. Measured side by
+    # side (Proxmox `blockstat`, flush avgs over the same 7h window):
+    #
+    #   dev-cp1 on local-lvm : flush 22.7ms  write 37.0ms  read 5.7ms
+    #   dev-w1  on ssd-fast  : flush  4.0ms  write  3.1ms  read 0.65ms
+    #
+    # So: MEASURE IT (`/nodes/<node>/qemu/<vmid>/status/current` → blockstat[dev].flush_total_time_ns ÷
+    # flush_operations) before choosing, and expect the answer to be "the NAS SSD mirror", not "local".
     # Workers are the opposite case: images want space, and a worker losing its API connection does not take
-    # the cluster with it, so they stay on iscsi.
+    # the cluster with it.
     storage = optional(string)
+
+    # Disk parameters, declared rather than inherited from the provider's defaults. iothread=true puts a
+    # node's virtio I/O on its own thread, which matters most on the one disk that is fsync-bound; ssd=true
+    # tells the guest it is flash. `discard` is where the roles differ in practice — a worker passes TRIM
+    # through to the NAS, while the CP's etcd volume does not.
+    #
+    # These exist because they are NOT cosmetic: left unset they read as drift against a disk that already
+    # runs with them set, and an apply rewrites them on a running node.
+    iothread = optional(bool, true)
+    ssd      = optional(bool, true)
+    discard  = optional(string, "on")
 
     # MAC for the second (storage) NIC, used only when `storage_bridge` is set. Leave null and Proxmox
     # generates one: the island runs DHCP, so it does not need a reservation, and a reservation on a MAC

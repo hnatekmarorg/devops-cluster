@@ -38,10 +38,33 @@ different one.
 
 ## Verified (2026-09-16)
 
-- **The Fedora traps did not bite.** SELinux `Enforcing` with `k3s-selinux` installed and the policy module
-  loaded, zero AVC denials; and the firewalld/CNI canary **passes** — a pod resolves
-  `kubernetes.default.svc.cluster.local`, so flannel traffic is not being eaten while Traefik's 80/443 stays
-  open. `cni0`/`flannel.1` are not in a trusted zone and did not need to be.
+- SELinux: `Enforcing`, `k3s-selinux` installed, policy module loaded, zero AVC denials. That trap is
+  genuinely absent here.
+- **firewalld: the cheap canary passed, and the trap bit anyway — hours later, somewhere else.** A pod
+  *does* resolve `kubernetes.default.svc.cluster.local` with `cni0`/`flannel.1` outside a trusted zone, so
+  the DNS test says fine. What that test hides is pod → *node* traffic: `metrics-server` could not reach
+  the kubelet —
+
+  ```
+  Failed to scrape node err="Get \"https://172.16.40.24:10250/metrics/resource\": dial tcp ..."
+  Failed probe metric-storage-ready err="no metrics to serve"
+  ```
+
+  — so it never became ready, so `v1beta1.metrics.k8s.io` sat **`False (MissingEndpoints)` from boot**, and
+  an unavailable aggregated API fails *discovery* — which blocks **namespace finalization cluster-wide**.
+  It surfaced as `clusterctl init` hanging forever on its cert-manager verification: the test namespace it
+  creates could not be deleted. Fixed with the k3s-recommended posture:
+
+  ```bash
+  firewall-cmd --permanent --zone=trusted --add-interface=cni0
+  firewall-cmd --permanent --zone=trusted --add-interface=flannel.1
+  firewall-cmd --reload     # metrics-server then goes 1/1, and the APIService turns True
+  ```
+
+  Lesson worth keeping: **a passing pod-DNS canary does not clear firewalld.** Check
+  `kubectl get apiservice` (every entry `True`) and `kubectl -n kube-system get pods | grep metrics-server`
+  (`1/1`). An unhealthy aggregated API is not cosmetic — it fails discovery, and discovery failure blocks
+  namespace deletion, which is how it reached something as unrelated as `clusterctl`.
 - Resolver is `172.16.40.1` — the router, i.e. internal names resolve here as they do everywhere else.
 - Registry access works (a `busybox:1.36` pull took 3.2s). Worth knowing before the spike pulls CAPI and
   provider images.

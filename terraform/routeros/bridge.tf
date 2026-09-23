@@ -175,7 +175,7 @@ resource "routeros_interface_bridge_port" "ether2" {
 # is exactly what the untrusted class is for, and Teams lives entirely in the cloud.
 #
 # The two attributes are the same ones every access port in the estate carries
-# (`docs/vlan-port-assignment.md`): `pvid` names the class, `frame-types` refuses anything tagged, so the
+# (`docs/agent/vlan-port-assignment.md`): `pvid` names the class, `frame-types` refuses anything tagged, so the
 # device cannot inject itself into another VLAN. `ingress_filtering` was already on.
 #
 # `ether3` is not the router's escape port — `ether1` is (the `mgmt` row's untagged member) — so no

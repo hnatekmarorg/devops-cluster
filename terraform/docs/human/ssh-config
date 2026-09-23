@@ -1,0 +1,81 @@
+# The known servers use internal DNS names, which resolve only through the estate resolver (the router).
+
+Host *
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+    StrictHostKeyChecking accept-new
+
+Host homelab-router router
+    HostName router.mgmt.hnatekmar.dev
+    User admin
+
+Host homelab-crs326 crs326
+    HostName crs326.mgmt.hnatekmar.dev
+    User admin
+
+Host homelab-crs804 crs804
+    HostName crs804.mgmt.hnatekmar.dev
+    User admin
+
+# Hand-applied; not yet in IaC
+Host homelab-crs317 crs317
+    HostName crs317.mgmt.hnatekmar.dev
+    User admin
+
+Host homelab-runner runner
+    HostName runner.mgmt.hnatekmar.dev
+    User root
+
+Host homelab-personal-hermes personal-hermes
+    HostName personal-hermes.mgmt.hnatekmar.dev
+    User root
+
+Host homelab-truenas truenas
+    HostName truenas.srv.hnatekmar.dev
+    User root
+
+Host homelab-bao bao
+    HostName bao.srv.hnatekmar.dev
+    User root
+
+Host homelab-proxy proxy
+    HostName proxy.srv.hnatekmar.dev
+    User root
+
+Host homelab-edge edge
+    HostName edge.srv.hnatekmar.dev
+    User root
+
+Host homelab-gitea gitea
+    HostName gitea.srv.hnatekmar.dev
+    User root
+
+Host homelab-spark1 spark1
+    HostName spark1.lab.hnatekmar.dev
+    User martin
+
+Host homelab-spark2 spark2
+    HostName spark2.lab.hnatekmar.dev
+    User martin
+
+Host homelab-spark3 spark3
+    HostName spark3.lab.hnatekmar.dev
+    User martin
+
+Host homelab-spark4 spark4
+    HostName spark4.lab.hnatekmar.dev
+    User martin
+
+Host homelab-inference inference
+    HostName inference.lab.hnatekmar.dev
+    User martin
+
+# The record balteus.srv.hnatekmar.dev is a known gap
+# Host homelab-balteus balteus
+#     HostName 172.16.100.38
+#     User root
+
+# IPMI
+# Host bmc-balteus
+#     HostName 172.16.10.46
+#     User root

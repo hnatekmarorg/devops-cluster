@@ -5,8 +5,8 @@ and both bonds are declared exactly as the device reports them; the plan is impo
 else.
 
 Contracts (runner, credentials, state, workflows) live in [`../README.md`](../README.md). The port
-plan and the class design are in [`../docs/vlan-port-assignment.md`](../docs/vlan-port-assignment.md)
-and [`../docs/vlan-port-assignment.svg`](../docs/vlan-port-assignment.svg).
+plan and the class design are in [`../docs/agent/vlan-port-assignment.md`](../docs/agent/vlan-port-assignment.md)
+and [`../docs/agent/vlan-port-assignment.svg`](../docs/agent/vlan-port-assignment.svg).
 
 ## Why it exists before the change
 

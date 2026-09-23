@@ -64,7 +64,7 @@ crossplane:
     # revoking one cluster's automation cannot strand the other's.
     vaultKey: ""
 
-# The autoscaling idiom — see terraform/docs/cluster-autoscaling.md.
+# The autoscaling idiom — see terraform/docs/agent/cluster-autoscaling.md.
 # Proxmox-specific, so gated on `onprem` above.
 karpenter:
   enabled: true
@@ -82,7 +82,7 @@ karpenter:
       # can see the template. The wrong one yields `TemplatesNotFound`, which reads like a template-name
       # problem and is not one. NOTE for a second PVE host: `iscsi` is an LVM over one iSCSI LUN and
       # reports shared=0, so the template AND this storage must exist under the same names on every node
-      # a clone may land on — see terraform/docs/cluster-autoscaling.md.
+      # a clone may land on — see terraform/docs/agent/cluster-autoscaling.md.
       storage: iscsi
     # Karpenter's own grid: c1=1:2 t1=1:3 s1=1:4 m1=1:8 x1=1:16, N ∈ {1,2,4,8,16}. The instance type IS
     # the node size (m1.4VCPU-32GB → 4 cores / 32 GiB). Adding a family only widens what may be chosen.

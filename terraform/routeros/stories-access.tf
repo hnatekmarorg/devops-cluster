@@ -21,7 +21,7 @@
 #
 # WHY A DESTINATION-SCOPED BLOCK AND NOT A CLASS ROW
 # ----------------
-# The matrix's rows are class-to-class (`docs/firewall-matrix.md`), and a row is the wrong instrument for
+# The matrix's rows are class-to-class (`docs/agent/firewall-matrix.md`), and a row is the wrong instrument for
 # this: mgmt → srv is ✓, srv → srv is ✓ (its own segment), and `lab → srv` is still log-only — so *today*
 # four of the six classes can reach this box, and none of those rows is the thing being changed. What is
 # being changed is one host's reachability, so it is written as one host's policy: a destination list

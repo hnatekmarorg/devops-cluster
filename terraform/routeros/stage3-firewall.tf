@@ -1,6 +1,6 @@
 # Stage 3, phase 2 — the matrix enforced for iot, and still counted.
 #
-# terraform/docs/firewall-matrix.md is the argument; this file is its first enforced slice. Phase 1
+# terraform/docs/agent/firewall-matrix.md is the argument; this file is its first enforced slice. Phase 1
 # (PR #60) measured with `action=log`: a six-hour-and-one-read sample showed iot's only spontaneous
 # internal traffic was a phone reaching a *published* service through the WAN address, plus whatever the
 # probe was told to try. Martin's call, 2026-09-15: **iot gets WAN and nothing else, no exceptions** —

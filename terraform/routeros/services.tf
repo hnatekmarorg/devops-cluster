@@ -3,7 +3,7 @@
 #
 # Measured 2026-09-16, and it cost most of a day: `api` carried
 # `available-from=172.16.100.0/24,172.16.101.0/24` — the compat subnet, plus the vestigial work subnet
-# that has carried no link since the work experiment (`docs/network-wiring.md`). A source outside that
+# that has carried no link since the work experiment (`docs/agent/network-wiring.md`). A source outside that
 # list has its connection closed **during the login**, and the router writes nothing to the log for it,
 # so the symptom was `could not login: EOF` from a runner whose reachability, credential and health were
 # all fine — while the *same* runner logged in to the CRS326 without complaint, which is what made it

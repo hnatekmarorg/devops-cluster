@@ -64,7 +64,7 @@ Error: could not login: EOF; close %!w(<nil>)
 
 **What it was.** The router's `api` service carried
 `available-from=172.16.100.0/24,172.16.101.0/24` — the compat subnet, plus the vestigial work subnet
-that has carried no link since that experiment (`docs/network-wiring.md`). RouterOS completes the TCP
+that has carried no link since that experiment (`docs/agent/network-wiring.md`). RouterOS completes the TCP
 handshake and then closes the connection for a source outside that list, and **writes nothing to the
 log**. The runner sits in mgmt (`172.16.10.202`), outside the list; the ARC runners were in compat
 (`172.16.100.146`), inside it — which is why the same workflow, credential and destination worked on ARC

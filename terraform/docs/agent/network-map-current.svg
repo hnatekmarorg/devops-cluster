@@ -208,5 +208,5 @@
 <text x="48.0" y="1074.0" font-size="9" fill="#64748b" text-anchor="start" font-weight="normal" opacity="1.0">Open, tracked elsewhere: Wi-Fi is one untrusted segment by decision; the WAN sits inside the LAN bridge until the pre-carve change; atuin's ports are reserved; bukefalos' bond idles.</text>
 <rect x="30" y="1204" width="1660" height="44" rx="10" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="1,0"/>
 <text x="48.0" y="1228.0" font-size="9.5" fill="#94a3b8" text-anchor="start" font-weight="normal" opacity="1.0">Sources: RouterOS /interface, /interface/bridge/{port,vlan,host}, bond + PPPoE reads · PVE guest net* configs · cluster API · DHCP leases</text>
-<text x="1672.0" y="1228.0" font-size="9" fill="#64748b" text-anchor="end" font-weight="normal" opacity="1.0">portfolio: devops-cluster · terraform/docs/network-wiring.md carries the detail</text>
+<text x="1672.0" y="1228.0" font-size="9" fill="#64748b" text-anchor="end" font-weight="normal" opacity="1.0">portfolio: devops-cluster · terraform/docs/agent/network-wiring.md carries the detail</text>
 </svg>

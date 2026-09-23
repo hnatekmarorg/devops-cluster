@@ -2,7 +2,7 @@
 #
 # The workflows run on self-hosted runners whose labels actionlint cannot know — the
 # estate's on-prem ARC scale set, and the dedicated mgmt-class runner that the
-# device-touching workflows moved to (see terraform/docs/ci-runner.md). Declaring them here keeps
+# device-touching workflows moved to (see terraform/docs/agent/ci-runner.md). Declaring them here keeps
 # `actionlint` useful as a pre-merge check of the CI configuration itself:
 #
 #   actionlint -color .github/workflows/*.yml

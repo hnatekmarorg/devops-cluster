@@ -22,7 +22,7 @@ resource "routeros_ip_dns" "resolver" {
   allow_remote_requests = true
   servers               = ["8.8.8.8", "1.1.1.1"]
   # Safe to enable: the router's input chain drops everything that is not from the LAN (defconf), so this
-  # does not become an open resolver on the WAN side. See docs/dns.md.
+  # does not become an open resolver on the WAN side. See docs/agent/dns.md.
 }
 
 locals {
@@ -32,7 +32,7 @@ locals {
   # addressed infrastructure, and aliases — keep a literal.
   #
   # `minio` is the Terraform state backend: using this name instead of the public one is what removes
-  # the WAN hairpin every plan and apply currently takes (docs/dns.md).
+  # the WAN hairpin every plan and apply currently takes (docs/agent/dns.md).
   dns_records = {
     # mgmt — the plane that administers
     "router.mgmt.hnatekmar.dev" = "172.16.10.1"
@@ -105,7 +105,7 @@ locals {
     # name resolves to the address that is *claimed* rather than to whatever the pool last handed out.
     #
     # What this record deliberately does not do is make the name resolve *on* the Mac: iot is handed
-    # `8.8.8.8` and may not ask the router (docs/dns.md), so the device cannot resolve even its own name.
+    # `8.8.8.8` and may not ask the router (docs/agent/dns.md), so the device cannot resolve even its own name.
     # A `dig` from the Mac proves nothing about this entry. As the header says, a record is not access
     # control either — everything here resolves for any client that can reach the resolver, and the
     # firewall matrix decides who may then reach `172.16.70.116`.

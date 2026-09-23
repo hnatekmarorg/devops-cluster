@@ -1,0 +1,56 @@
+name: Request Device Change Window
+description: Request a window to apply changes to a physical or virtual device.
+title: "[Device] Request window for same-day change"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Provide details for the requested change window.
+  - type: dropdown
+    attributes:
+      label: Device
+      options:
+        - router
+        - crs326
+        - crs804
+        - crs317
+        - css610
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Change Summary
+      description: Describe the change.
+      placeholder: "e.g. Update VLAN 10 subnet"
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Reason
+      description: Why is this change needed?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Risk
+      description: What could go wrong?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Rollback
+      description: How to revert the change?
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Desired Window
+      description: Preferred date and time (UTC).
+      placeholder: "2026-09-21 14:00 UTC"
+    validations:
+      required: true

@@ -21,7 +21,7 @@ module "cluster" {
   #
   # What the extension list does and does not achieve: a NEW node gets the extensions at install, a
   # Karpenter clone only when the PVE template is rebuilt (it boots the template's installed disk and never
-  # reinstalls), and an existing node only when it is rolled. See terraform/docs/cluster-autoscaling.md.
+  # reinstalls), and an existing node only when it is rolled. See terraform/docs/agent/cluster-autoscaling.md.
   talos_version = "v1.14.1"
 
   proxmox_node   = "balteus"
@@ -116,7 +116,7 @@ output "schematic_id" {
 }
 
 output "template_image_url" {
-  description = "The image a PVE template is built from — see terraform/docs/cluster-autoscaling.md."
+  description = "The image a PVE template is built from — see terraform/docs/agent/cluster-autoscaling.md."
   value       = module.cluster.template_image_url
 }
 

@@ -1,71 +1,36 @@
-# Kubernetes Infrastructure as Code
+# Kubernetes infrastructure as code
 
-This repository contains infrastructure-as-code (IaC) configurations for deploying and managing a Kubernetes cluster using **ArgoCD**, **Crossplane**, **SOPS**, and **Helm**. It is designed to automate the provisioning of control planes, node groups, storage, networking, and application services.
+This repository declares the estate clusters, the network devices, and the supporting Helm charts. ArgoCD converges the clusters.
 
----
+## Repository layout
 
-## 📁 Directory Structure
+| Directory | Description |
+| :--- | :--- |
+| `bootstrap/` | ArgoCD Application manifests bootstrap the clusters. They include `bootstrap/argocd/dev`, `bootstrap/argocd/prod`, `bootstrap/argocd/devops`, and `bootstrap/init.yaml`. |
+| `charts/` | Supporting Helm charts including `cluster-base`, `truenas-csi`, `vllm-proxy`, `llama-cpp`, `thingsboard`, and `crossplane-providers`. |
+| `devops/` | GitOps for the devops cluster. It includes `devops/argocd/` and `devops/crossplane/`. |
+| `manual/` | A manual ArgoCD values override. |
+| `scripts/` | Lifecycle and secret scripts including `tofu-ci.sh`, `bootstrap-cluster.sh`, `teardown-cluster.sh`, `wire-vault.sh`, `kubeconfig.sh`, `tf-plan-check.sh`, `encrypt.sh`, `decrypt.sh`, and `matrix-order-check.py`. |
+| `spike/` | Throwaway experiments including `spike/capmox-talos`. |
+| `terraform/` | Network device modules, cluster factory, and cluster roots. See `terraform/README.md` and `terraform/docs/human/README.md`. |
+| `.github/` | Workflows, CODEOWNERS, and PR and issue templates. |
+| `AGENTS.md` | Instructions for AI agents that work in this repository. |
 
-- **`.gitignore`**: Excludes sensitive files and IDE artifacts.
-- **`bootstrap/argocd/devops/`**: Contains ArgoCD Application manifests for cluster components (control plane, CPU/GPU nodes, etc.).
-- **`charts/minio-crossplane/`**: Helm charts for deploying MinIO object storage via Crossplane.
-- **`devops/argocd/`**: ArgoCD Application manifests for services like Prometheus, Rook, MetalLB, and secrets.
-- **`manual/argocd/`**: Manual overrides for cluster-specific configurations.
-- **`scripts/`**: Shell scripts for SOPS encryption/decryption and key initialization.
-- **`scripts/decrypt.sh` / `scripts/encrypt.sh`**: Automate secret management with SOPS.
-- **`scripts/init-key.sh`**: Initializes the SOPS age key secret in Kubernetes.
+## Where to start
 
----
+- For the network and the estate, see `terraform/docs/human/infra-map.md`.
+- For the Terraform delivery model, see `terraform/README.md`.
+- For a manual task, see `terraform/docs/human/runbooks/README.md`.
+- For the measured working notes, see `terraform/docs/agent/`.
 
-## 🛠️ Getting Started
+## Change model
 
-1. **Prerequisites**
-   - `kubectl`
-   - `argo` CLI
-   - `sops` (for secret management)
-   - `helm` (for Crossplane/MinIO)
+A plan on the pull request is the review artifact. A merge is the authorization to apply the change. Device and cluster workflows are unarmed until the repository variable is set. The variables are `ROUTEROS_CI_ENABLED` and `CLUSTER_CI_ENABLED`. The pull request templates enforce the plan summary and the rollback.
 
-2. **Initialize the Cluster**
-   ```bash
-   # Initialize SOPS key
-   ./scripts/init-key.sh
+## Secrets
 
-   # Decrypt secrets (if needed)
-   ./scripts/decrypt.sh
+SOPS encrypts Kubernetes secrets. These secrets live in `devops/argocd/secrets/`. The scripts `scripts/encrypt.sh` and `scripts/decrypt.sh` operate on these secrets. No secret goes into the repository in clear text.
 
-   # Apply ArgoCD Applications
-   kubectl apply -f bootstrap/init.yaml
-   ```
+## Dependencies
 
-3. **Verify Deployment**
-   ```bash
-   kubectl get applications -n argocd
-   ```
-
----
-
-## 🔐 Secret Management
-
-- Secrets are encrypted using **SOPS** and stored in `devops/argocd/secrets/enc.*.yaml`.
-- Decryption is handled by `scripts/decrypt.sh`, which uses the age key mounted at `/etc/sops-age-key-file`.
-
----
-
-## 📌 Notes
-
-- Replace placeholder values in `charts/minio-crossplane/values.yaml` with your actual MinIO endpoint and credentials.
-- Ensure the control plane IP in `bootstrap/argocd/devops/main.yaml` matches your environment.
-- GPU/CPU node groups are defined in `bootstrap/argocd/devops/gpu.yaml` and `bootstrap/argocd/devops/cpu.yaml`.
-
----
-
-## 🧩 Contributing
-
-- Add new ArgoCD Applications to `devops/argocd/`.
-- Add new Helm charts to `charts/`.
-- Add manual overrides to `manual/argocd/` if needed.
-- Always encrypt secrets before committing.
-
-## 🤖 Renovate Automation
-
-This repository uses [Renovate](https://github.com/renovatebot/renovate) to automatically keep dependencies up-to-date. The configuration is defined in `.github/renovate.json` and the workflow is triggered hourly via `.github/workflows/renovate.yml` using the `gha-runner-scale-set-hnatekmarorg` runner.
+Renovate keeps dependencies current. The configuration is in `.github/renovate.json`.

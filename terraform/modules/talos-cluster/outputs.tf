@@ -114,7 +114,7 @@ output "template_image_url" {
 
     This is the half of the image story a cluster root cannot do by itself — a Karpenter clone boots the
     TEMPLATE's already-installed disk and never reinstalls, so a new extension reaches burst nodes only
-    when the template has been rebuilt from this URL. See terraform/docs/cluster-autoscaling.md.
+    when the template has been rebuilt from this URL. See terraform/docs/agent/cluster-autoscaling.md.
   EOT
   value       = local.template_image_url
 }

@@ -54,7 +54,7 @@ variable "talos_schematic_extensions" {
       - a Karpenter clone       only when the PVE TEMPLATE is rebuilt: a clone boots the template's
                                 already-installed disk and never reinstalls itself;
       - an EXISTING static node only when it is rolled (`talosctl upgrade` with the new installer image).
-    See terraform/docs/cluster-autoscaling.md.
+    See terraform/docs/agent/cluster-autoscaling.md.
   EOT
   type        = list(string)
   default = [

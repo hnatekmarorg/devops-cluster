@@ -27,6 +27,18 @@ spec:
         releaseName: nfs-subdir-external-provisioner
         valuesObject:
           volume-name: nfs-async
+          # The chart defaults to giving the provisioner its own PVC for scratch space (mounted at
+          # /persistentvolumes). This cluster has NO default StorageClass, so that claim renders
+          # `storageClassName: ""` with a label selector nothing satisfies: it can never bind, so the
+          # provisioner pod can never schedule. And because the provisioner IS what would bind NFS
+          # claims, nothing inside the cluster can break that deadlock -- the nfs-client class gets
+          # created, reports Ready, and stays permanently empty behind a Pending pod.
+          #
+          # The provisioner needs no local state; with this off the chart falls back to an emptyDir.
+          # (Pointing persistence.storageClass at truenas-nvmeof would also work, but makes the NFS
+          # tier depend on the CSI tier for no benefit.)
+          persistence:
+            enabled: false
           storageClass:
             name: nfs-client
             pathPattern: "${.PVC.annotations.nfs.io/storage-path}"

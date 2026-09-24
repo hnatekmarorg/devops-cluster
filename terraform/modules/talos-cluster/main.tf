@@ -126,13 +126,24 @@ resource "proxmox_virtual_environment_vm" "node" {
 
   # Sized here rather than in the template, so one template serves every shape.
   #
-  # The datastore is PER NODE: the control plane belongs on LOCAL storage (etcd is fsync-bound — see the
-  # note on the `storage` field in variables.tf) while workers want the room iscsi has for images. The
-  # clone still sources the template from wherever it lives; this only chooses where the clone's disk lands.
+  # The datastore is PER NODE, and "fast" is a measurement rather than an address: on balteus the only
+  # local device is the single boot NVMe, which already carries pve-data and the NAS VM's own disks, so
+  # the NAS SSD mirror (`ssd-fast`) is the lower-latency tier for a node disk. See the note on the
+  # `storage` field in variables.tf for the flush numbers. The clone still sources the template from
+  # wherever it lives; this only chooses where the clone's disk lands.
+  #
+  # iothread/ssd/discard are DECLARED, not left to the provider's defaults (false/false/"ignore"). The
+  # estate's disks run with them set, and a value omitted here is a value the next apply rewrites on a
+  # running node — iothread=true is the one that matters, since it moves a node's virtio I/O onto its own
+  # thread rather than the vCPU's.
   disk {
     datastore_id = coalesce(each.value.storage, var.template_storage)
     interface    = "scsi0"
     size         = each.value.disk_gb
+
+    iothread = each.value.iothread
+    ssd      = each.value.ssd
+    discard  = each.value.discard
   }
 
   # The VLAN tag is declared EXPLICITLY. Karpenter's clones inherit it from the template instead, so the

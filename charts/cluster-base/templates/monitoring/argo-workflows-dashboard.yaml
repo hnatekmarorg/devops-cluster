@@ -252,8 +252,8 @@ data:
         {
           "id": 4,
           "type": "timeseries",
-          "title": "Queued work",
-          "description": "Depth of the controller work queue and how long the oldest item has waited. Growth without drain is the controller falling behind the API.",
+          "title": "Queue depth (unfinished items)",
+          "description": "Depth of the controller work queue. Growth without drain is the controller falling behind the API.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -261,7 +261,7 @@ data:
           "gridPos": {
             "x": 16,
             "y": 0,
-            "w": 8,
+            "w": 4,
             "h": 4
           },
           "targets": [
@@ -272,9 +272,51 @@ data:
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "legendFormat": "unfinished ${__field.labels.workflow_namespace_workflow_name}",
+              "legendFormat": "${__field.labels.workflow_namespace_workflow_name}",
               "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "fillOpacity": 8,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "stacking": {
+                  "mode": "none"
+                }
+              }
             },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "id": 15,
+          "type": "timeseries",
+          "title": "Age of oldest queued item",
+          "description": "How long the oldest queued item has waited. Its own panel because it is seconds while queue depth is items \u2014 two units on one canvas is unreadable.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 20,
+            "y": 0,
+            "w": 4,
+            "h": 4
+          },
+          "targets": [
             {
               "expr": "argo_workflows_queue_longest_running{job=~\"$job\"}",
               "refId": "A",
@@ -282,13 +324,13 @@ data:
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "legendFormat": "oldest ${__field.labels.workflow_namespace_workflow_name}",
+              "legendFormat": "${__field.labels.workflow_namespace_workflow_name}",
               "instant": false
             }
           ],
           "fieldConfig": {
             "defaults": {
-              "unit": "short",
+              "unit": "s",
               "custom": {
                 "fillOpacity": 8,
                 "lineWidth": 1,
@@ -574,8 +616,8 @@ data:
         {
           "id": 10,
           "type": "timeseries",
-          "title": "Controller memory",
-          "description": "Container working set against the controller's own heap accounting.",
+          "title": "Controller memory (container working set)",
+          "description": "Container working set for the controller pod.",
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
@@ -583,7 +625,7 @@ data:
           "gridPos": {
             "x": 8,
             "y": 18,
-            "w": 8,
+            "w": 4,
             "h": 7
           },
           "targets": [
@@ -596,7 +638,49 @@ data:
               },
               "legendFormat": "working set",
               "instant": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "fillOpacity": 8,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "stacking": {
+                  "mode": "none"
+                }
+              }
             },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "id": 16,
+          "type": "timeseries",
+          "title": "Controller memory (Go heap in use)",
+          "description": "The controller's own heap accounting. Separate from the container working set: two metrics on one canvas is unreadable even when the units agree.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 18,
+            "w": 4,
+            "h": 7
+          },
+          "targets": [
             {
               "expr": "argo_workflows_go_memory_used{job=~\"$job\"}",
               "refId": "A",
@@ -604,7 +688,7 @@ data:
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "legendFormat": "go used",
+              "legendFormat": "go memory used",
               "instant": false
             }
           ],

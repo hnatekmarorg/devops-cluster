@@ -78,12 +78,27 @@ karpenter:
       # need one — and a template with a cloud-init drive on a SECOND storage fails with
       # `Multiple storage IDs found for template`.
       size: 30G
+      # THE NODE TIER: the local NVMe. Node roots are the churn (image pulls, containerd, ephemeral) and
+      # the tier is chosen by ROLE, so control planes get the NAS SSD mirror and node roots get this.
+      #
+      # This replaced the inherited `iscsi` default, which was the wrong answer twice over: an LVM over
+      # ONE shared zvol on the all-5400rpm `data` pool stalls containerd while a node registers, and a
+      # node that never reaches Ready still looks EMPTY — so it gets recycled, the pending pods remain,
+      # and Karpenter provisions another (observed 2026-09-23: nodes booting on iscsi, recycled within
+      # minutes, indefinitely).
+      #
+      # It is also not `ssd-fast` any more, for a reason that is not about latency: that datastore is
+      # served by the TrueNAS plugin, whose broker sits in the CLONE path. Measured 2026-09-24 under a
+      # 1000-pod run: `broker: no response from upstream` (Storage/Custom/TrueNASPlugin.pm:1389), clones
+      # failing, nodes never registering, 13 orphan VMs in 7 minutes. A local target keeps the plugin out
+      # of the node lifecycle. `local-lvm` measures 0.9-1.0ms flush and its other tenants are near-idle.
+      #
       # This storage ALSO selects the zones: the provider derives them from it and counts only zones that
       # can see the template. The wrong one yields `TemplatesNotFound`, which reads like a template-name
-      # problem and is not one. NOTE for a second PVE host: `iscsi` is an LVM over one iSCSI LUN and
-      # reports shared=0, so the template AND this storage must exist under the same names on every node
-      # a clone may land on — see terraform/docs/cluster-autoscaling.md.
-      storage: iscsi
+      # problem and is not one. NOTE for a second PVE host: this datastore is LOCAL (shared=0), so the
+      # template AND this storage must exist under the same names on every node a clone may land on —
+      # see terraform/docs/cluster-autoscaling.md.
+      storage: local-lvm
     # Karpenter's own grid: c1=1:2 t1=1:3 s1=1:4 m1=1:8 x1=1:16, N ∈ {1,2,4,8,16}. The instance type IS
     # the node size (m1.4VCPU-32GB → 4 cores / 32 GiB). Adding a family only widens what may be chosen.
     instanceFamilies: ["c1", "t1", "s1"]

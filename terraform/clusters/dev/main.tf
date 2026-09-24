@@ -62,17 +62,24 @@ module "cluster" {
       cores     = 8
       memory_mb = 16384
       disk_gb   = 40
-      # etcd is fsync-bound, and this is the disk that decides whether the cluster is up. Measured
-      # 2026-09-23, same 7h window, Proxmox blockstat flush average:
+      # etcd is fsync-bound, and this is the disk that decides whether the cluster is up.
       #
-      #   local-lvm : 22.7ms flush, 37.0ms write   — and etcd's WAL saw fdatasyncs of 1.2s, 1.5s and 7.8s
-      #   ssd-fast  :  2.9ms flush,  0.7ms write   — no slow-fdatasync warning at all since the move
+      # THE TIER SPLIT IS BY ROLE, and that is what makes this a rule rather than a measurement:
       #
-      # The 7.8s fsync is what broke the cluster: it blocked etcd's apply loop, the API could not answer
-      # a 5s lease read, and every lease holder died at once (controller-manager, scheduler, CCM,
-      # Karpenter). `local-lvm` was not the low-latency choice it looked like — it is the thin pool of
-      # balteus' SINGLE boot NVMe, shared with pve-data and the NAS VM's own disks — so the CP gets the
-      # NAS SSD mirror, exactly like the Karpenter pool (bootstrap/argocd/dev/cluster-base.yaml).
+      #     control planes -> ssd-fast  (NAS SSD mirror, via the TrueNAS plugin): quiet by construction
+      #     node roots     -> local-lvm (the single local NVMe): carries the churn
+      #
+      # A CP writes almost nothing in steady state. Measured on this node 2026-09-24, idle cluster:
+      # 0.17 MB/s and ~10 flushes/s — and that already includes the monitoring stack, which also lives
+      # here. So the pressure on this tier is PROVISIONING (a new cluster's install/clone), not the
+      # workload, which is the point of putting control planes here at all.
+      #
+      # What made this the answer (2026-09-24): a 1000-pod run drove Karpenter to clone NODE roots onto
+      # `ssd-fast`, and the datastore measured 33.3s flush. Moving the WAL off it kept the cluster up but
+      # did NOT fix provisioning — the TrueNAS plugin's broker is in the CLONE path
+      # (`broker: no response from upstream`, Storage/Custom/TrueNASPlugin.pm:1389), so clones failed,
+      # nodes never registered, Karpenter retried, and it left 13 orphan VMs in 7 minutes. Node roots on
+      # a local datastore take that plugin out of the node lifecycle entirely: see the worker below.
       storage = "ssd-fast"
       # No TRIM on etcd's volume, deliberately: reclamation is the NAS' problem, not the write path's.
       discard = "ignore"
@@ -91,9 +98,19 @@ module "cluster" {
       # memory line was 8192 while the VM ran on 16384 — i.e. the next apply would have shrunk a worker.
       memory_mb = 32768
       disk_gb   = 40
-      # A worker wants the room for images, and losing it does not take the cluster with it — but images are
-      # also the churn, so it takes the same tier as the CP (measured 4.0ms flush vs 22.7ms on local-lvm).
-      storage = "ssd-fast"
+      # A worker is the NODE tier: the local NVMe, for two reasons that are both about the same failure.
+      #
+      # (a) Isolation runs the other way now. The churn device must never be the device holding an etcd
+      #     WAL, and with the CP above on ssd-fast, node writes belong here.
+      # (b) The TrueNAS plugin is a LIFECYCLE dependency, not merely a performance one. Node roots served
+      #     by it put its broker in the clone path, and that broker is what answered `no response from
+      #     upstream` under the 1000-pod run — clones failed, nodes never registered, Karpenter retried.
+      #
+      # local-lvm is a legitimate low-latency tier again: 0.9-1.0ms flush, because the NAS' SLOG no
+      # longer shares that device (it did when the 09-23 local-lvm vs ssd-fast comparison was taken, and
+      # that comparison is why this field has been wrong in both directions). Its other tenants are
+      # near-idle — the NAS VM's own boot disk writes 0.04 MB/s. MEASURE before moving it again.
+      storage = "local-lvm"
     },
   ]
 

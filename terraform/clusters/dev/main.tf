@@ -46,12 +46,21 @@ module "cluster" {
   # nothing scheduled at all. The install (see the module) is what actually makes that space usable.
   nodes = [
     {
+      # 8 cores and 16 GiB, not the 4/8 this declared before. This node is the whole control plane (etcd,
+      # apiserver, scheduler, controller-manager, CCM, Karpenter) AND the monitoring stack — Prometheus,
+      # Grafana, Alertmanager, the operator and kube-state-metrics all live here. Measured 2026-09-24 on
+      # 4 cores: every probe on the node timed out (`context deadline exceeded`, kube-state-metrics'
+      # `/livez` answering 503), so the kubelet killed containers that were healthy but starved — 73
+      # restarts for kube-state-metrics, 37 for the operator, 26 for Prometheus — and each kill flapped
+      # the alert rules watching them. Prometheus used ~1.1 cores against a 200m request at 212k series,
+      # and its own rule evaluations were timing out (`PrometheusRuleFailures`, critical). Requests were
+      # never the binding constraint here; time-slicing was.
       name      = "dev-cp1"
       role      = "controlplane"
       mac       = "BC:24:11:0D:00:10"
       address   = "172.16.40.100"
-      cores     = 4
-      memory_mb = 8192
+      cores     = 8
+      memory_mb = 16384
       disk_gb   = 40
       # etcd is fsync-bound, and this is the disk that decides whether the cluster is up. Measured
       # 2026-09-23, same 7h window, Proxmox blockstat flush average:
@@ -73,11 +82,14 @@ module "cluster" {
       role    = "worker"
       mac     = "BC:24:11:0D:00:11"
       address = "172.16.40.101"
-      cores   = 4
-      # 16 GiB, not the 8 the factory used to declare: the worker carries the heaviest stateful set in the
-      # cluster (artifactory alone requests 4 GiB) and ran at 11.2/16 GiB with 7.9 GiB of requests. This
-      # line was 8192 while the VM ran on 16384 — i.e. the next apply would have shrunk a running worker.
-      memory_mb = 16384
+      cores   = 8
+      # 8 cores, not 4, and 32 GiB, not the 16 the factory declared: with a single worker everything in
+      # the cluster competes for these (argocd, crossplane, cert-manager, forgejo, keycloak, artifactory
+      # all schedule here), and it carries the heaviest stateful set — artifactory alone requests 4 GiB.
+      # Measured 2026-09-24: 95% of its CPU requests and 258% of its CPU limits, 11.2/16 GiB used with
+      # 7.9 GiB of requests. Saturation showed up as probe timeouts on unrelated pods, not OOM. This
+      # memory line was 8192 while the VM ran on 16384 — i.e. the next apply would have shrunk a worker.
+      memory_mb = 32768
       disk_gb   = 40
       # A worker wants the room for images, and losing it does not take the cluster with it — but images are
       # also the churn, so it takes the same tier as the CP (measured 4.0ms flush vs 22.7ms on local-lvm).

@@ -141,18 +141,26 @@ variable "nodes" {
     # kube-controller-manager, kube-scheduler, the CCM and Karpenter (which panics with "leader election
     # lost"). The visible damage is a restart storm, not a slow cluster.
     #
-    # Both tiers have now been the wrong answer here, in opposite ways. On iscsi the CP measured those
-    # 118/138/350ms applies. Moved to local-lvm it measured WORSE stalls, because balteus' only local
-    # device is a single consumer NVMe that also carries pve-data and the NAS VM's disks. Measured side by
-    # side (Proxmox `blockstat`, flush avgs over the same 7h window):
+    # Both tiers have now been the wrong answer here, in opposite ways, and the resolution is a rule
+    # rather than a ranking. On iscsi the CP measured those 118/138/350ms applies. Moved to local-lvm it
+    # measured WORSE stalls, because balteus' only local device is a single consumer NVMe that also
+    # carries pve-data and the NAS VM's disks. Measured side by side (Proxmox `blockstat`, flush avgs over
+    # the same 7h window — note the NAS' SLOG still shared that NVMe at the time, which is why the number
+    # is no longer representative: it measures 0.9-1.0ms today):
     #
     #   dev-cp1 on local-lvm : flush 22.7ms  write 37.0ms  read 5.7ms
     #   dev-w1  on ssd-fast  : flush  4.0ms  write  3.1ms  read 0.65ms
     #
-    # So: MEASURE IT (`/nodes/<node>/qemu/<vmid>/status/current` → blockstat[dev].flush_total_time_ns ÷
-    # flush_operations) before choosing, and expect the answer to be "the NAS SSD mirror", not "local".
-    # Workers are the opposite case: images want space, and a worker losing its API connection does not take
-    # the cluster with it.
+    # So choose BY ROLE, and MEASURE before moving either one (`/nodes/<node>/qemu/<vmid>/status/current`
+    # → blockstat[dev].flush_total_time_ns ÷ flush_operations), because this field has been wrong in both
+    # directions:
+    #
+    #   control planes -> the NAS SSD mirror (`ssd-fast`). Quiet by construction: measured 0.17 MB/s in
+    #                     steady state including its monitoring stack, so its pressure is provisioning.
+    #   node roots     -> the local NVMe (`local-lvm`). All the churn, and — the part that is not about
+    #                     latency — it keeps the TrueNAS plugin's broker out of the node LIFECYCLE. That
+    #                     broker sits in the clone path and failed under load (13 orphans in 7 minutes,
+    #                     2026-09-24), which no amount of device speed fixes.
     storage = optional(string)
 
     # Disk parameters, declared rather than inherited from the provider's defaults. iothread=true puts a

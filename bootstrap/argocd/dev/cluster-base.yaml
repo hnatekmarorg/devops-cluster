@@ -58,19 +58,18 @@ spec:
           pools:
             - name: talos-nocloud-template
               templateName: talos-nocloud-template
-              # Node roots must NOT be left on the inherited `iscsi` default
-              # (charts/cluster-base/values.yaml): that datastore is an LVM over ONE shared zvol on the
-              # all-5400rpm `data` pool, and a stall there kills containerd while a node registers. A node
-              # that never reaches Ready still looks EMPTY, so recycling deletes it a minute later, the
-              # pending pods remain, and Karpenter provisions another — an endless spawn loop.
-              # Observed 2026-09-23: nodes booting on iscsi, recycled within minutes, indefinitely.
+              # Node roots are the NODE tier: the local NVMe. This is the same answer the chart's default
+              # now carries (charts/cluster-base/values.yaml) — kept explicit here because this cluster
+              # paid for it: the inherited `iscsi` default had nodes booting, stalling containerd on the
+              # all-5400rpm `data` pool, and being recycled within minutes, indefinitely (2026-09-23).
               #
-              # ssd-fast is the NAS SSD mirror. Deliberately NOT local-lvm: that is the single boot NVMe
-              # which already carries balteus' boot, the whole of pve-data and the NAS VM's own disks, so
-              # parking high-churn ephemeral node disks there would add contention to the one device
-              # everything else depends on.
+              # NOT `ssd-fast`: that is the NAS SSD mirror, and it is the CONTROL-PLANE tier — the CP of
+              # this cluster sits on it (terraform/clusters/dev/main.tf), where an etcd WAL needs a quiet
+              # device. Parking churn there put the TrueNAS plugin's broker in the clone path, and under a
+              # 1000-pod run it answered `no response from upstream`: clones failed, nodes never
+              # registered, Karpenter retried, 13 orphans in 7 minutes (2026-09-24).
               bootDevice:
-                storage: ssd-fast
+                storage: local-lvm
               instanceFamilies: ["c1", "t1", "s1", "m1", "x1"]
               limits:
                 cpu: "128"

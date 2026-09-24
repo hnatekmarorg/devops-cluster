@@ -148,6 +148,9 @@ locals {
     # appliance itself (`enp6s20`, MTU 9000), which stays its source of truth; this record names it so
     # clients can be written against the name rather than the number.
     "truenas.storage.hnatekmar.dev" = "192.168.88.25"
+
+    # cluster-wizard:insert-dns-records — new cluster DNS records go ABOVE this line, still inside
+    # `local.dns_records`. tools/cluster-wizard inserts here; edit around it freely.
   }
 }
 

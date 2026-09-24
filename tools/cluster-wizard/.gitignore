@@ -1,0 +1,3 @@
+# `go build ./...` drops the binary here.
+/cluster-wizard
+/cluster-wizard.exe

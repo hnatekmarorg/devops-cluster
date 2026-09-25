@@ -117,5 +117,9 @@ spec:
   disruption:
     consolidationPolicy: {{ $disruption.consolidationPolicy }}
     consolidateAfter: {{ $disruption.consolidateAfter }}
+{{- with $disruption.budgets }}
+    budgets:
+{{ toYaml . | indent 6 }}
+{{- end }}
 {{- end }}
 {{- end }}

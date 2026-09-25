@@ -80,6 +80,23 @@ spec:
               # (an idle burst node returns its RAM quickly) without arming a spawn loop.
               disruption:
                 consolidateAfter: 5m
+                # ABSOLUTE and scoped per reason, deliberately. The CRD default is one budget of 10% of
+                # the fleet, and at this fleet size that allows ONE concurrent disruption — which a node
+                # pinned by `do-not-disrupt` pods (argo-bench's stack) consumes permanently, because its
+                # termination can never finish. Once that happens Karpenter cannot disrupt anything else
+                # and the fleet freezes at its peak: observed 2026-09-25 — 8 empty nodes, `local-lvm`
+                # held at 786G instead of returning to ~700G, zero disruption actions for 40 minutes.
+                #
+                # Empty is generous because it removes only nodes that have no pods, so there is nothing
+                # to evict. Everything that DOES evict a pod (drift, expiry, under-utilisation) stays a
+                # trickle. Every reason is enumerated on purpose: an unlisted reason would be
+                # unconstrained, and with `WhenEmpty` above, Empty is the only one this pool should
+                # normally produce.
+                budgets:
+                  - nodes: "10"
+                    reasons: ["Empty"]
+                  - nodes: "1"
+                    reasons: ["Drifted", "Underutilized"]
         certManager:
           cloudflare:
             secretSource: eso

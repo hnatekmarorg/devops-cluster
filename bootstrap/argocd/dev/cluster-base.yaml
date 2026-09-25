@@ -152,21 +152,29 @@ spec:
         #     router that answers every service name on this cluster with its ingress VIP (172.16.48.1).
         monitoring:
           enabled: true
-          # Sized for two 4-vCPU/8Gi nodes: small requests on purpose and a short retention. Both volumes
-          # go on the BLOCK tier — a TSDB on NFS-async is how a WAL gets corrupted, and while Grafana's
-          # own state is less sensitive there is no reason to put it on a different plane.
+          # Sized for the node it actually runs on: dev-cp1 is 8 vCPU / 16GiB and carries the control plane
+          # AND this stack, so requests stay small on purpose and retention short. Both volumes go on the
+          # BLOCK tier — a TSDB on NFS-async is how a WAL gets corrupted, and while Grafana's own state is
+          # less sensitive there is no reason to put it on a different plane.
           prometheus:
             retention: 7d
             retentionSize: 12GB
             storageSize: 20Gi
-            # A LIMIT here, unusually for this repo, because of what this cluster is: two 8Gi nodes, and a
-            # Prometheus with no ceiling is the one pod that can take a node down with it. 1Gi is ~3x what
-            # a cluster this size actually holds, so hitting it means something is wrong (cardinality
-            # explosion) rather than that the stack is busy — and an OOMKill of Prometheus is loud
-            # (`KubePodCrashLooping`) and survivable, unlike the node going away.
+            # A LIMIT here, unusually for this repo, because a Prometheus with no ceiling is the one pod that
+            # can take a node down with it — and on this cluster that node is the control plane. 3Gi is a
+            # ceiling, not a target.
+            #
+            # RAISED FROM 1Gi (2026-09-25). The old value reasoned "~3x what a cluster this size actually
+            # holds", sized for "two 4-vCPU/8Gi nodes" — but this stack carries ~212k series and at 1Gi
+            # Prometheus could not finish WAL replay: OOMKilled (exit 137) ~28s in, at segment ~197/262,
+            # 193+ restarts in CrashLoopBackOff, so the Service had NO endpoints. In that state nothing is
+            # measured and no alert can fire — worse than the node risk the limit was guarding against, and
+            # it is how a missing series gets misread as a missing scrape.
+            #
+            # Cardinality control is the real fix and needs the headroom this buys to be measured.
             resources:
               limits:
-                memory: 1Gi
+                memory: 3Gi
           grafana:
             storageSize: 2Gi
           alertmanager:

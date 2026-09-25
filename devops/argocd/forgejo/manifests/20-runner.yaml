@@ -1,0 +1,175 @@
+# The Forgejo Actions runner — the half of the forge that executes the workflows.
+#
+# WHY IT IS NOT THE pet HOST: the estate's GitHub runners live on a dedicated `mgmt` host because the
+# device-touching jobs need a toolchain no container image has. This runner is the counter-example and
+# the whole reason the migration is attractive: it is one pod, it registers ONCE (a token, not an hourly
+# expiry, and no bot needed to mint it), and `runs-on` labels are free-form — so the workflows keep
+# `[self-hosted, mgmt, tofu]` unchanged while the labels are provided by a container instead of a pet.
+#
+# THE ONE TRAP, measured the hard way: a job's `runs-on` is matched against the labels recorded at
+# REGISTRATION (`action_runner.agent_labels`), not against the labels in `config.yaml`. `register`
+# silently DROPS any label that `config.yaml` does not define an image for — so a label defined in only
+# one of the two places produces a job that queues forever with no error anywhere. Both lists below must
+# stay in step, and changing either means re-registering the runner (delete `/data/.runner` and restart).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: forgejo-runner
+  labels:
+    # DinD is privileged because the runner starts job containers next to itself through a docker
+    # daemon. That is the design, not an accident, so the namespace says so instead of fighting PSA.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/warn-version: latest
+---
+# The label -> image map. `node:22-bookworm` is the job image: it carries node 22, python3, curl, git,
+# tar and unzip, which is what these workflows actually use. It does NOT carry jq, kubectl, aws, tofu,
+# gh, sops, age or zstd — the workflows install what they need (see .forgejo/README.md, and the jq step
+# in tf-apply-cluster.yml, which is there because this image is not the pet host).
+#
+# A ConfigMap, not a Secret: there is nothing secret in it. The runner's identity (`uuid`/`token`) lives
+# in the `.runner` file that registration writes into `/data`, and the registration token comes from the
+# `runner-registration` Secret. An earlier revision of this object was a Secret because it also carried
+# a stale uuid/token pair — vestigial, and it made the file look like it held a credential it did not.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: act-runner-config
+  namespace: forgejo-runner
+data:
+  config.yaml: |
+    log:
+      level: info
+    runner:
+      # ONE slot. The runner polls with this capacity and the server will not hand it more jobs than it
+      # accepts; 1 is what the prototype runs and what makes job ordering predictable in a small cluster.
+      # Raise it only with the runner's memory in mind — each concurrent job is another container.
+      capacity: 1
+      timeout: 30m
+      # MUST match the --labels list in the Deployment's register command, and MUST list every label the
+      # workflows ask for. See the trap note at the top of this file.
+      labels:
+        - "self-hosted:docker://node:22-bookworm"
+        - "mgmt:docker://node:22-bookworm"
+        - "tofu:docker://node:22-bookworm"
+        - "docker:docker://node:22-bookworm"
+        - "ubuntu-latest:docker://node:22-bookworm"
+    cache:
+      enabled: true
+      dir: /data/cache
+    container:
+      # host.docker.internal inside a job container resolves to the host gateway, so a job that needs to
+      # reach something on the pod's network does not need to know the pod's IP.
+      options: "--add-host=host.docker.internal:host-gateway"
+    host:
+      workdir_parent: /data/work
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: act-runner-data
+  namespace: forgejo-runner
+spec:
+  accessModes: [ReadWriteOnce]
+  # NOTE (prototype wart, deliberately not carried to prod as-is): `/data` holds only the registration
+  # (`.runner`), the persisted work tree and the action cache — small, and it does not need to be fast.
+  # What it does NOT need is NFS: the script path copies action sources into it and the DinD layer cache
+  # lives elsewhere (emptyDir). On prod, point this at the block tier with the rest of the estate's state
+  # volumes; the only thing that must outlive a pod is `.runner`.
+  storageClassName: nfs-client
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: act-runner
+  namespace: forgejo-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: act-runner
+  template:
+    metadata:
+      labels:
+        app: act-runner
+    spec:
+      containers:
+        - name: runner
+          image: code.forgejo.org/forgejo/runner:6
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              until nc -z 127.0.0.1 2375; do echo waiting-for-dind; sleep 2; done
+              cd /data
+              if [ ! -f /data/.runner ]; then
+                /bin/forgejo-runner register --no-interactive \
+                  --instance "$GITEA_INSTANCE_URL" --token "$RUNNER_REG_TOKEN" \
+                  --name dev-k8s-talos --labels "self-hosted,mgmt,tofu,docker,ubuntu-latest"
+              fi
+              exec /bin/forgejo-runner daemon --config /config/config.yaml
+          env:
+            - name: DOCKER_HOST
+              value: tcp://127.0.0.1:2375
+            # The runner does not use this, but the SERVER sends the actions URL with every task, so this
+            # is the belt to the server-side `[actions] DEFAULT_ACTIONS_URL` braces in values-dev.yaml.
+            # Server-side is the one that matters — measured: setting it only here changes nothing.
+            - name: DEFAULT_ACTIONS_URL
+              value: https://github.com
+            - name: GITEA_INSTANCE_URL
+              value: https://forgejo.dev-k8s.srv.hnatekmar.dev
+            - name: RUNNER_REG_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  # Minted server-side with `forgejo forgejo-cli actions generate-runner-token
+                  # --scope <org>` and valid until the runner registers; the `.runner` file it writes is
+                  # the long-lived identity. PREREQUISITE: Secret `runner-registration` — see README.md.
+                  name: runner-registration
+                  key: token
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /data
+        # DinD: the job containers are started by a docker daemon that lives beside the runner. The 2Gi
+        # limit is the honest constraint of this design — a heavy job image pull is what it bounds, and
+        # the runner's single slot is what keeps that from happening twice at once.
+        - name: dind
+          image: docker:27-dind
+          args: ["dockerd", "--host=tcp://127.0.0.1:2375", "--tls=false"]
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""              # plain TCP on the loopback of a shared pod network; no TLS to negotiate
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          volumeMounts:
+            - name: dind-storage
+              mountPath: /var/lib/docker
+      volumes:
+        - name: config
+          configMap:
+            name: act-runner-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: act-runner-data
+        - name: dind-storage
+          emptyDir: {}

@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forgejo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+
+  # The chart sets `replicas` on the Deployment it owns and HPA-shaped fields elsewhere; replicas are
+  # not this Application's decision to enforce.
+  ignoreDifferences:
+    - kind: "*"
+      group: "*"
+      namespace: forgejo
+      jsonPointers:
+        - /spec/replicas
+
+  # THREE SOURCES, deliberately, because the forge is one system made of pieces with different owners:
+  #
+  #   1. the forge itself — the official chart, PINNED. Every per-cluster fact lives in the values file,
+  #      so moving the forge to the prod cluster is a values change (values-prod.yaml + one line here),
+  #      not a rewrite of this file. That was the explicit requirement when the prototype was built:
+  #      do not wire anything permanently to the dev cluster.
+  #   2. the pieces the chart does not own — its database, its CI runner, its SSO client. The chart's
+  #      bundled Postgres subchart is a wrapper around the bitnami image; this estate runs the DB as a
+  #      plain StatefulSet on the block tier instead, so that the storage tier is visible in git and
+  #      not decided by a dependency bump.
+  #   3. the repo itself, referenced as `repo` so the value files above can be `$repo/...` paths.
+  sources:
+    - name: forgejo-chart
+      repoURL: oci://code.forgejo.org/forgejo-helm
+      chart: forgejo
+      targetRevision: 17.1.7        # Forgejo 15.0.9 — the version the PoC runs
+      helm:
+        valueFiles:
+          - $repo/devops/argocd/forgejo/values-dev.yaml
+
+    - repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      targetRevision: main
+      path: devops/argocd/forgejo/manifests
+
+    - repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      targetRevision: main
+      ref: repo
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: forgejo
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

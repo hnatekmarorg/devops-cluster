@@ -1,0 +1,52 @@
+# Forgejo's OIDC client — declared here, in the cluster that CONSUMES it.
+#
+# This is the estate's "one writer per object" rule in practice: the hub Keycloak keeps the realm, its
+# identity providers, the human clients and the role catalog; a cluster declares only the clients its own
+# services log in with. Forgejo's client was created by hand while the prototype was being built, so it
+# existed in the cluster and nowhere in git — which is the gap this file closes.
+#
+# WHY IT MATTERS THAT THE SECRET LANDS HERE: provider-keycloak writes a client's connection secret into
+# the cluster the provider runs in (`writeConnectionSecretToRef` below). That is what removes the
+# cross-boundary errand — no secret is copied from a WAN repo onto a LAN cluster.
+#
+# PREREQUISITES:
+#   * ProviderConfig `sso-hnatekmar-xyz` — the cluster's Keycloak writer identity, created by
+#     charts/cluster-base/templates/crossplane/keycloak-writer.yaml from `secret/<cluster>/keycloak-writer`
+#     in the on-prem OpenBao. Patch the name below per cluster; on prod it is that cluster's writer.
+#   * Forgejo's own auth source: the CLIENT is declared here, but wiring it into Forgejo is an app-level
+#     setting (`forgejo admin auth add-oauth`, or the corresponding admin UI screen), and it consumes the
+#     `attribute.client_secret` key of the connection secret written below. That step is deliberately not
+#     automated yet — automating it means giving the chart's init a Keycloak credential, which is exactly
+#     the long-lived credential this design avoids.
+apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+kind: Client
+metadata:
+  name: forgejo-dev
+  namespace: forgejo
+spec:
+  deletionPolicy: Delete
+  providerConfigRef:
+    name: sso-hnatekmar-xyz
+  forProvider:
+    realmId: master
+    clientId: forgejo-dev
+    name: Forgejo (dev)
+    # CONFIDENTIAL + client-secret: Forgejo's OIDC source is a server-side client, so the secret it
+    # already receives is the right authenticator. A public client would be wrong here — the callback is
+    # consumed by the server, not by a browser.
+    accessType: CONFIDENTIAL
+    clientAuthenticatorType: client-secret
+    enabled: true
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false   # no password grant: humans log in through the browser flow
+    serviceAccountsEnabled: false      # Forgejo does not call Keycloak's admin API with this client
+    useRefreshTokens: true
+    fullScopeAllowed: true
+    baseUrl: https://forgejo.dev-k8s.srv.hnatekmar.dev
+    validRedirectUris:
+      - https://forgejo.dev-k8s.srv.hnatekmar.dev/user/oauth2/keycloak/callback
+    webOrigins:
+      - https://forgejo.dev-k8s.srv.hnatekmar.dev
+  writeConnectionSecretToRef:
+    name: forgejo-oidc
+    namespace: forgejo

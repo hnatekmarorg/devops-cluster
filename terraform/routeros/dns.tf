@@ -148,6 +148,23 @@ locals {
     # appliance itself (`enp6s20`, MTU 9000), which stays its source of truth; this record names it so
     # clients can be written against the name rather than the number.
     "truenas.storage.hnatekmar.dev" = "192.168.88.25"
+
+    # The VPN endpoint — the one name here that is answered in **two worlds**, and the only one that
+    # does not follow the `<host>.<class>` scheme. Deliberately: the profile a device carries names it
+    # once, so the name has to exist in the public zone too, which makes it a bare one-label name under
+    # the apex rather than `something.vpn.hnatekmar.dev`.
+    #
+    # This is the *internal* answer: the router's address in the vpn class (`vlan60-vpn`'s gateway), so a
+    # client at home reaches the tunnel endpoint without a NAT hairpin. The public answer — the WAN
+    # address — is a bootstrap step, because this module owns the router's resolver and not the public
+    # zone: Cloudflare-as-code is Phase 4. Until it exists the name resolves through the public
+    # `*.hnatekmar.dev` wildcard to the *dead* ingress VIP, so a profile minted before it exists points
+    # at nothing. See docs/dns.md.
+    #
+    # An `iot` client is unaffected by this record in either direction: that class is handed a public
+    # resolver, so it resolves the endpoint to the WAN address and reaches the router through the input
+    # accept for the tunnel port (`wireguard.tf`), not through this name.
+    "vpn.hnatekmar.dev" = "172.16.96.1"
   }
 }
 

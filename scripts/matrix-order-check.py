@@ -16,6 +16,10 @@ The invariant, as written in `terraform/routeros/stage3-firewall.tf`:
   3. nothing **above** a matrix rule accepts traffic the matrix is meant to judge: an `accept` that is
      not narrowed (no connection-state / nat-state / ipsec / address / port / protocol) shadows the
      class policy. Checked chain-wide, because matrix rules are appended last.
+  4. every WireGuard accept sits **above** the drop it has to precede (`terraform/routeros/wireguard.tf`).
+     Those rules are inserted by rule *id* at write time — because the defconf drop they precede is the
+     device's own and not in this configuration — so their position is invisible to `plan` in exactly the
+     same way the matrix's is, and one of them is the estate's first WAN input accept.
 
 Read-only. Exit 0 = invariant holds, 1 = violated, 2 = could not measure. Credentials are never printed.
 
@@ -38,6 +42,18 @@ CREDS_FILES = [
 ROUTER_HOST = os.environ.get("MATRIX_ROUTER_HOST", "172.16.100.1")
 ROUTER_PORT = int(os.environ.get("MATRIX_ROUTER_PORT", "8728"))
 MATRIX_PREFIX = "MTX-"
+
+# The WireGuard accepts (`terraform/routeros/wireguard.tf`) are inserted by rule *id* at write time, so
+# their position is invisible to `plan` exactly like the matrix's own rules. Each one names the rule it
+# must precede; the table is exhaustive on purpose — a `wireguard:` comment present on the device but not
+# listed here is itself a violation, so editing a comment cannot silently retire its assertion.
+WIREGUARD_COMMENT_PREFIX = "wireguard:"
+WIREGUARD_ANCHORS = (
+    # (the accept's comment prefix, the anchor it must precede — matched on comment, then on log-prefix)
+    ("wireguard: the tunnel endpoint on the WAN", "defconf: drop all not coming from LAN"),
+    ("wireguard: the tunnel's resolver", "defconf: drop all not coming from LAN"),
+    ("wireguard: the WiFi class may reach the tunnel endpoint", "MTX-IOT>ROUTER "),
+)
 
 # Criteria that narrow a rule below "everything": if an accept has none of them it is a blanket accept.
 NARROWING = (
@@ -104,6 +120,21 @@ def describe(rule: dict) -> str:
     )
 
 
+def find_anchor(chain_rules: list[dict], anchor: str) -> int | None:
+    """Index of the rule an accept must precede: matched on `comment`, then on `log-prefix`.
+
+    A matrix rule is identified by its log-prefix (it has a comment too, but the prefix is the stable
+    half); the defconf drop is identified by the comment the device reports, which is the same string the
+    data source in `wireguard.tf` filters on — so both places fail together if it is ever renamed.
+    """
+    for i, r in enumerate(chain_rules):
+        if anchor in str(r.get("comment") or ""):
+            return i
+        if str(r.get("log-prefix") or "").startswith(anchor):
+            return i
+    return None
+
+
 def check(rules: list[dict]) -> tuple[list[str], list[str]]:
     """Return (violations, notes)."""
     violations: list[str] = []
@@ -149,6 +180,49 @@ def check(rules: list[dict]) -> tuple[list[str], list[str]]:
                 violations.append(
                     f"[blanket accept] {describe(r)} at position {i + 1} of chain {chain!r} is not narrowed — "
                     "it accepts what the matrix is meant to judge"
+                )
+
+    # 4. the WireGuard accepts, above the drops they must precede
+    input_rules = by_chain.get("input", [])
+    present = [
+        prefix
+        for prefix, _ in WIREGUARD_ANCHORS
+        if any(str(r.get("comment") or "").startswith(prefix) for r in input_rules)
+    ]
+    if not present:
+        # The same courtesy the matrix rules get: before the change is applied the rules legitimately do
+        # not exist, and a check that cries wolf on day zero is a check nobody keeps.
+        notes.append("no wireguard endpoint accepts on the device yet (expected until wireguard.tf is applied)")
+    else:
+        notes.append(f"{len(present)}/{len(WIREGUARD_ANCHORS)} wireguard accept group(s) present — placement asserted")
+        listed = tuple(prefix for prefix, _ in WIREGUARD_ANCHORS)
+        for prefix, anchor in WIREGUARD_ANCHORS:
+            hits = [i for i, r in enumerate(input_rules) if str(r.get("comment") or "").startswith(prefix)]
+            if not hits:
+                violations.append(
+                    f"[wireguard missing] no input rule carries the comment {prefix!r} — expected by "
+                    "terraform/routeros/wireguard.tf (another group is present, so the file is applied)"
+                )
+                continue
+            idx = find_anchor(input_rules, anchor)
+            if idx is None:
+                violations.append(
+                    f"[wireguard anchor missing] nothing in the input chain matches {anchor!r}, so the "
+                    f"placement of {prefix!r} could not be measured"
+                )
+                continue
+            for i in hits:
+                if i > idx:
+                    violations.append(
+                        f"[wireguard below its anchor] {describe(input_rules[i])} sits at position {i + 1} of "
+                        f"the input chain, below {anchor!r} (position {idx + 1}) — it will never match"
+                    )
+        for i, r in enumerate(input_rules):
+            comment = str(r.get("comment") or "")
+            if comment.startswith(WIREGUARD_COMMENT_PREFIX) and not comment.startswith(listed):
+                violations.append(
+                    f"[wireguard unasserted] {describe(r)} carries a `wireguard:` comment that "
+                    "WIREGUARD_ANCHORS does not name — its placement is unchecked"
                 )
 
     if not matrix:

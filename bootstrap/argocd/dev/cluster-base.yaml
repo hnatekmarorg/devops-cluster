@@ -71,9 +71,14 @@ spec:
               bootDevice:
                 storage: local-lvm
               instanceFamilies: ["c1", "t1", "s1", "m1", "x1"]
+              # TEMPORARY (2026-10-01): budget zeroed to stop the pool spawning nodes.
+              # A 100k-pod run drove the clone storm into local-lvm and wedged balteus:
+              # QEMU monitors stopped answering /status/current, Karpenter read that as
+              # `VM machine unreachable`, and retried clones indefinitely. Restore to
+              # cpu "128" / memory 512Gi once the storage path is understood.
               limits:
-                cpu: "128"
-                memory: 512Gi
+                cpu: "0"
+                memory: 0Gi
               # The chart default is 1m — SHORTER than a node takes to boot and register, so a slow or
               # failed registration is indistinguishable from an idle node and gets recycled. That is what
               # turned the storage problem above into a loop rather than a one-off. 5m keeps the intent

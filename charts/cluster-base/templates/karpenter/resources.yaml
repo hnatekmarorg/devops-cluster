@@ -114,6 +114,9 @@ spec:
   limits:
     cpu: {{ $limits.cpu | quote }}
     memory: {{ $limits.memory }}
+{{- with $limits.nodes }}
+    nodes: {{ . }}
+{{- end }}
   disruption:
     consolidationPolicy: {{ $disruption.consolidationPolicy }}
     consolidateAfter: {{ $disruption.consolidateAfter }}

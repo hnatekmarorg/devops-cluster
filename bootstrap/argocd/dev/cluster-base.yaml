@@ -71,14 +71,16 @@ spec:
               bootDevice:
                 storage: local-lvm
               instanceFamilies: ["c1", "t1", "s1", "m1", "x1"]
-              # TEMPORARY (2026-10-01): budget zeroed to stop the pool spawning nodes.
-              # A 100k-pod run drove the clone storm into local-lvm and wedged balteus:
-              # QEMU monitors stopped answering /status/current, Karpenter read that as
-              # `VM machine unreachable`, and retried clones indefinitely. Restore to
-              # cpu "128" / memory 512Gi once the storage path is understood.
+              # `nodes` is the real cap: Karpenter sizes a node to fit pending pods, so a cpu/memory
+              # budget alone does not bound the COUNT. A 100k-pod run on 2026-10-01 showed why the
+              # count is what matters: every extra node is another 30G clone into local-lvm, which
+              # shares /dev/nvme0n1p3 with the Proxmox OS, and the clone storm wedged the host
+              # (QEMU monitors stopped answering /status/current -> Karpenter read "VM machine
+              # unreachable" -> retried clones indefinitely).
               limits:
-                cpu: "0"
-                memory: 0Gi
+                cpu: "128"
+                memory: 512Gi
+                nodes: 8
               # The chart default is 1m — SHORTER than a node takes to boot and register, so a slow or
               # failed registration is indistinguishable from an idle node and gets recycled. That is what
               # turned the storage problem above into a loop rather than a one-off. 5m keeps the intent

@@ -66,7 +66,8 @@ module "cluster" {
       #
       # THE TIER SPLIT IS BY ROLE, and that is what makes this a rule rather than a measurement:
       #
-      #     control planes -> ssd-fast  (NAS SSD mirror, via the TrueNAS plugin): quiet by construction
+      #     control planes -> ssd-local (a dedicated local thin pool): fast AND independent of the NAS
+      #     workers        -> ssd-fast  (NAS SSD mirror, via the TrueNAS plugin): quiet, and redundant
       #     node roots     -> local-lvm (the single local NVMe): carries the churn
       #
       # A CP writes almost nothing in steady state. Measured on this node 2026-09-24, idle cluster:
@@ -74,14 +75,19 @@ module "cluster" {
       # here. So the pressure on this tier is PROVISIONING (a new cluster's install/clone), not the
       # workload, which is the point of putting control planes here at all.
       #
-      # What made this the answer (2026-09-24): a 1000-pod run drove Karpenter to clone NODE roots onto
-      # `ssd-fast`, and the datastore measured 33.3s flush. Moving the WAL off it kept the cluster up but
-      # did NOT fix provisioning — the TrueNAS plugin's broker is in the CLONE path
-      # (`broker: no response from upstream`, Storage/Custom/TrueNASPlugin.pm:1389), so clones failed,
-      # nodes never registered, Karpenter retried, and it left 13 orphan VMs in 7 minutes. Node roots on
-      # a local datastore take that plugin out of the node lifecycle entirely: see the worker below.
-      storage = "ssd-fast"
-      # No TRIM on etcd's volume, deliberately: reclamation is the NAS' problem, not the write path's.
+      # Why ssd-local and not ssd-fast (2026-09-25): a NAS rebuild stopped this VM, because its disk was
+      # on the NAS-backed plugin store. Worse, that store's API key was unauthorised (its TrueNAS user had
+      # no privileges), so pvestatd's status cycle went from 10s to 346s, EVERY storage reported `unknown`,
+      # and the provider — which accepts only storages it sees as available — found no zones:
+      # InstanceTemplateReady=False, NodePool not-ready, provisioning stopped completely. A hard stop that
+      # looks like nothing from inside the cluster; the fix was one group membership on the NAS.
+      #
+      # Role, not ranking, still decides this: the CP's disk must be local so that no NAS event can end it,
+      # and it must not share a device with the churn. Measured on ssd-local 2026-09-25: 0.66ms average
+      # flush against 1.4ms on ssd-fast. Its own 500GB SSD is the one device with nothing else on it.
+      storage = "ssd-local"
+      # No TRIM on etcd's volume, deliberately: it is 40G on a 450G pool that this VM never grows past, and
+      # discard on a thin volume injects latency spikes into the write path for space that is not needed.
       discard = "ignore"
     },
     {
@@ -98,19 +104,24 @@ module "cluster" {
       # memory line was 8192 while the VM ran on 16384 — i.e. the next apply would have shrunk a worker.
       memory_mb = 32768
       disk_gb   = 40
-      # A worker is the NODE tier: the local NVMe, for two reasons that are both about the same failure.
+      # A worker sits on ssd-fast, and the reasoning is the mirror image of the CP's above.
       #
-      # (a) Isolation runs the other way now. The churn device must never be the device holding an etcd
-      #     WAL, and with the CP above on ssd-fast, node writes belong here.
-      # (b) The TrueNAS plugin is a LIFECYCLE dependency, not merely a performance one. Node roots served
-      #     by it put its broker in the clone path, and that broker is what answered `no response from
-      #     upstream` under the 1000-pod run — clones failed, nodes never registered, Karpenter retried.
+      # (a) It is the QUIET tier. What broke this store was the churn — a 1000-pod run drove Karpenter to
+      #     clone NODE roots onto it and it measured 33.3s flush — and a worker creates none of that. Node
+      #     roots moved to local-lvm for that reason (see the chart's pool bootDevice), and they stay there.
+      # (b) It is the only REDUNDANT option: ssd-fast is a ZFS mirror of two SSDs, whereas both local tiers
+      #     are single devices. A worker's root is long-lived state, so mirroring buys more here than it
+      #     does for the CP (rebuildable by the factory) or for node roots (ephemeral by design).
+      # (c) It is not a new dependency CLASS: this worker's persistent volumes are on truenas-nvmeof
+      #     already, so the NAS is in its data path whichever device its root lives on.
       #
-      # local-lvm is a legitimate low-latency tier again: 0.9-1.0ms flush, because the NAS' SLOG no
-      # longer shares that device (it did when the 09-23 local-lvm vs ssd-fast comparison was taken, and
-      # that comparison is why this field has been wrong in both directions). Its other tenants are
-      # near-idle — the NAS VM's own boot disk writes 0.04 MB/s. MEASURE before moving it again.
-      storage = "local-lvm"
+      # Accepted cost, stated plainly: a NAS restart or plugin outage takes this worker down — it did on
+      # 2026-09-25, when the VM ended up stopped — and pods with NAS-backed PVCs cannot reschedule until
+      # the NAS returns. That is a worker-sized blast radius rather than a control-plane one, which is why
+      # the CP moved off this store in the same change. local-lvm is still a legitimate tier in its own
+      # right (0.9-1.0ms flush once the NAS' SLOG stopped sharing that device), and this field has been
+      # wrong in both directions before: MEASURE before moving it again.
+      storage = "ssd-fast"
     },
   ]
 

@@ -198,7 +198,10 @@ spec:
             # Cardinality control is the real fix and needs the headroom this buys to be measured.
             resources:
               limits:
-                memory: 3Gi
+                # RAISED FROM 3Gi (2026-10-04): bench campaigns (100k-node, 100/min churn) bloat the
+                # WAL past 1000 segments and replay spiked the working set past 6Gi — 389 OOMKills
+                # before the chart-layer fix was understood to be shadowed by this baked block.
+                memory: 14Gi
           grafana:
             storageSize: 2Gi
           alertmanager:

@@ -337,7 +337,12 @@ monitoring:
     resources:
       requests:
         cpu: 200m
-        memory: 512Mi
+        # OOM headroom: WAL replay of the bench-campaign churn spiked the working set past the old
+        # 6Gi hand-applied limit (389 restarts, exit 137 on 2026-10-04). Sized for ~2x the largest
+        # replay observed; trim if retention shrinks.
+        memory: 4Gi
+      limits:
+        memory: 14Gi
 
   grafana:
     # Empty derives `grafana.<clusterName>-k8s.srv.hnatekmar.dev`, which is the name the cluster's wildcard

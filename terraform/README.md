@@ -100,6 +100,7 @@ merge authorizes, each apply is triggered by changes to *its own* module (`terra
 | 3 | `iac` write user on the RB5009, then the `routeros-production` environment + `ROS_WRITE_*` secrets |
 | 4 | Pull the three devices' backups **off** the devices |
 | 5 | `ROUTEROS_CI_ENABLED=true` — last, once 3 holds |
+| 6 | `WG_SERVER_PRIVATE_KEY` on the **`routeros-production` environment** — the WireGuard server's private key (`wg genkey` where it is used; the private half goes into the secret and nowhere else). Without it the apply still succeeds and the **device** generates the key, which nothing can read back (`private_key` is computed + sensitive and both CI identities carry `!sensitive`) — so a later replacement of the interface would change it silently and kill every client profile. The two **client** public keys are not secrets and are not a bootstrap step: they are an edit to `wireguard_peers` in `terraform/routeros/wireguard.tf`, and until they are filled in the tunnel is published but inert |
 
 ## Reviewing a plan yourself
 

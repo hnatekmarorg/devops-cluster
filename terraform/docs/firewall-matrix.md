@@ -219,6 +219,49 @@ still covers the rest of `srv`).
 honest move then is a *published services* section with its own shape — not a fourth copy of this block.
 
 
+## The tunnel endpoint (2026-09-25)
+
+The `vpn` class stops being hypothetical with WireGuard on the router
+(`terraform/routeros/wireguard.tf`), and publishing the endpoint is a *policy* change rather than one
+firewall port. Three of its properties are invisible to `plan`, and each is a way for a correct-looking
+config to do nothing at all.
+
+**It is the estate's first WAN input accept.** Everything addressed to the router that did not arrive on
+a class VLAN meets the defconf `drop all not coming from LAN` (`in-interface-list=!LAN`) — which is why
+the box has never had a WAN-facing service, and why "expose one port on the router" reads as far more
+work than it is. The accept has to sit **above that rule**; no Terraform-managed rule sits above it, so
+its id is read at plan time through the provider's generic `routeros_ip_firewall` data source rather than
+being appended below (where it would never match).
+
+**The class that most needs the tunnel is the one that cannot reach it by default.** A client at home sits
+in `iot`, whose row is "internet ✓ only" and whose router access is a default-deny (`iot_router_deny`) —
+so `iot` gets a narrow accept for the tunnel port, anchored above that drop, in exactly the shape the DHCP
+accept beside it already has. Without it, the device that needs the tunnel most is the one that cannot
+bring it up and its client config looks correct while doing nothing. It is a *class* accept rather than a
+destination-scoped one on purpose: the input chain already means "addressed to the router", and `iot` is
+handed a **public** resolver, so this client resolves the endpoint to the WAN address and the packet
+arrives over the bridge addressed to the router's own WAN address. There is no `dstnat` in that path, so
+no NAT hairpin is involved.
+
+**The tunnel's own traffic to the router is scoped to one service: DNS.** The WireGuard interface is
+deliberately *not* added to the `LAN` interface list — that membership is the crutch the class
+default-denies exist to replace — so decapsulated traffic to the router's own addresses meets the same
+defconf drop and is denied except where named. A tunnel client's resolver is the router's address in its
+class (`172.16.96.1`, the `vlan60-vpn` gateway), which is the rule every DHCP scope already follows, and
+it needs **udp and tcp as two rules** (a filtered resolver truncates to TCP). NTP is not added: a client
+that is not the internet-less reader takes time from whatever network it is on.
+
+**What the tunnel may reach is not enforced yet, and that is a decision with a consequence.** There is no
+catch-all in the forward chain, so a class row's ✓ cells are satisfied by *fall-through*: the `vpn` row
+(mgmt scoped · srv on service ports · lab scoped · iot ✗) describes the intent, while a tunnel client
+today falls through to everything internal. Q21's enforcement order is iot → lab → srv → mgmt with compat
+last, and `vpn` is not in it — so the accept-list that enforces this row is its own reviewed step, and it
+needs the service-port list the `lab → srv` measurement is producing. Stated here rather than left
+implied, because it is the one thing about the tunnel a reader could reasonably assume the opposite of.
+
+Against that: the router's **own** input chain *is* scoped by this change — the tunnel reaches the
+endpoint and the box's resolver, and nothing else on the device.
+
 ## What this deliberately leaves alone
 
 - **IPv6** — out of scope for the overhaul; the classes are IPv4, and nothing in the matrix assumes

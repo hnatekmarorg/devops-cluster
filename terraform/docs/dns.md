@@ -67,6 +67,32 @@ everything that is not from the LAN (the defconf rule), so this does not become 
 WAN side. Each class's DHCP scope hands out **the router's address in that class** (`dhcp.tf`), so
 resolution never leaves the VLAN; upstream is public DNS (`8.8.8.8`, `1.1.1.1`).
 
+## The tunnel endpoint's name
+
+`vpn.hnatekmar.dev` is answered **twice, on purpose**, and the profile every device carries names it once:
+
+| world | answer | where |
+|---|---|---|
+| public | the estate's WAN address (`78.80.33.35`) | the public zone — **not in this repository yet**, see below |
+| internal | `172.16.96.1` — the router's address in the vpn class | `dns.tf`, one static record |
+
+Two answers because a profile has to work in both places: away from home the name must reach the WAN
+address, and at home it must not need a NAT hairpin. Neither answer is the ingress VIP the public wildcard
+gives (`172.16.100.15`) — and a name that resolves *only* through that wildcard inherits the wildcard's
+target, so **a profile minted before the public record exists points at nothing** and the symptom reads as
+"WireGuard is broken" rather than as a missing record.
+
+It is also the one name here that does not follow the `<host>.<class>` scheme, deliberately: the name has
+to exist in the public zone as well (one name in the profile, not one per world), which makes it the bare
+one-label name under the apex rather than `something.vpn.hnatekmar.dev`.
+
+**The public half is a bootstrap step.** This module owns the router's resolver, not the public zone, and
+Cloudflare-as-code is Phase 4 — so until that record exists, a remote client's profile has to carry the
+WAN address literally. Two properties are not optional when it is created: it must be **DNS-only**
+(unproxied — a proxied record terminates TLS and does not forward UDP at all), and it must track a
+*dynamic* address (the WAN is PPPoE), so it needs an updater **with a monitor**. A stale record is the one
+failure that is indistinguishable from a broken tunnel.
+
 ## Follow-ups this enables
 
 - **The Terraform state stops hairpinning.** The endpoint is currently `https://console-minio.hnatekmar.xyz`,

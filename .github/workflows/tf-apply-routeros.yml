@@ -83,6 +83,13 @@ jobs:
       TF_STATE_KEY: routeros/rb5009.tfstate
       ROS_WRITE_USERNAME: ${{ secrets.ROS_WRITE_USERNAME }}
       ROS_WRITE_PASSWORD: ${{ secrets.ROS_WRITE_PASSWORD }}
+      # The WireGuard server's private key — the tunnel interface's `private_key`. An ENVIRONMENT secret,
+      # like the write identity above and for the same reason: a repository secret is readable by any job
+      # a same-repo branch can trigger, and a plan job must not be able to reach it. When absent the apply
+      # still succeeds, but the device generates the key instead and nothing can read it back
+      # (`private_key` is computed + sensitive, and both CI identities carry `!sensitive`) — see the
+      # bootstrap step in terraform/README.md and the reasoning in terraform/routeros/wireguard.tf.
+      TF_VAR_wg_server_private_key: ${{ secrets.WG_SERVER_PRIVATE_KEY }}
       # State credential (repository-scoped — the state is not a device).
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

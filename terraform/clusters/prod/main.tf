@@ -1,8 +1,9 @@
 # The prod cluster.
 #
-# Same module as dev; only what is genuinely specific to *this* cluster lives here. Per the PR body, this
-# is a DRAFT: it is the scope of a prod cluster expressed as the diff that would create one, not something
-# to apply yet.
+# Same module as dev; only what is genuinely specific to *this* cluster lives here. The draft phase is
+# over: this root IS the recreate path. The four VMs exist (stopped) and an apply starts them and
+# re-applies the machine configs — merge-to-main or `tf-apply-cluster` dispatch, both gated on the
+# `clusters-production` environment.
 #
 #   tofu init -reconfigure -backend-config="key=cluster-prod/terraform.tfstate"
 #   tofu plan

@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       cluster:
-        description: 'Cluster to plan (e.g. dev)'
+        description: "Cluster name (e.g. dev), or 'all' — every root in main"
         required: true
         type: string
 
@@ -84,8 +84,40 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT: ${{ github.event_name }}
+          IN_CLUSTER: ${{ inputs.cluster }}
         run: |
           set -euo pipefail
+
+          # A dispatch names its target explicitly (the same branch tf-apply-cluster carries). The input
+          # was declared here from the start but never read, so a dispatch fell into the PR-diff path,
+          # diffed main's last commit, found no cluster change and planned nothing — reported as success.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            if [ "$IN_CLUSTER" = "all" ]; then
+              python3 - > /tmp/cluster-matrix.json <<'PY'
+          import json, os
+          base = 'terraform/clusters'
+          roots = sorted(d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d)))
+          print(json.dumps({"include": [
+              {"cluster": c, "action": "apply", "state_key": f"cluster-{c}/terraform.tfstate"}
+              for c in roots
+          ]}))
+          PY
+            else
+              python3 - > /tmp/cluster-matrix.json <<PY
+          import json
+          c = "$IN_CLUSTER"
+          print(json.dumps({"include": [{"cluster": c, "action": "apply",
+                                         "state_key": f"cluster-{c}/terraform.tfstate"}]}))
+          PY
+            fi
+            matrix="$(cat /tmp/cluster-matrix.json)"
+            echo "matrix: ${matrix}"
+            echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+            echo "has=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           base="${BASE_SHA:-HEAD^}"
           head="${HEAD_SHA:-HEAD}"
           if ! git cat-file -e "$base" 2>/dev/null; then

@@ -1,0 +1,927 @@
+[
+ {
+  "name": "c1.1VCPU-2GB",
+  "capacity": {
+   "cpu": "1",
+   "ephemeral-storage": "30Gi",
+   "memory": "2147483648",
+   "pods": "64"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "20m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "t1.1VCPU-3GB",
+  "capacity": {
+   "cpu": "1",
+   "ephemeral-storage": "30Gi",
+   "memory": "3221225472",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "20m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "s1.1VCPU-4GB",
+  "capacity": {
+   "cpu": "1",
+   "ephemeral-storage": "30Gi",
+   "memory": "4294967296",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "20m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "m1.1VCPU-8GB",
+  "capacity": {
+   "cpu": "1",
+   "ephemeral-storage": "30Gi",
+   "memory": "8589934592",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "20m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "x1.1VCPU-16GB",
+  "capacity": {
+   "cpu": "1",
+   "ephemeral-storage": "30Gi",
+   "memory": "17179869184",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "20m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "c1.2VCPU-4GB",
+  "capacity": {
+   "cpu": "2",
+   "ephemeral-storage": "30Gi",
+   "memory": "4294967296",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "50m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "t1.2VCPU-6GB",
+  "capacity": {
+   "cpu": "2",
+   "ephemeral-storage": "30Gi",
+   "memory": "6442450944",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "50m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "s1.2VCPU-8GB",
+  "capacity": {
+   "cpu": "2",
+   "ephemeral-storage": "30Gi",
+   "memory": "8589934592",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "50m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "m1.2VCPU-16GB",
+  "capacity": {
+   "cpu": "2",
+   "ephemeral-storage": "30Gi",
+   "memory": "17179869184",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "50m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "x1.2VCPU-32GB",
+  "capacity": {
+   "cpu": "2",
+   "ephemeral-storage": "30Gi",
+   "memory": "34359738368",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "50m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "c1.4VCPU-8GB",
+  "capacity": {
+   "cpu": "4",
+   "ephemeral-storage": "30Gi",
+   "memory": "8589934592",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "t1.4VCPU-12GB",
+  "capacity": {
+   "cpu": "4",
+   "ephemeral-storage": "30Gi",
+   "memory": "12884901888",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "s1.4VCPU-16GB",
+  "capacity": {
+   "cpu": "4",
+   "ephemeral-storage": "30Gi",
+   "memory": "17179869184",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "m1.4VCPU-32GB",
+  "capacity": {
+   "cpu": "4",
+   "ephemeral-storage": "30Gi",
+   "memory": "34359738368",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "x1.4VCPU-64GB",
+  "capacity": {
+   "cpu": "4",
+   "ephemeral-storage": "30Gi",
+   "memory": "68719476736",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "c1.8VCPU-16GB",
+  "capacity": {
+   "cpu": "8",
+   "ephemeral-storage": "30Gi",
+   "memory": "17179869184",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "t1.8VCPU-24GB",
+  "capacity": {
+   "cpu": "8",
+   "ephemeral-storage": "30Gi",
+   "memory": "25769803776",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "s1.8VCPU-32GB",
+  "capacity": {
+   "cpu": "8",
+   "ephemeral-storage": "30Gi",
+   "memory": "34359738368",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "m1.8VCPU-64GB",
+  "capacity": {
+   "cpu": "8",
+   "ephemeral-storage": "30Gi",
+   "memory": "68719476736",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "x1.8VCPU-128GB",
+  "capacity": {
+   "cpu": "8",
+   "ephemeral-storage": "30Gi",
+   "memory": "137438953472",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "c1.16VCPU-32GB",
+  "capacity": {
+   "cpu": "16",
+   "ephemeral-storage": "30Gi",
+   "memory": "34359738368",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "t1.16VCPU-48GB",
+  "capacity": {
+   "cpu": "16",
+   "ephemeral-storage": "30Gi",
+   "memory": "51539607552",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "s1.16VCPU-64GB",
+  "capacity": {
+   "cpu": "16",
+   "ephemeral-storage": "30Gi",
+   "memory": "68719476736",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "m1.16VCPU-128GB",
+  "capacity": {
+   "cpu": "16",
+   "ephemeral-storage": "30Gi",
+   "memory": "137438953472",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "x1.16VCPU-256GB",
+  "capacity": {
+   "cpu": "16",
+   "ephemeral-storage": "30Gi",
+   "memory": "274877906944",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "c1.32VCPU-64GB",
+  "capacity": {
+   "cpu": "32",
+   "ephemeral-storage": "30Gi",
+   "memory": "68719476736",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "t1.32VCPU-96GB",
+  "capacity": {
+   "cpu": "32",
+   "ephemeral-storage": "30Gi",
+   "memory": "103079215104",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "s1.32VCPU-128GB",
+  "capacity": {
+   "cpu": "32",
+   "ephemeral-storage": "30Gi",
+   "memory": "137438953472",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "m1.32VCPU-256GB",
+  "capacity": {
+   "cpu": "32",
+   "ephemeral-storage": "30Gi",
+   "memory": "274877906944",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "x1.32VCPU-512GB",
+  "capacity": {
+   "cpu": "32",
+   "ephemeral-storage": "30Gi",
+   "memory": "549755813888",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "c1.64VCPU-128GB",
+  "capacity": {
+   "cpu": "64",
+   "ephemeral-storage": "30Gi",
+   "memory": "137438953472",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "t1.64VCPU-192GB",
+  "capacity": {
+   "cpu": "64",
+   "ephemeral-storage": "30Gi",
+   "memory": "206158430208",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "s1.64VCPU-256GB",
+  "capacity": {
+   "cpu": "64",
+   "ephemeral-storage": "30Gi",
+   "memory": "274877906944",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "m1.64VCPU-512GB",
+  "capacity": {
+   "cpu": "64",
+   "ephemeral-storage": "30Gi",
+   "memory": "549755813888",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "x1.64VCPU-1024GB",
+  "capacity": {
+   "cpu": "64",
+   "ephemeral-storage": "30Gi",
+   "memory": "1099511627776",
+   "pods": "110"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "g1.4VCPU-16GB",
+  "capacity": {
+   "cpu": "4",
+   "ephemeral-storage": "30Gi",
+   "memory": "17179869184",
+   "pods": "110",
+   "nvidia.com/gpu": "1"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "g1.8VCPU-32GB",
+  "capacity": {
+   "cpu": "8",
+   "ephemeral-storage": "30Gi",
+   "memory": "34359738368",
+   "pods": "110",
+   "nvidia.com/gpu": "1"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "g1.16VCPU-64GB",
+  "capacity": {
+   "cpu": "16",
+   "ephemeral-storage": "30Gi",
+   "memory": "68719476736",
+   "pods": "110",
+   "nvidia.com/gpu": "1"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "g1.32VCPU-128GB",
+  "capacity": {
+   "cpu": "32",
+   "ephemeral-storage": "30Gi",
+   "memory": "137438953472",
+   "pods": "110",
+   "nvidia.com/gpu": "1"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "g1.64VCPU-256GB",
+  "capacity": {
+   "cpu": "64",
+   "ephemeral-storage": "30Gi",
+   "memory": "274877906944",
+   "pods": "110",
+   "nvidia.com/gpu": "1"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ }
+]

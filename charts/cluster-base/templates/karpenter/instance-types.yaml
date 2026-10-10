@@ -1,0 +1,20 @@
+{{- if and .Values.onprem .Values.karpenter.enabled }}
+# The provider's instance-type grid, replaced wholesale via INSTANCE_TYPES_FILE (wired in
+# templates/karpenter/karpenter.yaml). Generated with the provider's own `instancetypes` tool
+# (`-c 1,2,4,8,16,32,64 -m 2,3,4,8,16 -s 30 --kubelet --system --eviction`), so every stock entry
+# matches the provider's defaults exactly; the additions are:
+#   * 32- and 64-vCPU sizes across the stock families — the estate's hosts are 64- and 128-core, and
+#     the stock grid stops at 16;
+#   * the `g1` family — standard 1:4 nodes that additionally advertise `nvidia.com/gpu: 1`. This is
+#     what lets a GPU pod trigger provisioning at all: the stock families carry no GPU capacity, so
+#     without it a pending GPU pod is invisible to Karpenter. Only the GPU pool requires `g1`; every
+#     other pool's requirements (c1/t1/s1/m1/x1) exclude it, so non-GPU pools never size from it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: karpenter-instance-types
+  namespace: kube-system
+data:
+  instance-types.json: |-
+{{ .Files.Get "files/instance-types.json" | indent 4 }}
+{{- end }}

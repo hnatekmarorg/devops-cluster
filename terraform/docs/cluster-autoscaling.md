@@ -12,7 +12,7 @@ NodePool  ──▶  ProxmoxNodeClass  ──▶  ProxmoxUnmanagedTemplate  ─�
 
 A `NodePool` never names a VM, a size or a Proxmox node. It names a **NodeClass**, which names a
 **template**. The pool picks an **instance type** — the provider's own grid, `<family>.<N>VCPU-<R>GB` with
-families `c1` (1:2), `t1` (1:3), `s1` (1:4), `m1` (1:8), `x1` (1:16) and N ∈ {1,2,4,8,16} — and that *is*
+families `c1` (1:2), `t1` (1:3), `s1` (1:4), `m1` (1:8), `x1` (1:16) and N ∈ {1,2,4,8,16} — as extended by the estate's instance-types file (`charts/cluster-base/files/instance-types.json`, wired via `INSTANCE_TYPES_FILE`): N up to 64, plus the `g1` family (1:4, advertising `nvidia.com/gpu: 1`) — and that *is*
 the node size: `m1.4VCPU-32GB` becomes a 4-core, 32 GiB VM. The digit in the family name is a generation
 marker, not arithmetic.
 
@@ -168,6 +168,48 @@ Proxmox reports as `shared=0`. Either
 
 Everything else is ordinary Proxmox: join the host to the cluster, give it the storage bridge, and let the
 pool place clones on it.
+
+### GPU pools
+
+A GPU pool is a pool whose template carries a **PVE PCI resource mapping** on `hostpci0`, whose join
+config loads the NVIDIA modules, and whose nodes run the device plugin. The bukefalos pool
+(`bootstrap/argocd/dev/cluster-base.yaml`, `talos-nocloud-gpu-template`) is the worked example, proven
+end-to-end 2026-10-10 (a claim → clone → Talos join → `nvidia.com/gpu: 2` advertised → a pod ran
+`nvidia-smi` against an RTX A4000).
+
+Five things beyond the five above:
+
+1. **A PCI mapping, not a raw path.** An API token cannot set a raw `hostpci` (`only root can set
+   'hostpci0' config for non-mapped devices`), and the mapping validator demands every property the GUI
+   would record: `iommugroup` AND `subsystem-id`. Take them from `/sys/bus/pci/devices/<addr>/` and
+   `readlink .../iommu_group`:
+   `pvesh create /cluster/mapping/pci --id <name> --map "node=<host>,path=0000:XX:00.0,id=<vvvv:dddd>,subsystem-id=<vvvv:dddd>,iommugroup=<N>"`.
+2. **One mapping may hold several cards, and PVE takes the first FREE one at VM start.** That is what
+   lets `nodes: 2` mean two single-card nodes: the template has ONE `hostpci0: mapping=<id>` and each
+   clone that starts claims the next free card.
+3. **The node image carries the NVIDIA extensions** (factory schematic, as above) — and the template
+   must be rebuilt from the schematic's nocloud image, because a clone boots the template's installed
+   disk and never reinstalls.
+4. **The join config loads the modules**: `machine.kernel.modules: [nvidia, nvidia_uvm]` in a per-pool
+   join secret (the metal GPU class adds `nvidia_drm`/`nvidia_modeset` for display; compute needs the
+   first two). Without them the plugin reports `failed to initialize NVML: Driver Not Loaded`.
+5. **The device plugin + RuntimeClass** (`charts/cluster-base/templates/karpenter/nvidia.yaml`, gated on
+   `karpenter.nvidia`): the plugin runs with `runtimeClassName: nvidia` — Talos injects the driver
+   libraries only through that runtime — and selects the pool's nodes via `karpenter.sh/nodepool`,
+   because the CPU nodes carry no nvidia runtime handler.
+6. **GPU capacity in the instance grid.** The stock families advertise no `nvidia.com/gpu`, so a
+   pending GPU pod is invisible to Karpenter and only a manual NodeClaim provisions a GPU node. The
+   estate's grid adds the `g1` family (1:4 + `nvidia.com/gpu: 1`); the GPU pool requires `g1` and no
+   other pool does. The zone-fit check still only sees cpu/memory, so `limits.nodes` remains the real
+   card cap.
+
+Two traps found on the way:
+
+- **The factory nocloud image boots under OVMF only.** On SeaBIOS the VM spins at ~98% CPU having read
+  ~16 KB, with the disk's layout and boot bytes byte-identical to an image that boots — so it reads as
+  a corrupt clone and is not one. `bios: ovmf` + an `efidisk0`, and the same image boots in seconds.
+- **Leave `machine` alone.** `pcie=1` on the hostpci requires q35, the provider overrides the CPU type
+  anyway, and a plain mapping on the default machine boots and passes the card.
 
 ## What "working" looks like
 

@@ -3,12 +3,21 @@
 {{- $defaultBoot := default dict $defaults.bootDevice }}
 
 {{- /* One template CR per distinct templateName: two pools may share a PVE template (same machine image,
-       different size budget or taints), and two CRs of the same name would fight over one object. */}}
+       different size budget or taints), and two CRs of the same name would fight over one object. The CR
+       pins ONE region, so pools sharing a templateName must agree on it — a mismatch fails the render
+       rather than letting the last writer win. */}}
 {{- $templateNames := dict }}
 {{- range .Values.karpenter.pools }}
-{{- $_ := set $templateNames .templateName true }}
+{{- $region := default $.Values.karpenter.region .region }}
+{{- if hasKey $templateNames .templateName }}
+{{- if ne (get $templateNames .templateName) $region }}
+{{- fail (printf "karpenter: template %s is declared with two regions (%s vs %s)" .templateName (get $templateNames .templateName) $region) }}
 {{- end }}
-{{- range $name, $_ := $templateNames }}
+{{- else }}
+{{- $_ := set $templateNames .templateName $region }}
+{{- end }}
+{{- end }}
+{{- range $name, $region := $templateNames }}
 ---
 # Which PVE template to clone. Unmanaged ⇒ the provider SEARCHES every Proxmox node for this NAME, so a
 # matching template must exist on each node a clone may land on — same name, class VLAN tag on its net0,
@@ -18,7 +27,7 @@ kind: ProxmoxUnmanagedTemplate
 metadata:
   name: {{ $name }}
 spec:
-  region: {{ $.Values.karpenter.region }}
+  region: {{ $region }}
   templateName: {{ $name }}
 {{- end }}
 {{- range .Values.karpenter.pools }}
@@ -27,6 +36,8 @@ spec:
 {{- $families := default $defaults.instanceFamilies .instanceFamilies }}
 {{- $disruption := merge (deepCopy (default dict .disruption)) (deepCopy (default dict $defaults.disruption)) }}
 {{- $expire := default $defaults.expireAfter .expireAfter | default "Never" }}
+{{- $region := default $.Values.karpenter.region .region }}
+{{- $js := merge (deepCopy (default dict .joinSecret)) (deepCopy $.Values.karpenter.joinSecret) }}
 ---
 # Where and how: region, disk (which also selects the zones), and how the machine config is delivered.
 # One NodeClass PER POOL — a pool's template, disk and storage are its own, so two pools that differ in
@@ -36,7 +47,7 @@ kind: ProxmoxNodeClass
 metadata:
   name: {{ .name }}
 spec:
-  region: {{ $.Values.karpenter.region }}
+  region: {{ $region }}
   instanceTemplateRef:
     kind: ProxmoxUnmanagedTemplate
     name: {{ .templateName }}
@@ -57,8 +68,8 @@ spec:
     # The referenced Secret carries cloud-init fragments as keys, all optional:
     #   user-data, meta-data, network-config
     templatesRef:
-      name: {{ $.Values.karpenter.joinSecret.name }}
-      namespace: {{ $.Values.karpenter.joinSecret.namespace }}
+      name: {{ $js.name }}
+      namespace: {{ $js.namespace }}
   placementStrategy:
     zoneBalance: Balanced
   tags:

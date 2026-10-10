@@ -104,6 +104,51 @@ spec:
                     reasons: ["Empty"]
                   - nodes: "1"
                     reasons: ["Drifted", "Underutilized"]
+
+            # THE GPU POOL (bukefalos). Two A4000s, one per node: the PVE PCI mapping holds both cards
+            # and PVE takes the first FREE one at VM start (terraform/docs/cluster-autoscaling.md,
+            # "GPU pools"), so `nodes: 2` is two single-card nodes, not one double-card one.
+            - name: talos-nocloud-gpu-template
+              templateName: talos-nocloud-gpu-template
+              # Bukefalos is its own provider region, and its node roots live on the striped `vms`
+              # thin pool — `local-lvm` does not exist there. The bootDevice storage also selects the
+              # zones, so this is also what keeps this pool's clones off balteus.
+              region: bukefalos
+              bootDevice:
+                storage: vms
+              # The GPU join config: the same worker config plus `machine.kernel.modules: [nvidia,
+              # nvidia_uvm]`. The extensions ship the modules but nothing loads them by default, and
+              # without them the device plugin dies with `failed to initialize NVML: Driver Not Loaded`.
+              joinSecret:
+                name: karpenter-talos-join-gpu
+              # `g1` = the GPU family (1:4 nodes carrying `nvidia.com/gpu: 1`) from the estate's
+              # instance-types file — the stock families advertise no GPU capacity, so without it a
+              # pending GPU pod would never trigger provisioning at all.
+              instanceFamilies: ["g1"]
+              # Cpu: 127 of the machine's 128 vCPUs (2× EPYC 7601 threads) — one thread stays with the
+              # host. Memory: 448 GiB of bukefalos' 512, deliberately — the remaining 64 GiB is the
+              # floor a CPU pool in this same region can count on. `nodes: 2` is the real card cap
+              # (two cards, two single-card nodes).
+              limits:
+                cpu: "127"
+                memory: 448Gi
+                nodes: 2
+              # Only GPU workloads land here; the device plugin carries the same toleration.
+              taints:
+                - key: nvidia.com/gpu
+                  value: present
+                  effect: NoSchedule
+              disruption:
+                consolidateAfter: 5m
+                budgets:
+                  - nodes: "10"
+                    reasons: ["Empty"]
+                  - nodes: "1"
+                    reasons: ["Drifted", "Underutilized"]
+
+          nvidia:
+            enabled: true
+            poolName: talos-nocloud-gpu-template
         certManager:
           cloudflare:
             secretSource: eso

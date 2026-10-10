@@ -28,15 +28,17 @@ spec:
           # rendered by templates/karpenter/instance-types.yaml replaces it wholesale.
           extraEnvs:
             - name: INSTANCE_TYPES_FILE
-              value: /etc/proxmox/instance-types.json
+              value: /etc/karpenter/instance-types.json
           extraVolumes:
             - name: instance-types
               configMap:
                 name: karpenter-instance-types
           extraVolumeMounts:
             - name: instance-types
-              mountPath: /etc/proxmox/instance-types.json
-              subPath: instance-types.json
+              # Its own directory mount, NOT a subPath file under /etc/proxmox: that path is the
+              # credentials secret's directory mount, and a file mount nested inside it fails at
+              # container start with `mount ...: not a directory` (observed live 2026-10-10).
+              mountPath: /etc/karpenter
   destination:
     server: "https://kubernetes.default.svc"
     namespace: kube-system

@@ -24,6 +24,11 @@ spec:
             service:
               annotations:
                 metallb.io/loadBalancerIPs: {{ required "metallb.ingressVIP is required when metallb is enabled" .Values.metallb.ingressVIP | quote }}
+                # `allow-shared-ip` lets the forge's SSH Service (`forgejo-ssh-lb`, port 22) share
+                # this address with the ingress: one hostname then answers both 443 and 22, which is
+                # what makes the clone URL the forge hands out work verbatim. Inert until a Service
+                # requests the same sharing key; 22 does not overlap 80/443, so the share is legal.
+                metallb.io/allow-shared-ip: "forgejo-ssh"
 {{- end }}
   destination:
     server: "https://kubernetes.default.svc"

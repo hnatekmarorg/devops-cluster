@@ -88,10 +88,8 @@ spec:
         # appliance answers NFS/iSCSI/NVMe-oF on the management address too, so the wrong name is a 1G
         # data path rather than an error.
         #
-        # PREREQUISITE, and it is provisioning rather than values: prod's nodes need the island NIC.
-        # terraform/clusters/dev/main.tf sets `storage_bridge = "vmbr2"`; prod's does not, so nothing on
-        # this cluster can reach 192.168.88.0/24 yet. Until that lands an NFS PVC stays Pending and a
-        # `truenas-nvmeof` PVC fails at provision time — both of which read like a NAS fault.
+        # The island NIC is in place: prod's root sets `storage_bridge = "vmbr2"` and the VMs carry the
+        # `net1` (verified on the stopped VMs), so 192.168.88.0/24 is reachable from every node.
         storage:
           # RWX over NFS (`nfs-client`).
           nfs:
@@ -114,10 +112,9 @@ spec:
         #
         # PREREQUISITES, both real:
         #   * `secret/common/telegram` in the vault (shared with dev: one bot, one chat).
-        #   * DNS, and it is the reason this PR also touches terraform/routeros/dns.tf: prod has no
-        #     `*.prod-k8s.srv.hnatekmar.dev` record yet, so `grafana.prod-k8s.srv.hnatekmar.dev` falls
-        #     through to the public `*.hnatekmar.dev` wildcard and answers 172.16.100.15 — the reverse
-        #     proxy, which does not serve this cluster. The record is added alongside the stack.
+        #   * DNS — live: `^.+\\.prod-k8s\\.srv\\.hnatekmar\\.dev$` → 172.16.49.1 (the regexp record in
+        #     terraform/routeros/dns.tf), so `grafana.prod-k8s.srv.hnatekmar.dev` reaches this cluster's
+        #     ingress VIP and not the public wildcard.
         monitoring:
           enabled: true
           # Roomier than dev on purpose: four nodes, and a week of retention on a cluster whose incidents

@@ -43,6 +43,15 @@ ingress:
   className: nginx
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    # THE REGISTRY PUSH PATH. Without these, a blob upload dies on nginx's default 1m body cap:
+    # `413 Request Entity Too Large` before the transfer starts. First measured on dev (where the
+    # live release was patched — the transcription into git missed it), and again on prod 2026-10-10
+    # when the registry's first push hit the same wall. `0` lifts the cap; buffering off and long
+    # timeouts keep multi-hundred-MB layers streaming.
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
   hosts:
     - host: forgejo.prod-k8s.srv.hnatekmar.dev
       paths:

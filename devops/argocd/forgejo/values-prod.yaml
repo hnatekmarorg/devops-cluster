@@ -1,0 +1,69 @@
+# Forgejo (prod cluster) — values for the official chart, oci://code.forgejo.org/forgejo-helm.
+#
+# A copy of values-dev.yaml with exactly the differences prod has: the hostname in the three places it
+# appears, and the size of the forge's data volume (the built-in registry's home). Everything else —
+# the whole gitea.config block, the DB layout, the persistence tier — is identical, which is the point
+# of keeping the forge's topology inside a values file. values-dev.yaml carries the full reasoning for
+# the shared blocks; only the prod-specific deltas are commented here.
+gitea:
+  admin:
+    username: mh
+    email: m.hnatma+forgejo@gmail.com
+    # password: <not here — credential; on a FRESH database (this one) Secret `forgejo-admin` must
+    # exist before the first sync (see README.md), because the chart only uses it to create the account.
+
+  # Full-object EnvVars, not bare names — see values-dev.yaml for the measured reason.
+  additionalConfigFromEnvs:
+    - name: FORGEJO__database__PASSWD
+      valueFrom:
+        secretKeyRef:
+          name: forgejo-db
+          key: password
+
+  config:
+    server:
+      ROOT_URL: https://forgejo.prod-k8s.srv.hnatekmar.dev/
+    database:
+      DB_TYPE: postgres
+      HOST: forgejo-db.forgejo.svc.cluster.local:5432
+      NAME: forgejo
+      USER: forgejo
+      SSL_MODE: disable
+    oauth2_client:
+      ACCOUNT_LINKING: auto
+      ENABLE_AUTO_REGISTRATION: true
+      REGISTER_EMAIL_CONFIRM: false
+      UPDATE_AVATAR: true
+      USERNAME: nickname
+    actions:
+      DEFAULT_ACTIONS_URL: https://github.com
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+  hosts:
+    - host: forgejo.prod-k8s.srv.hnatekmar.dev
+      paths:
+        - path: /
+          pathType: Prefix
+          port: http
+  tls:
+    - hosts:
+        - forgejo.prod-k8s.srv.hnatekmar.dev
+      secretName: forgejo-tls
+
+persistence:
+  enabled: true
+  # 128Gi, sized for the BUILT-IN CONTAINER REGISTRY: the estate's CI pushes images here, and the git
+  # repositories plus LFS are rounding errors next to it. The blobs are content-addressed — layers
+  # shared between tags are stored once — so growth tracks distinct layers, not tag count. The one
+  # growth lever to remember: deleting a tag leaves its blobs behind until the registry's garbage
+  # collection runs, so schedule that task once the registry carries real traffic.
+  #
+  # The number is a soft ceiling: `truenas-nvmeof` serves sparse zvols (you pay for what is used, not
+  # for the ceiling) and the class has allowVolumeExpansion, so this can grow in place.
+  size: 128Gi
+  # The BLOCK tier, not NFS — the same reasoning as the database (see manifests-prod/10-postgres.yaml).
+  storageClass: truenas-nvmeof

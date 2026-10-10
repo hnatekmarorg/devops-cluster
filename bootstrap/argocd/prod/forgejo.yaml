@@ -1,0 +1,55 @@
+# The forge, on the PROD cluster — the gitops half of moving it off the dev prototype.
+#
+# This file is the per-cluster PLACEMENT: the prod root Application recurses bootstrap/argocd/prod/,
+# so this is what makes ArgoCD adopt the forge here. The app's own pieces (values, manifests) live
+# under devops/argocd/forgejo/ per the repo's convention, shared with the dev declaration there.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forgejo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+
+  # The chart sets `replicas` on the Deployment it owns and HPA-shaped fields elsewhere; replicas are
+  # not this Application's decision to enforce.
+  ignoreDifferences:
+    - kind: "*"
+      group: "*"
+      namespace: forgejo
+      jsonPointers:
+        - /spec/replicas
+
+  # Three sources, same shape as the dev declaration (devops/argocd/forgejo/forgejo.yaml): the pinned
+  # chart with the PROD values file, the pieces the chart does not own (prod's DB and SSO client), and
+  # the repo itself referenced as `repo` so the values file above can be a $repo path.
+  sources:
+    - name: forgejo-chart
+      repoURL: oci://code.forgejo.org/forgejo-helm
+      chart: forgejo
+      targetRevision: 17.1.7
+      helm:
+        valueFiles:
+          - $repo/devops/argocd/forgejo/values-prod.yaml
+
+    - repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      targetRevision: main
+      path: devops/argocd/forgejo/manifests-prod
+
+    - repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      targetRevision: main
+      ref: repo
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: forgejo
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

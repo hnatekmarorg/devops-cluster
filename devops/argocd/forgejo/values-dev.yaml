@@ -1,0 +1,77 @@
+# Forgejo (dev cluster) — values for the official chart, oci://code.forgejo.org/forgejo-helm.
+#
+# These are the values the RUNNING instance was built with (read back from the release, not retyped
+# from memory), minus one thing: `gitea.admin.password`. It is deliberately absent — it is a credential,
+# and this file is in git. The admin account already exists; the chart only uses that value to create
+# it on a database it has not initialised yet.
+#
+# PROD: copy this file to values-prod.yaml and change exactly four things — the hostname (three places:
+# ROOT_URL, ingress host, ingress TLS host), and point the Application's valueFiles at it. Everything
+# else (the whole gitea.config block, the DB layout, the persistence tier) is identical, which is the
+# point of keeping the forge's topology inside a values file.
+gitea:
+  admin:
+    username: mh
+    email: m.hnatma+forgejo@gmail.com
+    # password: <not here — credential>
+
+  # The chart's `additionalConfigFromEnvs` takes full EnvVar OBJECTS. A bare name renders as a string
+  # and the Forgejo API rejects the whole Deployment ("cannot unmarshal string into Go value of type
+  # v1.EnvVar") — the pod never starts and the error is one API call away from the value it complains
+  # about. Measured while building the prototype.
+  additionalConfigFromEnvs:
+    - name: FORGEJO__database__PASSWD
+      valueFrom:
+        secretKeyRef:
+          name: forgejo-db
+          key: password
+
+  config:
+    server:
+      ROOT_URL: https://forgejo.dev-k8s.srv.hnatekmar.dev/
+    database:
+      DB_TYPE: postgres
+      HOST: forgejo-db.forgejo.svc.cluster.local:5432
+      NAME: forgejo
+      USER: forgejo
+      SSL_MODE: disable            # same namespace, same cluster — the link never leaves the pod network
+    oauth2_client:
+      # ACCOUNT_LINKING=auto is what makes the Keycloak login link to the account Forgejo already has
+      # for that address, instead of racing it and creating a second one. Without it, an SSO login for
+      # an existing local user is an error rather than a login.
+      ACCOUNT_LINKING: auto
+      ENABLE_AUTO_REGISTRATION: true
+      REGISTER_EMAIL_CONFIRM: false
+      UPDATE_AVATAR: true
+      USERNAME: nickname           # Forgejo's own preference for which claim becomes the username
+    # `actions` (lower-case, the chart's key) — the setting that decides where a workflow's `uses:`
+    # is fetched from. Forgejo's own default is data.forgejo.org, which does NOT carry the GitHub
+    # actions this repo's workflows reference; pointing it at github.com is what makes
+    # actions/checkout@v4 and opentofu/setup-opentofu@v1 resolve (measured: without it, setup-opentofu
+    # dies with "repository not found"). It is also, deliberately, the one remaining outbound
+    # dependency on github.com in the whole CI path — see .forgejo/README.md for the mirror option.
+    actions:
+      DEFAULT_ACTIONS_URL: https://github.com
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+  hosts:
+    - host: forgejo.dev-k8s.srv.hnatekmar.dev
+      paths:
+        - path: /
+          pathType: Prefix
+          port: http
+  tls:
+    - hosts:
+        - forgejo.dev-k8s.srv.hnatekmar.dev
+      secretName: forgejo-tls          # cert-manager's; not declared in git, and should not be
+
+persistence:
+  enabled: true
+  size: 20Gi
+  # The BLOCK tier, not NFS: this holds the git repositories, and Forgejo's object storage wants a
+  # device whose fsync is honest. The same reasoning applies to the database (see manifests/).
+  storageClass: truenas-nvmeof

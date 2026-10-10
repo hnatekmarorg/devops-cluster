@@ -1,0 +1,109 @@
+# Forgejo's database — the piece the upstream chart does not own.
+#
+# WHY NOT THE CHART'S SUBCHART: the chart can bundle a Postgres wrapper for you, but then the storage
+# tier, the image and the reset semantics arrive as a dependency bump. This estate runs its databases
+# as plain StatefulSets on the block tier, so what git says is what runs.
+#
+# WHY THE BLOCK TIER (`truenas-nvmeof`, not `nfs-client`): Postgres fsyncs on every commit. Over NFS the
+# fsync is somebody else's problem, and a database that answers OK to a write it has not durably stored
+# is a database that can come back wrong after a node reboot. The same reasoning puts Forgejo's own
+# `/data` on the block tier (devops/argocd/forgejo/values-dev.yaml).
+#
+# PREREQUISITE, not owned here: Secret `forgejo-db` (key `password`) — see README.md. It is a credential,
+# so it is not in git; on dev it was created out of band, and on a new cluster it must exist before the
+# first sync or the pod sits in CreateContainerConfigError.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forgejo-db
+  namespace: forgejo
+spec:
+  # NOT headless, unlike the usual StatefulSet companion. This is transcribed from the running object:
+  # it is a plain ClusterIP service, and making it headless now would be a change to an immutable field
+  # (`spec.clusterIP`), i.e. a delete-and-recreate of a service Forgejo is connected to. With one replica
+  # there is nothing for the headless form to buy, so the honest thing is to leave it as it runs.
+  selector:
+    app: forgejo-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: forgejo-db
+  namespace: forgejo
+spec:
+  serviceName: forgejo-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: forgejo-db
+  # RETAIN, deliberately. The default for a StatefulSet's PVCs is also Retain, but this estate has been
+  # bitten by "delete the workload to fix it" turning into "delete the database" — saying it out loud in
+  # the manifest is free, and it makes the intent reviewable instead of inherited from a default.
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  template:
+    metadata:
+      labels:
+        app: forgejo-db
+    spec:
+      # postgres:17-alpine runs as uid/gid 70; 999 is what this
+      # image's data directory expects to be group-owned, so the volume is mounted writable for it.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: forgejo
+            - name: POSTGRES_DB
+              value: forgejo
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-db
+                  key: password
+            # A SUBDIRECTORY of the volume, not its root: the image refuses to initialise a data
+            # directory that already has content, and a mounted volume always has `lost+found`. The
+            # failure mode is a container that exits immediately with "directory not empty".
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "forgejo", "-d", "forgejo"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "forgejo"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              # A ceiling, not a target: this pod shares the dev control-plane node with the whole
+              # cluster-base stack, and an unbounded Postgres is the one pod that can take that node down.
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: truenas-nvmeof
+        resources:
+          requests:
+            storage: 5Gi

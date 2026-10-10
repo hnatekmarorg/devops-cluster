@@ -29,4 +29,26 @@ stringData:
   # no scheme
   url: ghcr.io/sergelogvinov/charts
   enableOCI: "true"
+---
+# The forge's chart registry — the same requirement as above, measured the same way: the Application
+# declared `oci://code.forgejo.org/forgejo-helm`, ArgoCD resolved it to `code.forgejo.org/forgejo-helm:17.1.7`
+# and the registry answered `not found`, because the package is `forgejo-helm/forgejo` (owner + chart
+# name). Registered with the OWNER path and enableOCI, the chart name in the Application completes the
+# package: `<this url>/<chart>:<revision>` = code.forgejo.org/forgejo-helm/forgejo:17.1.7, which pulls
+# anonymously (verified 2026-10-10 — the 401 on the raw manifest is just the token dance).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-code-forgejo-org-forgejo-helm
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+stringData:
+  name: code-forgejo-org-forgejo-helm
+  type: helm
+  # no scheme — the same rule as ghcr above
+  url: code.forgejo.org/forgejo-helm
+  enableOCI: "true"
 {{- end }}

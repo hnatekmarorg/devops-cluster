@@ -27,7 +27,11 @@ spec:
   # the repo itself referenced as `repo` so the values file above can be a $repo path.
   sources:
     - name: forgejo-chart
-      repoURL: oci://code.forgejo.org/forgejo-helm
+      # No scheme, and it ends at the OWNER: the chart name below completes the package
+      # (code.forgejo.org/forgejo-helm/forgejo), which is what the repository registration in
+      # charts/cluster-base/templates/argocd/repository-oci.yaml pairs with. With the scheme present
+      # ArgoCD resolved `.../forgejo-helm:17.1.7` and the registry answered `not found` (2026-10-10).
+      repoURL: code.forgejo.org/forgejo-helm
       chart: forgejo
       targetRevision: 17.1.7
       helm:

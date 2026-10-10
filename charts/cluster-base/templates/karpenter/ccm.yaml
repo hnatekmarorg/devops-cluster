@@ -20,13 +20,19 @@ spec:
     # ghcr.io/v2/sergelogvinov/charts and GHCR answers 403 for the token request.
     - repoURL: ghcr.io/sergelogvinov/charts
       chart: proxmox-cloud-controller-manager
-      # Chart 0.2.30 ships CCM v0.15.0. The old pin (0.2.0 -> CCM v0.4.0) resolved Nodes by VM NAME
+      # Chart 0.2.32 ships CCM v0.16.1. Do not go back to 0.2.30/0.2.31: those ship v0.15.0/v0.16.0,
+      # whose image tags upstream were rebuilt without the leading `v` in the version string, and the
+      # binary dies at startup — `panic: version string "0.15.0" doesn't match expected regular
+      # expression "^v(\d+\.\d+\.\d+)"` (k8s.io/component-base metrics parses it before anything
+      # runs). v0.16.1 is the first tag built correctly; the old builds still run only on nodes that
+      # cached them before the tags were re-pushed.
+      # The old pin (0.2.0 -> CCM v0.4.0) resolved Nodes by VM NAME
       # and nothing else: v0.4.0 has no FindVMByUUID, no providerID-from-node, no annotation path.
       # That is the node-naming problem — Talos names itself talos-xxxx-xxx while the VM is dev-cp1,
       # so providerID is never set, the uninitialized taint is never cleared and nothing schedules.
-      # v0.15.0 matches on the SMBIOS UUID, which already matches the VM exactly, so no renaming is
+      # v0.15.0+ matches on the SMBIOS UUID, which already matches the VM exactly, so no renaming is
       # needed for either static or Karpenter-provisioned nodes.
-      targetRevision: "0.2.30"
+      targetRevision: "0.2.32"
       helm:
         releaseName: proxmox-ccm
         valuesObject:

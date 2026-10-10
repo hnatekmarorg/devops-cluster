@@ -122,8 +122,9 @@ karpenter:
   # change, not a template change.
   #
   # A GPU pool needs more than values: a PVE PCI resource mapping (PVE takes the FIRST FREE device from
-  # the mapping at VM start, which is how two nodes hold two different cards) plus the NVIDIA extensions
-  # in the node image. Neither exists yet — see the doc before adding one.
+  # the mapping at VM start, which is how two nodes hold two different cards), the NVIDIA extensions in
+  # the node image, and the modules loaded by that pool's join config. The dev cluster's bukefalos pool
+  # (bootstrap/argocd/dev/cluster-base.yaml) is the worked example — see terraform/docs/cluster-autoscaling.md.
   pools:
     - name: talos-nocloud-template
       # The NAME of the PVE template to clone, searched on every Proxmox node. It must carry the class
@@ -144,6 +145,15 @@ karpenter:
     # For a PoC this reuses the provider's credential. Give the CCM its own read-only token
     # (VM.Audit, Sys.Audit, VM.GuestAgent.Audit) when it matters.
     existingConfigSecret: karpenter-provider-proxmox
+  # The NVIDIA stack for GPU pools — a RuntimeClass named `nvidia` plus the device plugin. Off by
+  # default: a cluster without a GPU pool renders nothing. templates/karpenter/nvidia.yaml carries the
+  # reasoning for the runtime class and for the nodeSelector.
+  nvidia:
+    enabled: false
+    # The pool whose nodes run the plugin; Karpenter labels its nodes `karpenter.sh/nodepool: <name>`.
+    # Required when enabled: the CPU nodes have no nvidia runtime handler and the plugin pod would fail
+    # there with RunContainerError.
+    poolName: ""
 
 # Which class of cluster this is: 'dev' or 'infra'. REQUIRED — the chart fails rather than defaulting,
 # because guessing wrong would grant dev-level access on a cluster that must keep working (or vice

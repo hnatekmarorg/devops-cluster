@@ -24,6 +24,19 @@ spec:
           # the pod sat in ContainerCreating on `secret "karpenter-karpenter-provider-proxmox" not found`.
           existingConfigSecret: {{ .Values.karpenter.credentialsSecret }}
           existingConfigSecretKey: config.yaml
+          # The provider's stock grid stops at 16 vCPU and advertises no GPU capacity; the file
+          # rendered by templates/karpenter/instance-types.yaml replaces it wholesale.
+          extraEnvs:
+            - name: INSTANCE_TYPES_FILE
+              value: /etc/proxmox/instance-types.json
+          extraVolumes:
+            - name: instance-types
+              configMap:
+                name: karpenter-instance-types
+          extraVolumeMounts:
+            - name: instance-types
+              mountPath: /etc/proxmox/instance-types.json
+              subPath: instance-types.json
   destination:
     server: "https://kubernetes.default.svc"
     namespace: kube-system

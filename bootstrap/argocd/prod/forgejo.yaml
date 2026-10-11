@@ -21,6 +21,13 @@ spec:
       namespace: forgejo
       jsonPointers:
         - /spec/replicas
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        # The API server defaults the embedded PVC spec inside volumeClaimTemplates (volumeMode,
+        # apiVersion, kind) and ArgoCD compares it raw — the DB StatefulSet reported OutOfSync
+        # forever: a phantom diff that masks real ones. Templates are immutable anyway.
+        - /spec/volumeClaimTemplates
 
   # Three sources, same shape as the dev declaration (devops/argocd/forgejo/forgejo.yaml): the pinned
   # chart with the PROD values file, the pieces the chart does not own (prod's DB and SSO client), and

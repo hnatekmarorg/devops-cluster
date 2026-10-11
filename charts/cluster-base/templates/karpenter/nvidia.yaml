@@ -1,13 +1,16 @@
 {{- if and .Values.onprem .Values.karpenter.enabled .Values.karpenter.nvidia.enabled }}
+{{- $poolNames := .Values.karpenter.nvidia.poolNames }}
+{{- if not $poolNames }}{{ fail "karpenter.nvidia.poolNames (a list, one entry per GPU pool) is required when the nvidia stack is enabled" }}{{ end }}
 # The NVIDIA stack for GPU pools — the two halves of "a GPU node advertises nvidia.com/gpu", both only
 # on the GPU nodes:
 #   * the RuntimeClass: Talos' nvidia-container-toolkit extension wires the driver libraries into
 #     containerd as a runtime named `nvidia`, and nothing gets those libraries (or the device nodes)
 #     injected without `runtimeClassName: nvidia`. The plugin itself and every GPU workload use it.
 #   * the plugin: it is what registers nvidia.com/gpu with the kubelet.
-# The nodeSelector names the GPU pool: its nodes carry `karpenter.sh/nodepool: <name>` from Karpenter
-# itself, while the CPU nodes have no nvidia runtime handler at all — a plugin pod there fails with
-# RunContainerError. The toleration matches the pool's taint; the pool is the only place it runs.
+# The affinity names the GPU pools (one entry per NodePool): their nodes carry
+# `karpenter.sh/nodepool: <name>` from Karpenter itself, while the CPU nodes have no nvidia runtime
+# handler at all — a plugin pod there fails with RunContainerError. The toleration matches the pools'
+# taint; GPU pools are the only place it runs.
 apiVersion: node.k8s.io/v1
 kind: RuntimeClass
 metadata:
@@ -33,8 +36,20 @@ spec:
         name: nvidia-device-plugin-ds
     spec:
       runtimeClassName: nvidia
-      nodeSelector:
-        karpenter.sh/nodepool: {{ required "karpenter.nvidia.poolName is required when the nvidia stack is enabled" .Values.karpenter.nvidia.poolName }}
+      # A nodeSelector cannot express a set of pools, and the estate runs more than one GPU pool
+      # (bukefalos' A4000s, balteus' 3090s) — so the plugin selects them by affinity, one
+      # `karpenter.nvidia.poolNames` entry per NodePool.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: karpenter.sh/nodepool
+                    operator: In
+                    values:
+{{- range $pool := $poolNames }}
+                      - {{ $pool | quote }}
+{{- end }}
       tolerations:
       - key: nvidia.com/gpu
         operator: Exists

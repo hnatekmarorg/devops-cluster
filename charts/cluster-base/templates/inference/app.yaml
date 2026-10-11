@@ -1,0 +1,37 @@
+{{- if and .Values.onprem .Values.inference.enabled }}
+{{/*
+The model zoo (charts/llama-cpp): one Deployment per model, toggled by SCALE. The model set is
+per-cluster data — `inference.values` in this cluster's cluster-base.yaml is passed to the chart
+verbatim (see charts/llama-cpp/values.yaml for the schema).
+*/}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: inference
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    targetRevision: HEAD
+    path: charts/llama-cpp
+    helm:
+      valuesObject:
+{{ toYaml .Values.inference.values | indent 8 }}
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: inference
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+{{- end }}

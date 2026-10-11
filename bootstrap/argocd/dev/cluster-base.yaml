@@ -150,6 +150,53 @@ spec:
             enabled: true
             # One entry per GPU pool; a new GPU pool appends its NodePool name here.
             poolNames: ["talos-nocloud-gpu-template"]
+
+        # The model zoo (charts/llama-cpp). Wave 1 = the three .189 residents that fit the
+        # 2x RTX 3090 node; all TP2, so one is resident at a time and SCALE flips them.
+        # `args` are the .189 quadlet Exec lines verbatim, with the model paths pointed at
+        # the NAS copies (/models = the NAS export; see charts/llama-cpp/values.yaml).
+        inference:
+          enabled: true
+          registrySecret:
+            vaultKey: dev/forgejo-registry
+          values:
+            host: llm.dev-k8s.srv.hnatekmar.dev
+            imagePullSecrets:
+              - name: forgejo-registry
+            env:
+              - name: NCCL_CUMEM_ENABLE
+                value: "0"
+              - name: NCCL_P2P_DISABLE
+                value: "1"
+              - name: VLLM_WORKER_MULTIPROC_METHOD
+                value: spawn
+              - name: PYTORCH_CUDA_ALLOC_CONF
+                value: expandable_segments:True,max_split_size_mb:512
+              - name: VLLM_NO_USAGE_STATS
+                value: "1"
+            models:
+              - name: qwen36-35b
+                image: forgejo.dev-k8s.srv.hnatekmar.dev/hnatekmarorg/vllm-qwen36-patched:0.25.1
+                port: 8030
+                resources:
+                  requests: {cpu: "8", memory: 48Gi}
+                  limits: {nvidia.com/gpu: 2}
+                args: ["/models/hub/Qwen3.6-35B-A3B-FP8", "--served-model-name", "qwen3.6-35b-a3b", "--host", "0.0.0.0", "--port", "8030", "--tensor-parallel-size", "2", "--max-model-len", "200704", "--gpu-memory-utilization", "0.93", "--max-num-seqs", "16", "--max-num-batched-tokens", "8192", "--trust-remote-code", "--dtype", "auto", "--performance-mode", "interactivity", "--attention-backend", "FLASHINFER", "--kv-cache-dtype", "fp8", "--reasoning-parser", "qwen3", "--no-enable-prefix-caching", "--enable-chunked-prefill", "--long-prefill-token-threshold", "8192", "--tool-call-parser", "qwen3_coder", "--enable-auto-tool-choice"]
+              - name: gemma4-31b
+                image: docker.io/vllm/vllm-openai:v0.28.0
+                port: 8030
+                resources:
+                  requests: {cpu: "8", memory: 48Gi}
+                  limits: {nvidia.com/gpu: 2}
+                args: ["/models/models-custom/gemma4-31b", "--served-model-name", "gemma4-31b-qat-w4a16", "--host", "0.0.0.0", "--language-model-only", "--port", "8030", "--tensor-parallel-size", "2", "--max-model-len", "auto", "--gpu-memory-utilization", "0.95", "--max-num-seqs", "2", "--max-num-batched-tokens", "4096", "--kv-cache-dtype", "auto", "--trust-remote-code", "--dtype", "auto", "--enable-auto-tool-choice", "--tool-call-parser", "gemma4", "--reasoning-parser", "gemma4", "--speculative-config", "{\"model\":\"/models/models-custom/gemma4-31b-drafter\",\"num_speculative_tokens\":4}", "--override-generation-config", "{\"temperature\":1.0,\"top_p\":0.95,\"top_k\":64,\"min_p\":0.0,\"repetition_penalty\":1.0}"]
+              - name: gemma4-26b-moe
+                image: docker.io/vllm/vllm-omni:v0.26.0
+                command: ["vllm", "serve"]
+                port: 8030
+                resources:
+                  requests: {cpu: "8", memory: 48Gi}
+                  limits: {nvidia.com/gpu: 2}
+                args: ["/models/models-custom/gemma4-26b", "--served-model-name", "gemma4-26b-moe", "--host", "0.0.0.0", "--port", "8030", "--tensor-parallel-size", "2", "--max-model-len", "262144", "--gpu-memory-utilization", "0.92", "--max-num-seqs", "2", "--max-num-batched-tokens", "4096", "--kv-cache-dtype", "auto", "--trust-remote-code", "--dtype", "auto", "--enable-auto-tool-choice", "--tool-call-parser", "gemma4", "--reasoning-parser", "gemma4", "--override-generation-config", "{\"temperature\":0.9,\"top_p\":0.95,\"top_k\":64,\"min_p\":0.0,\"repetition_penalty\":1.0}"]
         certManager:
           cloudflare:
             secretSource: eso

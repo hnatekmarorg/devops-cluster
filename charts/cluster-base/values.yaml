@@ -155,6 +155,18 @@ karpenter:
     # handler and the plugin pod would fail there with RunContainerError.
     poolNames: []
 
+# The inference stack (charts/llama-cpp): one Deployment per model, SCALE-toggled. Off by
+# default — a cluster opts in with `inference.enabled: true` plus its model set in
+# `inference.values`, which is passed to the chart verbatim (schema in
+# charts/llama-cpp/values.yaml).
+inference:
+  enabled: false
+  # Vault key (inside the `secret` mount) holding the registry pull credential as ONE key —
+  # `dockerconfigjson`, the whole docker config JSON text.
+  registrySecret:
+    vaultKey: ""
+  values: {}
+
 # Which class of cluster this is: 'dev' or 'infra'. REQUIRED — the chart fails rather than defaulting,
 # because guessing wrong would grant dev-level access on a cluster that must keep working (or vice
 # versa). A cluster binds only its own class's roles, so this is what keeps the two axes isolated.

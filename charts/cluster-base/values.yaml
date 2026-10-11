@@ -147,13 +147,13 @@ karpenter:
     existingConfigSecret: karpenter-provider-proxmox
   # The NVIDIA stack for GPU pools — a RuntimeClass named `nvidia` plus the device plugin. Off by
   # default: a cluster without a GPU pool renders nothing. templates/karpenter/nvidia.yaml carries the
-  # reasoning for the runtime class and for the nodeSelector.
+  # reasoning for the runtime class and for the node affinity.
   nvidia:
     enabled: false
-    # The pool whose nodes run the plugin; Karpenter labels its nodes `karpenter.sh/nodepool: <name>`.
-    # Required when enabled: the CPU nodes have no nvidia runtime handler and the plugin pod would fail
-    # there with RunContainerError.
-    poolName: ""
+    # The GPU pools whose nodes run the plugin, by NodePool name; Karpenter labels their nodes
+    # `karpenter.sh/nodepool: <name>`. Required when enabled: the CPU nodes have no nvidia runtime
+    # handler and the plugin pod would fail there with RunContainerError.
+    poolNames: []
 
 # Which class of cluster this is: 'dev' or 'infra'. REQUIRED — the chart fails rather than defaulting,
 # because guessing wrong would grant dev-level access on a cluster that must keep working (or vice

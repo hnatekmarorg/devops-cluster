@@ -923,5 +923,77 @@
     "memory": "100Mi"
    }
   }
+ },
+ {
+  "name": "g2.8VCPU-32GB",
+  "capacity": {
+   "cpu": "8",
+   "ephemeral-storage": "30Gi",
+   "memory": "34359738368",
+   "pods": "110",
+   "nvidia.com/gpu": "2"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "g2.16VCPU-64GB",
+  "capacity": {
+   "cpu": "16",
+   "ephemeral-storage": "30Gi",
+   "memory": "68719476736",
+   "pods": "110",
+   "nvidia.com/gpu": "2"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
+ },
+ {
+  "name": "g2.32VCPU-128GB",
+  "capacity": {
+   "cpu": "32",
+   "ephemeral-storage": "30Gi",
+   "memory": "137438953472",
+   "pods": "110",
+   "nvidia.com/gpu": "2"
+  },
+  "capacitytype": "on-demand",
+  "overhead": {
+   "KubeReserved": {
+    "cpu": "100m",
+    "memory": "384Mi"
+   },
+   "SystemReserved": {
+    "cpu": "10m",
+    "memory": "64Mi"
+   },
+   "EvictionThreshold": {
+    "memory": "100Mi"
+   }
+  }
  }
 ]

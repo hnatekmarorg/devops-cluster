@@ -148,7 +148,8 @@ spec:
 
           nvidia:
             enabled: true
-            poolName: talos-nocloud-gpu-template
+            # One entry per GPU pool; a new GPU pool appends its NodePool name here.
+            poolNames: ["talos-nocloud-gpu-template"]
         certManager:
           cloudflare:
             secretSource: eso

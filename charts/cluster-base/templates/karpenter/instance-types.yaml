@@ -7,8 +7,10 @@
 #     the stock grid stops at 16;
 #   * the `g1` family — standard 1:4 nodes that additionally advertise `nvidia.com/gpu: 1`. This is
 #     what lets a GPU pod trigger provisioning at all: the stock families carry no GPU capacity, so
-#     without it a pending GPU pod is invisible to Karpenter. Only the GPU pool requires `g1`; every
+#     without it a pending GPU pod is invisible to Karpenter. Only the GPU pools require `g1`; every
 #     other pool's requirements (c1/t1/s1/m1/x1) exclude it, so non-GPU pools never size from it.
+#   * the `g2` family — the same idea at 8/16/32 vCPU with `nvidia.com/gpu: 2`, for a pool whose
+#     node must hold both cards (a tensor-parallel-2 model on balteus' 2x RTX 3090).
 apiVersion: v1
 kind: ConfigMap
 metadata:

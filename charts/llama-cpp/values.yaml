@@ -1,65 +1,34 @@
-llm:
-  host: llm.hnatekmar.dev
-  vllm:
-    image: gitea.hnatekmar.xyz/public/vllm:qwen3-vl
-  llama_cpp:
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda
-    cpuImage: ghcr.io/ggml-org/llama.cpp:server
+# The model-serving chart: one Deployment + Service per `models[]` entry, all behind one
+# path-per-model Ingress on `host`. Entries start at their `scale.off` replica count; SCALE
+# (github.com/hnatekmarorg/scale) flips them between off/on through the `scale.*` labels —
+# the swap-by-nature contract the .189 quadlets' `Conflicts=` encoded.
+#
+# The per-model shape mirrors what those quadlets said, field for field:
+#   * `args` is the quadlet's Exec verbatim (the model path first);
+#   * `command` exists only for images without an entrypoint — vllm-openai and the patched
+#     builds carry `vllm serve` as their entrypoint, vllm-omni carries none;
+#   * `port` is the served port; the Ingress publishes one path per model at /<name>.
 
-ingress:
-  host: llama.hnatekmar.dev
+host: ""                # ingress host; the chart refuses to render without it
+imagePullSecrets: []    # e.g. [{name: forgejo-registry}]
 
-models:
-  - name: qwen3
-    args:
-      - --jinja
-      - "-m"
-      - "/models/gguf/Qwen3-32B-Q5_K_M.gguf"
-      - "-ngl"
-      - "99"
-    selector: {}
-    replicas: 3
-    resources:
-      requests:
-        nvidia.com/gpu: 1
-      limits:
-        nvidia.com/gpu: 1
-    cooldownPeriod: 120
-  # Example tabbyapi model configuration
-  - name: tabby-qwen3
-    engine: tabby
-    replicas: 1
-    resources:
-      requests:
-        nvidia.com/gpu: 1
-      limits:
-        nvidia.com/gpu: 1
-    args:
-      - start.py
-      - --model-dir
-      - /models/exl2
-      - --model-name
-      - Qwen2.5-Coder-32B-Instruct-exl2
-      - --gpu-lib
-      - cu121
-      - --disable-auth
-      - "true"
-    cooldownPeriod: 120
+# The NAS export that holds every model dir, mounted read-only at /models in every pod.
+# Addressed by the *storage* name (the island plane), never the srv one.
+storage:
+  nfs:
+    server: truenas.storage.hnatekmar.dev
+    path: /mnt/data/k8s/ai
 
-  # CPU model example
-  - name: qwen3-cpu
-    device: cpu
-    args:
-      - --jinja
-      - "-m"
-      - "/models/gguf/Qwen3-32B-Q5_K_M.gguf"
-      # Note: Removed "-ngl" parameter for CPU operation
-    cpuResources:
-      requests:
-        cpu: "4"
-        memory: "16Gi"
-      limits:
-        cpu: "8"
-        memory: "32Gi"
-    replicas: 3
-    cooldownPeriod: 120
+env: []                 # env for every model pod (NCCL/allocator flags live here); per-model `env` appends
+
+models: []
+# - name: qwen36-35b
+#   image: forgejo.dev-k8s.srv.hnatekmar.dev/hnatekmarorg/vllm-qwen36-patched:0.25.1
+#   command: ["vllm", "serve"]        # only for images with no entrypoint
+#   args: ["/models/hub/<dir>", "--served-model-name", "...", ...]
+#   port: 8030
+#   resources:
+#     requests: {cpu: "8", memory: 48Gi}
+#     limits: {nvidia.com/gpu: 2}
+#   env: []                           # per-model extras
+#   scale: {on: 1, off: 0}            # SCALE's two replica counts (defaults 1/0)

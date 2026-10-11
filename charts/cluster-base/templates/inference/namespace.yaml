@@ -1,0 +1,15 @@
+{{- if and .Values.onprem .Values.inference.enabled }}
+# The inference namespace carries its PSA labels, so it is declared here rather than created by
+# the Application (CreateNamespace=true would make it label-less). baseline is enough: the model
+# pods run as root (the vllm images carry no USER) but need no host access and no extra caps.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: inference
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/audit: baseline
+{{- end }}

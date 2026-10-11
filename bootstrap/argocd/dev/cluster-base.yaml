@@ -209,6 +209,13 @@ spec:
             vaultKey: dev/forgejo-registry
           values:
             host: llm.dev-k8s.srv.hnatekmar.dev
+            # Karpenter clones cannot get island addresses (the storage fabric's DHCP is
+            # reservation-based, and a clone's MAC is new), and the island has no gateway by
+            # design — so the models mount the NAS over its management address, the documented
+            # fallback (1G, answers 2049; see the storage notes in terraform/routeros/dns.tf).
+            storage:
+              nfs:
+                server: truenas.srv.hnatekmar.dev
             imagePullSecrets:
               - name: forgejo-registry
             env:

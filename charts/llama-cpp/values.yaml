@@ -27,7 +27,7 @@ models: []
 #   command: ["vllm", "serve"]        # only for images with no entrypoint
 #   args: ["/models/hub/<dir>", "--served-model-name", "...", ...]
 #   port: 8030
-#   nodeSelector: {gpu.class: rtx3090-24g}   # pin a card class when pools differ
+#   nodeSelector: {gpu.vram: 24gb}            # pin by card VRAM; count x vram = the pod's total
 #   resources:
 #     requests: {cpu: "8", memory: 48Gi}
 #     limits: {nvidia.com/gpu: 2}

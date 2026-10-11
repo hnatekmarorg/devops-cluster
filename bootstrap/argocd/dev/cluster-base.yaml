@@ -124,10 +124,12 @@ spec:
                 name: karpenter-talos-join-gpu
               # `g2` = the 2-GPU family (1:4 nodes carrying `nvidia.com/gpu: "2"`).
               instanceFamilies: ["g2"]
-              # What per-model nodeSelectors pin against: VRAM is not a schedulable resource, so
-              # `nvidia.com/gpu: 2` alone cannot say "24 GB cards" — the class label can.
+              # What per-model nodeSelectors pin against. Two labels, so a model states its real
+              # requirement: `gpu.vram` × the pod's `nvidia.com/gpu` count is the VRAM it gets
+              # (2 x 16gb here), and `gpu.arch` stays informational (both pools are Ampere today).
               labels:
-                gpu.class: a4000-16g
+                gpu.arch: ampere
+                gpu.vram: 16gb
               # Cpu: 127 of the machine's 128 vCPUs (2× EPYC 7601 threads) — one thread stays with the
               # host. Memory: 448 GiB of bukefalos' 512, deliberately — the remaining 64 GiB is the
               # floor a CPU pool in this same region can count on. `nodes: 1` is the card cap: both
@@ -168,7 +170,8 @@ spec:
               instanceFamilies: ["g2"]
               # What per-model nodeSelectors pin against (see the bukefalos pool).
               labels:
-                gpu.class: rtx3090-24g
+                gpu.arch: ampere
+                gpu.vram: 24gb
               # One node IS the shape (two cards, one VM); the budget is left at a fraction of
               # the host so the box's other guests are not raced.
               limits:
@@ -219,8 +222,8 @@ spec:
               - name: qwen36-35b
                 image: forgejo.dev-k8s.srv.hnatekmar.dev/hnatekmarorg/vllm-qwen36-patched:0.25.1
                 port: 8030
-                # 35G of weights need the 24 GB cards.
-                nodeSelector: {gpu.class: rtx3090-24g}
+                # 35G of weights need the 24 GB cards (2 x 24gb = 48gb).
+                nodeSelector: {gpu.vram: 24gb}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}
@@ -228,7 +231,7 @@ spec:
               - name: gemma4-31b
                 image: docker.io/vllm/vllm-openai:v0.28.0
                 port: 8030
-                nodeSelector: {gpu.class: rtx3090-24g}
+                nodeSelector: {gpu.vram: 24gb}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}
@@ -237,8 +240,9 @@ spec:
                 image: docker.io/vllm/vllm-omni:v0.26.0
                 command: ["vllm", "serve"]
                 port: 8030
-                # 17G of weights fit the A4000 pair — the dry-run model.
-                nodeSelector: {gpu.class: a4000-16g}
+                # 17G of weights fit the A4000 pair (2 x 16gb = 32gb) — the dry-run model.
+                # Dropping this selector would let it run on the 3090s too.
+                nodeSelector: {gpu.vram: 16gb}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}

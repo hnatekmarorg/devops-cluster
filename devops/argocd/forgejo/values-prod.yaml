@@ -29,6 +29,12 @@ gitea:
       NAME: forgejo
       USER: forgejo
       SSL_MODE: disable
+    security:
+      # Forgejo refuses migrations/imports from hosts outside this list ("You can not import from
+      # disallowed hosts", measured 2026-10-10 while migrating devops-cluster over from the dev
+      # instance). The dev instance's public hostname is the only entry needed; extend if more
+      # imports ever run.
+      ALLOWED_HOST_LIST: forgejo.dev-k8s.srv.hnatekmar.dev
     oauth2_client:
       ACCOUNT_LINKING: auto
       ENABLE_AUTO_REGISTRATION: true

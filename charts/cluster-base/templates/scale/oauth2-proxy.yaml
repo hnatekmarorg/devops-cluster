@@ -108,6 +108,10 @@ metadata:
   namespace: scale
   annotations:
     argocd.argoproj.io/sync-wave: "5"
+    # oauth2-proxy's /oauth2/callback answers with several Set-Cookie headers that exceed
+    # nginx's default 4k proxy buffer — the login flow then dies at the very last hop with
+    # `upstream sent too big header` (a bare 502; measured 2026-10-11).
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
 spec:
   ingressClassName: nginx
   tls:

@@ -3,7 +3,9 @@
 {{- $clientId := required "scale.clientId is required when scale is enabled" .Values.scale.clientId }}
 # The estate's first forward-auth: oauth2-proxy in front of the dashboard. The dashboard's
 # ingress carries auth-url/auth-signin (set in `scale.values.ingress.annotations`); this
-# deployment answers both, against the sso.hnatekmar.xyz realm and the client above. The
+# deployment answers both, against the sso.hnatekmar.xyz realm and the client above. NOTE the
+# auth-url must carry `:4180` — the Service below listens there, not on port 80, and a
+# port-less URL makes the auth subrequest connection-refused (a bare 500 on every request). The
 # /oauth2 ingress below is where the browser lands after `auth-signin` redirects it — it
 # deliberately carries no cluster-issuer annotation, because the certificate for the host is
 # issued for the dashboard's own ingress (same host, same secret).

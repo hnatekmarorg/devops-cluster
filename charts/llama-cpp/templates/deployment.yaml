@@ -1,114 +1,116 @@
-{{ range  .Values.models }}
+{{- range .Values.models }}
+{{- $scale := .scale | default dict }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{.name}}
+  name: {{ .name }}
   labels:
-    llm: {{.name}}
-    scale.off-replicas: "0"
-    scale.on-replicas: "1"
+    llm: {{ .name }}
+    # SCALE reads these two (strings, by convention) and moves replicas between them.
+    scale.on-replicas: {{ $scale.on | default 1 | quote }}
+    scale.off-replicas: {{ $scale.off | default 0 | quote }}
 spec:
-  replicas: 0
+  # A resident model spans both cards (TP2 on the 3090 node), so an update cannot roll:
+  # kill, then start. Same trade the .189 quadlets' Conflicts= made.
+  strategy:
+    type: Recreate
+  replicas: {{ $scale.off | default 0 }}
   selector:
     matchLabels:
-      llm: {{.name}}
+      llm: {{ .name }}
   template:
     metadata:
-      name: {{.name}}
       labels:
-        llm: {{.name}}
+        llm: {{ .name }}
     spec:
-      #hostIPC: true
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      # Talos' nvidia-container-toolkit extension injects the driver libraries; the device
+      # plugin's DaemonSet runs on the same pools (karpenter.nvidia.poolNames).
+      runtimeClassName: nvidia
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
           effect: NoSchedule
-
-      {{- if eq (.device | default "gpu") "gpu" }}
-      runtimeClassName: nvidia
-      {{- end }}
+      terminationGracePeriodSeconds: 120
       volumes:
         - name: shm
           emptyDir:
             medium: Memory
             sizeLimit: 32Gi
-        - name: nas
+        - name: models
           nfs:
-            server: 192.168.88.25
-            path: /mnt/data/k8s/ai
+            server: {{ required "storage.nfs.server is required" $.Values.storage.nfs.server | quote }}
+            path: {{ required "storage.nfs.path is required" $.Values.storage.nfs.path | quote }}
       containers:
-        - name: llamacpp
-          securityContext:
-            privileged: false        
-            capabilities:
-              add: ["IPC_LOCK"]      
-          resources:
-            {{- if eq (.device | default "gpu") "gpu" }}
-            {{toYaml .resources | nindent 12}}
-            {{- else }}
-            {{toYaml .cpuResources | nindent 12}}
-            {{- end }}
-          {{- if .image }}
-          image: {{ .image }}
-          {{- else if eq (.engine | default "llama") "vllm" }}
-          image: {{ $.Values.llm.vllm.image }}
-          {{- else if eq (.engine | default "llama") "tabby" }}
-          image: ghcr.io/theroyallab/tabbyapi:latest
-          {{- else }}
-          {{- if eq (.device | default "gpu") "gpu" }}
-          image: {{ $.Values.llm.llama_cpp.image }}
-          {{- else }}
-          image: {{ $.Values.llm.llama_cpp.cpuImage }}
+        - name: vllm
+          image: {{ required (printf "model %q: image is required" .name) .image }}
+          imagePullPolicy: IfNotPresent
+          {{- with .command }}
+          command:
+{{ toYaml . | indent 12 }}
           {{- end }}
-          {{- end }}
-          imagePullPolicy: Always
-          {{- if eq (.engine | default "llama") "vllm" }}
-          command: ["/bin/bash"]
-          {{- end }}
+          args:
+{{ toYaml (required (printf "model %q: args are required" .name) .args) | indent 12 }}
           env:
-            {{- if .env }}
+            - name: HF_HOME
+              value: /root/.cache/huggingface
+            {{- range $.Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
             {{- range .env }}
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
-            {{ end -}}
-          {{- if eq (.engine | default "llama") "vllm" }}
-          args: 
-            - -c 
-            - "/usr/local/bin/vllm serve {{ join " " .args }} --host 0.0.0.0 --port 8080"
-          {{- else }}
-          args: {{ toYaml .args | nindent 12}} 
-          {{- end }}
-          volumeMounts:
-            - mountPath: /models
-              name: nas
-            - mountPath: /dev/shm
-              name: shm
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .port | default 8030 }}
               protocol: TCP
               name: http
-      restartPolicy: Always
-      securityContext: {}
+          resources:
+{{ toYaml .resources | indent 12 }}
+          # /health answers once the model is up; the big ones take minutes to load, so startup
+          # gets a 15-minute budget and readiness — not liveness — gates traffic. No liveness
+          # probe: killing a loading model is worse than a pod that simply stays NotReady.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: shm
+              mountPath: /dev/shm
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{.name}}
+  name: {{ .name }}
 spec:
   selector:
-    llm: {{.name}}
+    llm: {{ .name }}
   ports:
     - protocol: TCP
-      port: 8080
-      targetPort: 8080
+      port: {{ .port | default 8030 }}
+      targetPort: http
   type: ClusterIP
+{{- end }}
 ---
-{{end}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{$.Values.llm.host}}
+  name: llm
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
@@ -121,18 +123,18 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - {{$.Values.llm.host}}
-      secretName: {{$.Values.llm.host}}
+        - {{ required "host is required" .Values.host }}
+      secretName: {{ .Values.host }}-tls
   rules:
-{{ range  .Values.models }}
-    - host: {{$.Values.llm.host}}
+    - host: {{ .Values.host }}
       http:
         paths:
-          - path: /{{.name}}(/|$)(.*)
+{{- range .Values.models }}
+          - path: /{{ .name }}(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
-                name: {{.name}}
+                name: {{ .name }}
                 port:
-                  number: 8080
-{{end}}
+                  number: {{ .port | default 8030 }}
+{{- end }}

@@ -124,12 +124,19 @@ spec:
                 name: karpenter-talos-join-gpu
               # `g2` = the 2-GPU family (1:4 nodes carrying `nvidia.com/gpu: "2"`).
               instanceFamilies: ["g2"]
-              # What per-model nodeSelectors pin against. Two labels, so a model states its real
-              # requirement: `gpu.vram` × the pod's `nvidia.com/gpu` count is the VRAM it gets
-              # (2 x 16gb here), and `gpu.arch` stays informational (both pools are Ampere today).
-              labels:
-                gpu.arch: ampere
-                gpu.vram: 16gb
+              # What per-model nodeSelectors pin against. These must be REQUIREMENTS, not template
+              # labels: Karpenter validates pod selectors only against the pools' declared
+              # requirements (`label "gpu.vram" does not have known values` otherwise — measured),
+              # and a requirement also lands on the node as a label. `gpu.vram` × the pod's
+              # `nvidia.com/gpu` count is the VRAM budget (2 x 16gb = 32gb here); `gpu.arch` is
+              # informational today (both pools are Ampere).
+              extraRequirements:
+                - key: gpu.vram
+                  operator: In
+                  values: ["16gb"]
+                - key: gpu.arch
+                  operator: In
+                  values: ["ampere"]
               # Cpu: 127 of the machine's 128 vCPUs (2× EPYC 7601 threads) — one thread stays with the
               # host. Memory: 448 GiB of bukefalos' 512, deliberately — the remaining 64 GiB is the
               # floor a CPU pool in this same region can count on. `nodes: 1` is the card cap: both
@@ -168,10 +175,15 @@ spec:
                 name: karpenter-talos-join-gpu
               # `g2` = the 2-GPU family (1:4 nodes carrying `nvidia.com/gpu: "2"`).
               instanceFamilies: ["g2"]
-              # What per-model nodeSelectors pin against (see the bukefalos pool).
-              labels:
-                gpu.arch: ampere
-                gpu.vram: 24gb
+              # What per-model nodeSelectors pin against (see the bukefalos pool — requirements,
+              # not labels).
+              extraRequirements:
+                - key: gpu.vram
+                  operator: In
+                  values: ["24gb"]
+                - key: gpu.arch
+                  operator: In
+                  values: ["ampere"]
               # One node IS the shape (two cards, one VM); the budget is left at a fraction of
               # the host so the box's other guests are not raced.
               limits:

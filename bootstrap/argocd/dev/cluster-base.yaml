@@ -244,6 +244,9 @@ spec:
           cookieSecret:
             vaultKey: dev/oauth2-proxy
           values:
+            # The dashboard serves the model namespace, not its own.
+            rbac:
+              namespace: inference
             image:
               repository: forgejo.dev-k8s.srv.hnatekmar.dev/hnatekmarorg/scale
               tag: be

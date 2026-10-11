@@ -928,7 +928,7 @@
   "name": "g2.8VCPU-32GB",
   "capacity": {
    "cpu": "8",
-   "ephemeral-storage": "30Gi",
+   "ephemeral-storage": "100Gi",
    "memory": "34359738368",
    "pods": "110",
    "nvidia.com/gpu": "2"
@@ -952,7 +952,7 @@
   "name": "g2.16VCPU-64GB",
   "capacity": {
    "cpu": "16",
-   "ephemeral-storage": "30Gi",
+   "ephemeral-storage": "100Gi",
    "memory": "68719476736",
    "pods": "110",
    "nvidia.com/gpu": "2"
@@ -976,7 +976,7 @@
   "name": "g2.32VCPU-128GB",
   "capacity": {
    "cpu": "32",
-   "ephemeral-storage": "30Gi",
+   "ephemeral-storage": "100Gi",
    "memory": "137438953472",
    "pods": "110",
    "nvidia.com/gpu": "2"

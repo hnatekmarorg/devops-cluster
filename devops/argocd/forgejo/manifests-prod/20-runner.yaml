@@ -1,11 +1,10 @@
 # The Forgejo Actions runner on PROD — the in-cluster half of the forge's capacity.
 #
-# RELATIONSHIP TO THE DEDICATED HOST: the ZimaBoard runner (runner.mgmt) stays the one that executes
-# the DEVICE workflows — "CI must not live in the cluster it manages" is the standing rule, and the
-# tofu-* workflows manage this very cluster. This runner exists for the workloads that are NOT
-# cluster-management: image builds for the registry, tests, anything whose blast radius is a job
-# container. The `runs-on` LABELS are what draws that line — see the PR notes before merging; the
-# label sets below are mirrored from dev and the boundary decision is deliberately left open.
+# RELATIONSHIP TO THE DEDICATED HOST — settled by the purpose-label scheme (2026-10-11): labels name
+# what a runner IS, not where it sits. `mgmt` = the dedicated mgmt host (device workflows — "CI must
+# not live in the cluster it manages", a technical fact now: those workflows match only a runner that
+# carries mgmt). `dind` = docker builders — this one. `k8s` = kubernetes runners (reserved; lands when
+# a workflow needs it). This runner therefore carries `self-hosted, dind` and nothing else.
 #
 # WHY IT IS NOT THE pet HOST: the estate's GitHub runners live on a dedicated `mgmt` host because the
 # device-touching jobs need a toolchain no container image has. This runner is the counter-example and
@@ -61,10 +60,7 @@ data:
       # workflows ask for. See the trap note at the top of this file.
       labels:
         - "self-hosted:docker://node:22-bookworm"
-        - "mgmt:docker://node:22-bookworm"
-        - "tofu:docker://node:22-bookworm"
-        - "docker:docker://node:22-bookworm"
-        - "ubuntu-latest:docker://node:22-bookworm"
+        - "dind:docker://node:22-bookworm"
     cache:
       enabled: true
       dir: /data/cache
@@ -133,7 +129,7 @@ spec:
               if [ ! -f /data/.runner ]; then
                 /bin/forgejo-runner register --no-interactive \
                   --instance "$GITEA_INSTANCE_URL" --token "$RUNNER_REG_TOKEN" \
-                  --name prod-k8s-talos --labels "self-hosted,mgmt,tofu,docker,ubuntu-latest"
+                  --name prod-dind --labels "self-hosted,dind"
               fi
               exec /bin/forgejo-runner daemon --config /config/config.yaml
           env:

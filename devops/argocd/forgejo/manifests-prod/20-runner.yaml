@@ -127,7 +127,10 @@ spec:
               until nc -z 127.0.0.1 2375; do echo waiting-for-dind; sleep 2; done
               cd /data
               if [ ! -f /data/.runner ]; then
-                /bin/forgejo-runner register --no-interactive \
+                # `-c` matters: without it the register does not see the label->image map below and
+                # records the bare names, which run jobs in :host mode (on the pod's filesystem)
+                # instead of the job containers. Measured on the ZimaBoard, same runner version.
+                /bin/forgejo-runner register --no-interactive -c /config/config.yaml \
                   --instance "$GITEA_INSTANCE_URL" --token "$RUNNER_REG_TOKEN" \
                   --name prod-dind --labels "self-hosted,dind"
               fi

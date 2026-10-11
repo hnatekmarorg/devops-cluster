@@ -117,6 +117,12 @@ spec:
       labels:
         app: act-runner
     spec:
+      # The PVCs come up root-owned; the runner is non-root. fsGroup gives the volume group access
+      # (and adds the group to the containers), so `.runner` can be written. Do NOT set runAsUser
+      # pod-wide: the dind needs root (without it dockerd falls to rootless mode and dies on the
+      # missing rootlesskit). Both measured live on prod, 2026-10-11.
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: runner
           image: code.forgejo.org/forgejo/runner:6

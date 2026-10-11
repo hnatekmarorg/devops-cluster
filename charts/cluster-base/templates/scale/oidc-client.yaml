@@ -1,0 +1,42 @@
+{{- if and .Values.onprem .Values.scale.enabled }}
+{{- $host := required "scale.host is required when scale is enabled" .Values.scale.host }}
+{{- $clientId := required "scale.clientId is required when scale is enabled" .Values.scale.clientId }}
+# The dashboard's OIDC client, created BY THIS CLUSTER — the one-writer-per-object rule from
+# templates/crossplane/keycloak-writer.yaml applied to the forward-auth: the cluster that
+# consumes the client secret declares the Client, and `writeConnectionSecretToRef` lands it
+# in the scale namespace, where oauth2-proxy reads it as `attribute.client_secret`.
+apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+kind: Client
+metadata:
+  name: {{ $clientId }}
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  deletionPolicy: Delete
+  providerConfigRef:
+    name: sso-hnatekmar-xyz
+  writeConnectionSecretToRef:
+    name: scale-oidc
+    namespace: scale
+  forProvider:
+    realmId: master
+    clientId: {{ $clientId }}
+    name: SCALE ({{ .Values.clusterName }})
+    accessType: CONFIDENTIAL
+    standardFlowEnabled: true
+    # No password grant — it would bypass the realm's identity providers and MFA.
+    directAccessGrantsEnabled: false
+    serviceAccountsEnabled: false
+    # Absolute, and it matters: Keycloak validates these URL fields server-side (see
+    # grafana-oidc.yaml for the measured failure mode with a relative value).
+    rootUrl: https://{{ $host }}
+    baseUrl: https://{{ $host }}
+    webOrigins:
+      - https://{{ $host }}
+    validRedirectUris:
+      - https://{{ $host }}/oauth2/callback
+    validPostLogoutRedirectUris:
+      - https://{{ $host }}/
+{{- end }}

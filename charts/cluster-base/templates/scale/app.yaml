@@ -1,0 +1,37 @@
+{{- if and .Values.onprem .Values.scale.enabled }}
+{{/*
+SCALE — the model toggle dashboard (github.com/hnatekmarorg/scale). `scale.values` in this
+cluster's cluster-base.yaml is passed to the scale chart verbatim (schema in the scale repo's
+helm-chart/values.yaml).
+*/}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: scale-backend
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/hnatekmarorg/scale.git
+    targetRevision: HEAD
+    path: helm-chart
+    helm:
+      valuesObject:
+{{ toYaml .Values.scale.values | indent 8 }}
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: scale
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+{{- end }}

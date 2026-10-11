@@ -1,0 +1,126 @@
+{{- if and .Values.onprem .Values.scale.enabled }}
+{{- $host := required "scale.host is required when scale is enabled" .Values.scale.host }}
+{{- $clientId := required "scale.clientId is required when scale is enabled" .Values.scale.clientId }}
+# The estate's first forward-auth: oauth2-proxy in front of the dashboard. The dashboard's
+# ingress carries auth-url/auth-signin (set in `scale.values.ingress.annotations`); this
+# deployment answers both, against the sso.hnatekmar.xyz realm and the client above. The
+# /oauth2 ingress below is where the browser lands after `auth-signin` redirects it — it
+# deliberately carries no cluster-issuer annotation, because the certificate for the host is
+# issued for the dashboard's own ingress (same host, same secret).
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: oauth2-proxy-cookie
+  namespace: scale
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: {{ .Values.certManager.eso.storeName | quote }}
+    kind: ClusterSecretStore
+  target:
+    name: oauth2-proxy-cookie
+    creationPolicy: Owner
+  data:
+    - secretKey: cookie-secret
+      remoteRef:
+        key: {{ .Values.scale.cookieSecret.vaultKey | quote }}
+        property: cookie-secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: scale
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: {{ .Values.scale.oauth2Proxy.image | quote }}
+          args:
+            - --provider=oidc
+            - --oidc-issuer-url=https://sso.hnatekmar.xyz/realms/master
+            - --client-id={{ $clientId }}
+            - --redirect-url=https://{{ $host }}/oauth2/callback
+            - --http-address=0.0.0.0:4180
+            - --email-domain=*
+            - --upstream=static://200
+            - --set-xauthrequest=true
+            - --reverse-proxy=true
+            - --skip-provider-button=true
+          env:
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: scale-oidc
+                  key: attribute.client_secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-cookie
+                  key: cookie-secret
+          ports:
+            - name: http
+              containerPort: 4180
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy
+  namespace: scale
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  selector:
+    app: oauth2-proxy
+  ports:
+    - name: http
+      port: 4180
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: scale-oauth2
+  namespace: scale
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ $host }}
+      secretName: {{ .Values.scale.tlsSecret | quote }}
+  rules:
+    - host: {{ $host }}
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
+{{- end }}

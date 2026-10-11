@@ -167,6 +167,27 @@ inference:
     vaultKey: ""
   values: {}
 
+# SCALE (github.com/hnatekmarorg/scale) — the model toggle dashboard, behind oauth2-proxy
+# forward-auth. Off by default; a cluster opts in with `scale.enabled: true` plus its values.
+scale:
+  enabled: false
+  # The dashboard's ingress host; also the OIDC client's URL and the redirect base.
+  host: ""
+  # OIDC client id — one per cluster (the realm is shared), e.g. `scale-dev`.
+  clientId: ""
+  # The TLS secret the dashboard ingress uses; the /oauth2 ingress references the same one.
+  tlsSecret: ""
+  # Vault key (inside the `secret` mount) holding the pull credential (same shape as
+  # `inference.registrySecret.vaultKey`) and the proxy's cookie secret.
+  registrySecret:
+    vaultKey: ""
+  cookieSecret:
+    vaultKey: ""
+  oauth2Proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+  # Passed verbatim to the scale chart (schema: the scale repo's helm-chart/values.yaml).
+  values: {}
+
 # Which class of cluster this is: 'dev' or 'infra'. REQUIRED — the chart fails rather than defaulting,
 # because guessing wrong would grant dev-level access on a cluster that must keep working (or vice
 # versa). A cluster binds only its own class's roles, so this is what keeps the two axes isolated.

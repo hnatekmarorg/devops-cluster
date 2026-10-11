@@ -264,7 +264,7 @@ spec:
                 - hosts: [scale.dev-k8s.srv.hnatekmar.dev]
                   secretName: scale-dev-tls
               annotations:
-                nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.scale.svc.cluster.local/oauth2/auth"
+                nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.scale.svc.cluster.local:4180/oauth2/auth"
                 nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$scheme://$host$request_uri"
 
         certManager:

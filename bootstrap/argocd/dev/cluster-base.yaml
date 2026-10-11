@@ -209,6 +209,14 @@ spec:
             vaultKey: dev/forgejo-registry
           values:
             host: llm.dev-k8s.srv.hnatekmar.dev
+            # The fabric address, pinned: the nodes' resolver mixes a public upstream (the island
+            # DHCP hands one) with the router's, so the name can fall through to the public
+            # *.hnatekmar.dev wildcard and land on the reverse proxy. The IP is the storage fabric
+            # itself — no DNS in the mount path (the estate's own warning: "a client that resolves
+            # the wrong name silently consumes storage over 1G instead of failing").
+            storage:
+              nfs:
+                server: 192.168.88.25
             imagePullSecrets:
               - name: forgejo-registry
             env:

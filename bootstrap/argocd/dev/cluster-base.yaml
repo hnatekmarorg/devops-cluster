@@ -146,10 +146,45 @@ spec:
                   - nodes: "1"
                     reasons: ["Drifted", "Underutilized"]
 
+            # THE BALTEUS POOL. The single 2x RTX 3090 node — the shape the inference wave-1
+            # models need: all TP2, so one resident model spans both cards. `g2` is the only
+            # family advertising `nvidia.com/gpu: "2"`, and the PVE mapping hands each hostpci
+            # entry the first free device — while .189 holds the cards, a start refuses with
+            # `could not find a free device for 'hostpci0'` (measured 2026-10-11).
+            - name: talos-nocloud-gpu-3090-template
+              templateName: talos-nocloud-gpu-3090-template
+              # Balteus' node roots live on local-lvm, same as its CPU pool; the storage also
+              # selects the zones, keeping these clones on balteus.
+              region: balteus
+              bootDevice:
+                storage: local-lvm
+              # The same GPU join config as bukefalos' pool.
+              joinSecret:
+                name: karpenter-talos-join-gpu
+              # `g2` = the 2-GPU family (1:4 nodes carrying `nvidia.com/gpu: "2"`).
+              instanceFamilies: ["g2"]
+              # One node IS the shape (two cards, one VM); the budget is left at a fraction of
+              # the host so the box's other guests are not raced.
+              limits:
+                cpu: "64"
+                memory: 256Gi
+                nodes: 1
+              taints:
+                - key: nvidia.com/gpu
+                  value: present
+                  effect: NoSchedule
+              disruption:
+                consolidateAfter: 5m
+                budgets:
+                  - nodes: "10"
+                    reasons: ["Empty"]
+                  - nodes: "1"
+                    reasons: ["Drifted", "Underutilized"]
+
           nvidia:
             enabled: true
             # One entry per GPU pool; a new GPU pool appends its NodePool name here.
-            poolNames: ["talos-nocloud-gpu-template"]
+            poolNames: ["talos-nocloud-gpu-template", "talos-nocloud-gpu-3090-template"]
 
         # The model zoo (charts/llama-cpp). Wave 1 = the three .189 residents that fit the
         # 2x RTX 3090 node; all TP2, so one is resident at a time and SCALE flips them.

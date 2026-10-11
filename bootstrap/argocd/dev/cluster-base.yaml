@@ -105,9 +105,10 @@ spec:
                   - nodes: "1"
                     reasons: ["Drifted", "Underutilized"]
 
-            # THE GPU POOL (bukefalos). Two A4000s, one per node: the PVE PCI mapping holds both cards
-            # and PVE takes the first FREE one at VM start (terraform/docs/cluster-autoscaling.md,
-            # "GPU pools"), so `nodes: 2` is two single-card nodes, not one double-card one.
+            # THE A4000 POOL (bukefalos). Its template maps BOTH cards (hostpci0/1 against the
+            # a4000-1/-2 mappings), so a clone IS a two-card node — measured 2026-10-11: the pool's
+            # node reported `nvidia.com/gpu: 2`. Hence `g2` + `nodes: 1`: a second node would find
+            # no free cards and its start would fail.
             - name: talos-nocloud-gpu-template
               templateName: talos-nocloud-gpu-template
               # Bukefalos is its own provider region, and its node roots live on the striped `vms`
@@ -121,18 +122,22 @@ spec:
               # without them the device plugin dies with `failed to initialize NVML: Driver Not Loaded`.
               joinSecret:
                 name: karpenter-talos-join-gpu
-              # `g1` = the GPU family (1:4 nodes carrying `nvidia.com/gpu: 1`) from the estate's
-              # instance-types file — the stock families advertise no GPU capacity, so without it a
-              # pending GPU pod would never trigger provisioning at all.
-              instanceFamilies: ["g1"]
+              # `g2` = the 2-GPU family (1:4 nodes carrying `nvidia.com/gpu: "2"`).
+              instanceFamilies: ["g2"]
+              # What per-model nodeSelectors pin against. Two labels, so a model states its real
+              # requirement: `gpu.vram` × the pod's `nvidia.com/gpu` count is the VRAM it gets
+              # (2 x 16gb here), and `gpu.arch` stays informational (both pools are Ampere today).
+              labels:
+                gpu.arch: ampere
+                gpu.vram: 16gb
               # Cpu: 127 of the machine's 128 vCPUs (2× EPYC 7601 threads) — one thread stays with the
               # host. Memory: 448 GiB of bukefalos' 512, deliberately — the remaining 64 GiB is the
-              # floor a CPU pool in this same region can count on. `nodes: 2` is the real card cap
-              # (two cards, two single-card nodes).
+              # floor a CPU pool in this same region can count on. `nodes: 1` is the card cap: both
+              # cards live in one node.
               limits:
                 cpu: "127"
                 memory: 448Gi
-                nodes: 2
+                nodes: 1
               # Only GPU workloads land here; the device plugin carries the same toleration.
               taints:
                 - key: nvidia.com/gpu
@@ -163,6 +168,10 @@ spec:
                 name: karpenter-talos-join-gpu
               # `g2` = the 2-GPU family (1:4 nodes carrying `nvidia.com/gpu: "2"`).
               instanceFamilies: ["g2"]
+              # What per-model nodeSelectors pin against (see the bukefalos pool).
+              labels:
+                gpu.arch: ampere
+                gpu.vram: 24gb
               # One node IS the shape (two cards, one VM); the budget is left at a fraction of
               # the host so the box's other guests are not raced.
               limits:
@@ -213,6 +222,8 @@ spec:
               - name: qwen36-35b
                 image: forgejo.dev-k8s.srv.hnatekmar.dev/hnatekmarorg/vllm-qwen36-patched:0.25.1
                 port: 8030
+                # 35G of weights need the 24 GB cards (2 x 24gb = 48gb).
+                nodeSelector: {gpu.vram: 24gb}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}
@@ -220,6 +231,7 @@ spec:
               - name: gemma4-31b
                 image: docker.io/vllm/vllm-openai:v0.28.0
                 port: 8030
+                nodeSelector: {gpu.vram: 24gb}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}
@@ -228,6 +240,9 @@ spec:
                 image: docker.io/vllm/vllm-omni:v0.26.0
                 command: ["vllm", "serve"]
                 port: 8030
+                # 17G of weights fit the A4000 pair (2 x 16gb = 32gb) — the dry-run model.
+                # Dropping this selector would let it run on the 3090s too.
+                nodeSelector: {gpu.vram: 16gb}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}

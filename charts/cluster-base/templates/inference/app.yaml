@@ -25,6 +25,15 @@ spec:
   destination:
     server: "https://kubernetes.default.svc"
     namespace: inference
+  # SCALE owns /spec/replicas — that IS the product. Without this the controller reverts
+  # every toggle on its next reconcile (measured 2026-10-11: argocd-controller re-applied
+  # replicas=0 the same second SCALE set 1). `RespectIgnoreDifferences` is already in the
+  # syncOptions, so syncs honour it too.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
   syncPolicy:
     automated:
       prune: true

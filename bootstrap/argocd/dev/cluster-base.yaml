@@ -124,19 +124,15 @@ spec:
                 name: karpenter-talos-join-gpu
               # `g2` = the 2-GPU family (1:4 nodes carrying `nvidia.com/gpu: "2"`).
               instanceFamilies: ["g2"]
-              # What per-model nodeSelectors pin against. These must be REQUIREMENTS, not template
-              # labels: Karpenter validates pod selectors only against the pools' declared
-              # requirements (`label "gpu.vram" does not have known values` otherwise — measured),
-              # and a requirement also lands on the node as a label. `gpu.vram` × the pod's
-              # `nvidia.com/gpu` count is the VRAM budget (2 x 16gb = 32gb here); `gpu.arch` is
-              # informational today (both pools are Ampere).
-              extraRequirements:
-                - key: gpu.vram
-                  operator: In
-                  values: ["16gb"]
-                - key: gpu.arch
-                  operator: In
-                  values: ["ampere"]
+              # What the node shows about its cards — informational (for eyes and selectors that
+              # don't need provisioning): `gpu.vram` x the pod's `nvidia.com/gpu` count is the
+              # VRAM budget (2 x 16gb = 32gb here), `gpu.arch` both pools' Ampere. Models CANNOT
+              # nodeSelect these: the provider's instance types carry no custom labels, so
+              # Karpenter rejects such selectors at provisioning (`does not have known values` —
+              # measured). Models pin a pool via the well-known `karpenter.sh/nodepool` label.
+              labels:
+                gpu.arch: ampere
+                gpu.vram: 16gb
               # Cpu: 127 of the machine's 128 vCPUs (2× EPYC 7601 threads) — one thread stays with the
               # host. Memory: 448 GiB of bukefalos' 512, deliberately — the remaining 64 GiB is the
               # floor a CPU pool in this same region can count on. `nodes: 1` is the card cap: both
@@ -175,15 +171,11 @@ spec:
                 name: karpenter-talos-join-gpu
               # `g2` = the 2-GPU family (1:4 nodes carrying `nvidia.com/gpu: "2"`).
               instanceFamilies: ["g2"]
-              # What per-model nodeSelectors pin against (see the bukefalos pool — requirements,
-              # not labels).
-              extraRequirements:
-                - key: gpu.vram
-                  operator: In
-                  values: ["24gb"]
-                - key: gpu.arch
-                  operator: In
-                  values: ["ampere"]
+              # Informational, like the bukefalos pool's — models pin the pool via
+              # `karpenter.sh/nodepool`, not these labels.
+              labels:
+                gpu.arch: ampere
+                gpu.vram: 24gb
               # One node IS the shape (two cards, one VM); the budget is left at a fraction of
               # the host so the box's other guests are not raced.
               limits:
@@ -234,8 +226,8 @@ spec:
               - name: qwen36-35b
                 image: forgejo.dev-k8s.srv.hnatekmar.dev/hnatekmarorg/vllm-qwen36-patched:0.25.1
                 port: 8030
-                # 35G of weights need the 24 GB cards (2 x 24gb = 48gb).
-                nodeSelector: {gpu.vram: 24gb}
+                # 35G of weights: only the 3090 pool can hold them.
+                nodeSelector: {karpenter.sh/nodepool: talos-nocloud-gpu-3090-template}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}
@@ -243,7 +235,8 @@ spec:
               - name: gemma4-31b
                 image: docker.io/vllm/vllm-openai:v0.28.0
                 port: 8030
-                nodeSelector: {gpu.vram: 24gb}
+                # 22G + drafter — 3090 pool, like qwen36.
+                nodeSelector: {karpenter.sh/nodepool: talos-nocloud-gpu-3090-template}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}
@@ -252,9 +245,9 @@ spec:
                 image: docker.io/vllm/vllm-omni:v0.26.0
                 command: ["vllm", "serve"]
                 port: 8030
-                # 17G of weights fit the A4000 pair (2 x 16gb = 32gb) — the dry-run model.
-                # Dropping this selector would let it run on the 3090s too.
-                nodeSelector: {gpu.vram: 16gb}
+                # 17G of weights — the A4000 pool (the dry-run model). To allow the 3090s too,
+                # point this at the 3090 pool (or drop it once both pools can boot).
+                nodeSelector: {karpenter.sh/nodepool: talos-nocloud-gpu-template}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}

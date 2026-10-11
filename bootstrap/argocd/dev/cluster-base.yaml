@@ -116,6 +116,9 @@ spec:
               # zones, so this is also what keeps this pool's clones off balteus.
               region: bukefalos
               bootDevice:
+                # The GPU images unpack to ~25-40 GB (vllm-omni: 9.2 GB compressed); the 30 G
+                # default evicted the first model pod on ephemeral-storage.
+                size: 100G
                 storage: vms
               # The GPU join config: the same worker config plus `machine.kernel.modules: [nvidia,
               # nvidia_uvm]`. The extensions ship the modules but nothing loads them by default, and
@@ -165,6 +168,8 @@ spec:
               # selects the zones, keeping these clones on balteus.
               region: balteus
               bootDevice:
+                # Same reason as the A4000 pool — the patched vllm image alone is 18.8 GB compressed.
+                size: 100G
                 storage: local-lvm
               # The same GPU join config as bukefalos' pool.
               joinSecret:

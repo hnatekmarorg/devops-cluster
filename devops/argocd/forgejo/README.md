@@ -51,7 +51,8 @@ so the forge's topology lives in `values-dev.yaml` and the move to production is
 prod placement is `bootstrap/argocd/prod/forgejo.yaml`. Prod's remaining prerequisites are the two
 hand-made credentials from the table above (`forgejo-db`, and `forgejo-admin` because that database is
 fresh) plus the registry GC task noted in `values-prod.yaml`. The RUNNER is deliberately not part of
-prod yet — it lands with the CI migration, not before it.
+prod yet — it lands with the CI migration (drafted: `manifests-prod/20-runner.yaml`, the in-cluster
+runner; the dedicated mgmt host stays the one for device workflows).
 
 **Still absent, deliberately:** the dev app's own placement under `bootstrap/argocd/dev/`. The dev
 declaration adopts a RUNNING instance — live CI — so putting it under the dev root means ArgoCD takes
@@ -62,7 +63,10 @@ Then re-check the two things that are *deliberately* per-cluster rather than glo
 
 * the runner's `--labels` list **and** the `config.yaml` label map in `manifests/20-runner.yaml` — the
   server matches `runs-on` against the labels recorded at registration, and `register` silently drops
-  any label `config.yaml` does not define;
+  any label `config.yaml` does not define. **The scheme is by purpose (2026-10-11):** `mgmt` = the
+  dedicated mgmt host (every device workflow, relabeled to `[self-hosted, mgmt]`), `dind` = docker
+  builders (the in-cluster runner, `manifests-prod/20-runner.yaml`), `k8s` = kubernetes runners
+  (reserved). The device-workflow boundary is therefore a fact of the labels, not a convention;
 * `providerConfigRef` on the SSO client — the NAME is deliberately the same on both clusters
   (`sso-hnatekmar-xyz`, see the chart's keycloak-writer template); only the identity behind it differs,
   and prod's is verified live.

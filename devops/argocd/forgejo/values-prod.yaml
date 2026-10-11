@@ -29,6 +29,13 @@ gitea:
       NAME: forgejo
       USER: forgejo
       SSL_MODE: disable
+    migrations:
+      # Needed to import from a LAN source: the import guard resolves the source host and refuses
+      # private-network targets unless this is set (ALLOWED_HOST_LIST above is the hostname gate,
+      # this is the address gate; the key has no underscores — a wrong key is silently ignored).
+      # Set live on the instance during the devops-cluster migration and codified here so the
+      # values match reality.
+      ALLOW_LOCALNETWORKS: true
     security:
       # Forgejo refuses migrations/imports from hosts outside this list ("You can not import from
       # disallowed hosts", measured 2026-10-10 while migrating devops-cluster over from the dev

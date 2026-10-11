@@ -260,9 +260,9 @@ spec:
                 image: docker.io/vllm/vllm-omni:v0.26.0
                 command: ["vllm", "serve"]
                 port: 8030
-                # 17G of weights — the A4000 pool (the dry-run model). To allow the 3090s too,
-                # point this at the 3090 pool (or drop it once both pools can boot).
-                nodeSelector: {karpenter.sh/nodepool: talos-nocloud-gpu-template}
+                # 17G of weights — the 3090 pool (the dry run is done; bukefalos is
+                # power-managed off, and a pin at it would chase a powered-off host).
+                nodeSelector: {karpenter.sh/nodepool: talos-nocloud-gpu-3090-template}
                 resources:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}

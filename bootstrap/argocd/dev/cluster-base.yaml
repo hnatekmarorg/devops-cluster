@@ -231,9 +231,11 @@ spec:
                 value: "1"
               - name: VLLM_WORKER_MULTIPROC_METHOD
                 value: spawn
-              - name: PYTORCH_CUDA_ALLOC_CONF
-                value: expandable_segments:True,max_split_size_mb:512
               - name: VLLM_NO_USAGE_STATS
+                value: "1"
+              # So a crash leaves its traceback in the pod log instead of dying in Python's
+              # buffer (a segfaulting/erroring vllm produced empty logs twice today).
+              - name: PYTHONUNBUFFERED
                 value: "1"
             models:
               - name: qwen36-35b

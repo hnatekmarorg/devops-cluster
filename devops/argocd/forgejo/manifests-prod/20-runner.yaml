@@ -90,6 +90,22 @@ spec:
     requests:
       storage: 5Gi
 ---
+# The dind layer cache. Measured on a Talos worker (dev PoC, 2026-10-11): with an emptyDir this cache
+# lands on the NODE's ephemeral disk — 28.9G total on the dev's karpenter workers — so a busy CI fills
+# the node. The block tier, like the estate's other state volumes: sparse (you pay for used) and
+# expandable. Unlike the runner's /data this is pure cache — losing it costs rebuild time, nothing else.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: act-runner-dind
+  namespace: forgejo-runner
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: truenas-nvmeof
+  resources:
+    requests:
+      storage: 32Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -177,4 +193,5 @@ spec:
           persistentVolumeClaim:
             claimName: act-runner-data
         - name: dind-storage
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: act-runner-dind

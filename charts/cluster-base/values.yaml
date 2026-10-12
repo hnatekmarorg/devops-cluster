@@ -225,7 +225,7 @@ storage:
     # deviations and the re-sync recipe. `chartVersion` records which upstream release was copied, so a
     # re-sync diffs against a known point instead of against nothing.
     chartVersion: "1.3.0"
-    chartRepoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    chartRepoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
     chartRevision: HEAD
     chartPath: charts/truenas-csi
     namespace: truenas-csi

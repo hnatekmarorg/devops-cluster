@@ -1,0 +1,39 @@
+name: sync to the estate forge
+
+# The clusters' ArgoCD reads from the forge copy of this repo
+# (forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster). GitHub stays the master: every
+# push to main is merged INTO the copy's main, so the copy's own commits (the .forgejo CI
+# layer) survive. The merge commit carries [skip ci] so the forge's runners stay quiet on
+# syncs — the ported CI is dispatched by hand when it is being exercised.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    # The LAN runner (the ZimaBoard): it reaches the forge; GitHub-hosted runners cannot.
+    runs-on: [self-hosted, linux, x64, mgmt]
+    steps:
+      - name: merge GitHub main into the forge copy
+        env:
+          FORGEJO_SYNC_TOKEN: ${{ secrets.FORGEJO_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --quiet "https://mh:${FORGEJO_SYNC_TOKEN}@forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git" copy
+          cd copy
+          git config user.name "Hnatekmar"
+          git config user.email "Hnatekmar@users.noreply.github.com"
+          git fetch --quiet origin
+          git fetch --quiet "https://github.com/${GITHUB_REPOSITORY}.git" main:refs/remotes/github/main
+          git checkout --quiet main
+          if git merge-base --is-ancestor refs/remotes/github/main main; then
+            echo "the copy already contains ${GITHUB_SHA}"
+            exit 0
+          fi
+          git merge --no-ff refs/remotes/github/main -m "sync: merge GitHub main (${GITHUB_SHA:0:7}) into the copy [skip ci]"
+          git push --quiet origin main
+          echo "synced ${GITHUB_SHA} to the forge"

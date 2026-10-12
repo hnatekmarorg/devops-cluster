@@ -45,11 +45,11 @@ spec:
         valueFiles:
           - $repo/devops/argocd/forgejo/values-prod.yaml
 
-    - repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    - repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
       targetRevision: main
       path: devops/argocd/forgejo/manifests-prod
 
-    - repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    - repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
       targetRevision: main
       ref: repo
 

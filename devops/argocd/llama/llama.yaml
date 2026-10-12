@@ -27,13 +27,13 @@ spec:
         - /spec/replicas
   sources:
     - name: chart
-      repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
       path: charts/llama-cpp
       targetRevision: main
       helm:
         valueFiles:
           - $repo/devops/argocd/llama/values.yaml
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+    - repoURL: 'https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   destination:

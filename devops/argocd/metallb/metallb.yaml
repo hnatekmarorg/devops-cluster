@@ -27,7 +27,7 @@ spec:
         releaseName: metallb
         valueFiles:
           - $repo/devops/argocd/metallb/values.yaml
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+    - repoURL: 'https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   # https://github.com/metallb/metallb/issues/1681#issuecomment-2037707693

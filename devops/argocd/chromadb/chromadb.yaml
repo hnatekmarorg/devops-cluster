@@ -14,7 +14,7 @@ spec:
       helm:
         valueFiles:
           - $repo/devops/argocd/chromadb/values.yaml
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+    - repoURL: 'https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   destination:

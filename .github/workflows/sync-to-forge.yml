@@ -23,6 +23,7 @@ jobs:
           FORGEJO_SYNC_TOKEN: ${{ secrets.FORGEJO_SYNC_TOKEN }}
         run: |
           set -euo pipefail
+          rm -rf copy   # self-hosted runners keep their workspace between runs
           git clone --quiet "https://mh:${FORGEJO_SYNC_TOKEN}@forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git" copy
           cd copy
           git config user.name "Hnatekmar"

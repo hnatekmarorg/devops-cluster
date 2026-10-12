@@ -120,6 +120,11 @@ spec:
     metadata:
       labels:
         app: act-runner
+      annotations:
+        # karpenter: never voluntarily disrupt this node while a runner lives on it — a drain
+        # (drift, or a future consolidation-policy change) would kill a job mid-run. To recycle a
+        # node this blocks, bounce the runner pod; it re-registers from its PVC.
+        karpenter.sh/do-not-disrupt: "true"
     spec:
       # The PVCs come up root-owned; the runner is non-root. fsGroup gives the volume group access
       # (and adds the group to the containers), so `.runner` can be written. Do NOT set runAsUser

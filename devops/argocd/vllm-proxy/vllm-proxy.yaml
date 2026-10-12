@@ -21,13 +21,13 @@ spec:
   project: default
   sources:
     - name: chart
-      repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
       path: charts/vllm-proxy
       targetRevision: main
       helm:
         valueFiles:
           - $repo/devops/argocd/vllm-proxy/values.yaml
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+    - repoURL: 'https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   destination:

@@ -15,13 +15,13 @@ spec:
         - /spec/replicas
   sources:
     - name: chart
-      repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
       path: charts/thingsboard
       targetRevision: main
       helm:
         valueFiles:
           - $repo/devops/argocd/thingsboard/values.yaml
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+    - repoURL: 'https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   destination:

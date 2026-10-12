@@ -16,7 +16,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+    repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
     targetRevision: HEAD
     path: charts/llama-cpp
     helm:

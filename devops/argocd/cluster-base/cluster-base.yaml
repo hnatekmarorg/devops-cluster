@@ -10,12 +10,12 @@ spec:
   project: default
   sources:
     - name: chart
-      repoURL: https://github.com/hnatekmarorg/devops-cluster.git
+      repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
       path: charts/cluster-base
       targetRevision: main
       helm:
         valuesObject: {}
-    - repoURL: 'https://github.com/hnatekmarorg/devops-cluster.git'
+    - repoURL: 'https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git'
       targetRevision: main
       ref: repo
   destination:

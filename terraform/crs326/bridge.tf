@@ -266,8 +266,42 @@ resource "routeros_interface_bridge_port" "pve_lan" {
   unknown_unicast_flood   = true
 }
 
-# The idle bond has no bridge port on the device — it was removed with the other dead ports, and this
-# resource went with it. The bond itself stays: it is the second server's reservation.
+# The second server's port returns with its server (2026-10-12): while the bond was idle its bridge
+# port had been removed with the other dead ports; it is back now that bukefalos is being integrated,
+# with the same treatment as `pve_lan` — untagged in compat, tagged for every class, so its guests can
+# be tagged into any segment without moving the host.
+resource "routeros_interface_bridge_port" "bukefalos" {
+  auto_isolate            = false
+  bpdu_guard              = false
+  bridge                  = "bridge"
+  broadcast_flood         = true
+  disabled                = false
+  edge                    = "auto"
+  fast_leave              = false
+  frame_types             = "admit-all"
+  horizon                 = "none"
+  hw                      = true
+  ingress_filtering       = true
+  interface               = "bukefalos"
+  internal_path_cost      = 10
+  learn                   = "auto"
+  multicast_router        = "temporary-query"
+  mvrp_applicant_state    = "normal-participant"
+  mvrp_registrar_state    = "normal"
+  path_cost               = "10"
+  point_to_point          = "auto"
+  priority                = "0x80"
+  pvid                    = 1
+  restricted_role         = false
+  restricted_tcn          = false
+  tag_stacking            = false
+  trusted                 = false
+  unknown_multicast_flood = true
+  unknown_unicast_flood   = true
+
+  # The port cannot exist before its interface: on a from-scratch build the bond must be created first.
+  depends_on = [routeros_interface_bonding.bukefalos]
+}
 
 resource "routeros_interface_bridge_port" "ether10" {
   auto_isolate            = false

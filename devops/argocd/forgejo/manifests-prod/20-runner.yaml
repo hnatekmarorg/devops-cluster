@@ -179,7 +179,10 @@ spec:
         # the runner's single slot is what keeps that from happening twice at once.
         - name: dind
           image: docker:27-dind
-          args: ["dockerd", "--host=tcp://127.0.0.1:2375", "--tls=false"]
+          # 0.0.0.0, not loopback: job containers reach the daemon through host.docker.internal
+          # (the pod's docker0 gateway) and a loopback-only bind refuses them — measured
+          # 2026-10-12, on the first real dind job.
+          args: ["dockerd", "--host=tcp://0.0.0.0:2375", "--tls=false"]
           env:
             - name: DOCKER_TLS_CERTDIR
               value: ""              # plain TCP on the loopback of a shared pod network; no TLS to negotiate

@@ -74,10 +74,10 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
   # switch stops needing a journey through the storage island to be reachable; see crs326/bridge.tf
   # for the 1500-byte ceiling this link has to respect). Every other port keeps its compat pvid 1.
   #
-  # `ether2` is here because the Proxmox host is a trunk: the host itself stays on compat (the port's
-  # pvid is 1, untouched), and its guests are tagged into the class they belong to. A VM in mgmt is
-  # therefore possible without moving the host — which is what keeps this additive.
-  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4", "ether2"]
+  # `ether2` and `bukefalos` are here because the Proxmox hosts are trunks: each host itself stays on
+  # compat (the ports' pvid is 1, untouched), and their guests are tagged into the class they belong
+  # to. A VM in mgmt is therefore possible without moving a host — which is what keeps this additive.
+  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4", "ether2", "bukefalos"]
   untagged = ["ether3", "ether7", "ether24"]
   comment  = "mgmt — escape hatch, IPMI and the CRS317's port untagged; tagged on both uplinks"
 }
@@ -96,8 +96,8 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
 resource "routeros_interface_bridge_vlan" "lab_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["30"]
-  tagged   = ["ether18", "ether4", "ether2"]
-  comment  = "lab — transport only; the router terminates it, balteus's guests live in it"
+  tagged   = ["ether18", "ether4", "ether2", "bukefalos"]
+  comment  = "lab — transport only; the router terminates it, the PVE hosts' guests live in it"
 }
 
 # ---------------------------------------------------------------------------
@@ -122,8 +122,8 @@ import {
 resource "routeros_interface_bridge_vlan" "srv_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["40"]
-  tagged   = ["ether18", "ether2"]
-  comment  = "srv — transport only; the router terminates it, balteus's guests live in it"
+  tagged   = ["ether18", "ether2", "bukefalos"]
+  comment  = "srv — transport only; the router terminates it, the PVE hosts' guests live in it"
 }
 
 # Adopted, not created: the push that added this row lost its runner mid-apply (the CI runner sits
@@ -137,7 +137,7 @@ import {
 resource "routeros_interface_bridge_vlan" "vpn_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["60"]
-  tagged   = ["ether18", "ether2"]
+  tagged   = ["ether18", "ether2", "bukefalos"]
   comment  = "vpn — transport only; the router terminates the zone, WireGuard clients join it there"
 }
 
@@ -155,7 +155,7 @@ resource "routeros_interface_bridge_vlan" "iot_trunk" {
   # is an UNTAGGED member and its `pvid` is 70 (see crs326/bridge.tf). Tagging it instead would leave
   # the segment's devices — a dumb switch, a Deco, a TV, a gaming PC, none of which can tag — receiving
   # VLAN 70 frames they cannot read, and would leave the probe sitting in compat.
-  tagged   = ["ether18", "ether2"]
+  tagged   = ["ether18", "ether2", "bukefalos"]
   untagged = ["ether16"]
   comment  = "iot — tagged to the router on ether18; ether16 is the untagged access port to the devices"
 }

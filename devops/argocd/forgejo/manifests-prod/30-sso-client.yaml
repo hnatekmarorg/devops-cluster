@@ -8,6 +8,12 @@
 # services log in with. Forgejo's client was created by hand while the prototype was being built, so it
 # existed in the cluster and nowhere in git — which is the gap this file closes.
 #
+# HANDOVER (2026-10-12): the forge left the cluster, so this declaration follows it to the hub
+# (hnatekmarorg/hetzner-k8s, `clients/forgejo-client.yaml`) — the consumer the secret below was
+# written for no longer exists, and a disposable cluster must not own an estate client. This file
+# now carries `deletionPolicy: Orphan` so that its removal (next PR) cannot delete the live client;
+# the hub declaration adopts it by external-name.
+#
 # WHY IT MATTERS THAT THE SECRET LANDS HERE: provider-keycloak writes a client's connection secret into
 # the cluster the provider runs in (`writeConnectionSecretToRef` below). That is what removes the
 # cross-boundary errand — no secret is copied from a WAN repo onto a LAN cluster.
@@ -27,7 +33,7 @@ metadata:
   name: forgejo-prod
   namespace: forgejo
 spec:
-  deletionPolicy: Delete
+  deletionPolicy: Orphan
   providerConfigRef:
     name: sso-hnatekmar-xyz
   forProvider:
@@ -45,11 +51,11 @@ spec:
     serviceAccountsEnabled: false      # Forgejo does not call Keycloak's admin API with this client
     useRefreshTokens: true
     fullScopeAllowed: true
-    baseUrl: https://forgejo.prod-k8s.srv.hnatekmar.dev
+    baseUrl: https://forgejo.srv.hnatekmar.dev
     validRedirectUris:
-      - https://forgejo.prod-k8s.srv.hnatekmar.dev/user/oauth2/keycloak/callback
+      - https://forgejo.srv.hnatekmar.dev/user/oauth2/keycloak/callback
     webOrigins:
-      - https://forgejo.prod-k8s.srv.hnatekmar.dev
+      - https://forgejo.srv.hnatekmar.dev
   writeConnectionSecretToRef:
     name: forgejo-oidc
     namespace: forgejo

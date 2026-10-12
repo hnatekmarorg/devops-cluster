@@ -111,6 +111,11 @@ spec:
     metadata:
       labels:
         app: act-runner
+      annotations:
+        # karpenter: never voluntarily disrupt this node while a runner lives on it — a drain
+        # (drift, or a future consolidation-policy change) would kill a job mid-run. To recycle a
+        # node this blocks, bounce the runner pod; it re-registers from its PVC.
+        karpenter.sh/do-not-disrupt: "true"
     spec:
       # The PVCs come up root-owned; the runner is non-root. fsGroup gives the volume group access
       # (and adds the group to the containers), so `.runner` can be written. Do NOT set runAsUser
@@ -194,3 +199,144 @@ spec:
         - name: dind-storage
           persistentVolumeClaim:
             claimName: act-runner-dind
+
+---
+# The general CI lane (`k8s`) — lints, tests, templating: everything that needs a runner but neither
+# the devices (`mgmt`) nor the build cache (`dind`). It still carries a dind sidecar, because job
+# containers need a daemon; the 10Gi cache keeps the job image warm.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ci-runner-config
+  namespace: forgejo-runner
+data:
+  config.yaml: |
+    log:
+      level: info
+    runner:
+      capacity: 1
+      timeout: 30m
+      labels:
+        - "self-hosted:docker://node:22-bookworm"
+        - "k8s:docker://node:22-bookworm"
+    cache:
+      enabled: true
+      dir: /data/cache
+    container:
+      options: "--add-host=host.docker.internal:host-gateway"
+    host:
+      workdir_parent: /data/work
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ci-runner-data
+  namespace: forgejo-runner
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: truenas-nvmeof
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ci-runner-dind
+  namespace: forgejo-runner
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: truenas-nvmeof
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ci-runner
+  namespace: forgejo-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ci-runner
+  template:
+    metadata:
+      labels:
+        app: ci-runner
+      annotations:
+        # karpenter: never voluntarily disrupt this node while a runner lives on it — a drain
+        # (drift, or a future consolidation-policy change) would kill a job mid-run. To recycle a
+        # node this blocks, bounce the runner pod; it re-registers from its PVC.
+        karpenter.sh/do-not-disrupt: "true"
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: runner
+          image: code.forgejo.org/forgejo/runner:6
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              until nc -z 127.0.0.1 2375; do echo waiting-for-dind; sleep 2; done
+              cd /data
+              if [ ! -f /data/.runner ]; then
+                /bin/forgejo-runner register --no-interactive -c /config/config.yaml \
+                  --instance "$GITEA_INSTANCE_URL" --token "$RUNNER_REG_TOKEN" \
+                  --name dev-k8s --labels "self-hosted,k8s"
+              fi
+              exec /bin/forgejo-runner daemon --config /config/config.yaml
+          env:
+            - name: DOCKER_HOST
+              value: tcp://127.0.0.1:2375
+            - name: DEFAULT_ACTIONS_URL
+              value: https://github.com
+            - name: GITEA_INSTANCE_URL
+              value: https://forgejo.srv.hnatekmar.dev
+            - name: RUNNER_REG_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ci-runner-registration
+                  key: token
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /data
+        - name: dind
+          image: docker:27-dind
+          # 0.0.0.0, not loopback: job containers reach the daemon through host.docker.internal
+          # (the pod's docker0 gateway) — see the note in 20-runner.yaml.
+          args: ["dockerd", "--host=tcp://0.0.0.0:2375", "--tls=false"]
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          volumeMounts:
+            - name: dind-storage
+              mountPath: /var/lib/docker
+      volumes:
+        - name: config
+          configMap:
+            name: ci-runner-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: ci-runner-data
+        - name: dind-storage
+          persistentVolumeClaim:
+            claimName: ci-runner-dind

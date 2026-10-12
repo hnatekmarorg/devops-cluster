@@ -108,7 +108,11 @@ metadata:
   name: act-runner
   namespace: forgejo-runner
 spec:
-  replicas: 1
+  # Parked 2026-10-12: the dind builder lives on dev now (../manifests/20-runner.yaml) — builds are
+  # bursty and the dind is privileged, so they belong on the cluster that may be rebuilt, not on the
+  # one that must survive. Raise this back to 1 (and re-register against the estate forge) if a
+  # prod-local builder is ever wanted.
+  replicas: 0
   selector:
     matchLabels:
       app: act-runner

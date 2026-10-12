@@ -35,6 +35,24 @@ jobs:
             echo "the copy already contains ${GITHUB_SHA}"
             exit 0
           fi
-          git merge --no-ff refs/remotes/github/main -m "sync: merge GitHub main (${GITHUB_SHA:0:7}) into the copy [skip ci]"
+          if ! git merge --no-ff refs/remotes/github/main -m "sync: merge GitHub main (${GITHUB_SHA:0:7}) into the copy [skip ci]"; then
+            # The copy keeps .forgejo only: a same-named file under .github/workflows OVERRIDES the
+            # ported one (the dirs are scanned in order and .github wins) and names the tofu label
+            # the forge's runner does not carry. Any conflict inside the workflow dirs resolves to
+            # "removed"; a conflict anywhere else is real.
+            UNM=$(git diff --name-only --diff-filter=U)
+            if [ -z "$UNM" ] || echo "$UNM" | grep -qvE '^\.(github|forgejo)/'; then
+              echo "real merge conflict:"; echo "$UNM"; exit 1
+            fi
+            echo "$UNM" | while read -r f; do
+              git rm -q -f --ignore-unmatch "$f" 2>/dev/null || git rm -q --cached -f --ignore-unmatch "$f" || true
+            done
+            git commit --no-edit
+          fi
+          # Belt: whatever the merge produced, the copy carries no .github/workflows.
+          if [ -e .github/workflows ]; then
+            git rm -r -q .github/workflows
+            git commit --amend --no-edit -q
+          fi
           git push --quiet origin main
           echo "synced ${GITHUB_SHA} to the forge"

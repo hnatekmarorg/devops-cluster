@@ -26,7 +26,7 @@ Nothing here is in git, on purpose — they are credentials:
 | Secret | Namespace | Keys | How it is produced |
 |---|---|---|---|
 | `forgejo-db` | `forgejo` | `password` | generated; the same value must reach Postgres and Forgejo (the chart injects it into `app.ini`, the StatefulSet into `POSTGRES_PASSWORD`) |
-| `runner-registration` | `forgejo-runner` | `token` | `kubectl -n forgejo exec deploy/forgejo -c forgejo -- forgejo forgejo-cli actions generate-runner-token --scope hnatekmarorg` |
+| `runner-registration` | `forgejo-runner` | `token` | minted on the forge host: `forgejo --config /etc/forgejo/app.ini forgejo-cli actions generate-runner-token --scope hnatekmarorg` |
 | `forgejo-admin` | `forgejo` | `username`, `password` | the local break-glass admin; only needed on a fresh database |
 | `forgejo-oidc` | `forgejo` | `attribute.client_secret` | **not created by hand** — Crossplane writes it from the `Client` in `manifests/30-sso-client.yaml` |
 
@@ -50,9 +50,10 @@ so the forge's topology lives in `values-dev.yaml` and the move to production is
 **State (2026-10-10):** steps 1-3 are done — `values-prod.yaml` and `manifests-prod/` exist, and the
 prod placement is `bootstrap/argocd/prod/forgejo.yaml`. Prod's remaining prerequisites are the two
 hand-made credentials from the table above (`forgejo-db`, and `forgejo-admin` because that database is
-fresh) plus the registry GC task noted in `values-prod.yaml`. The RUNNER is deliberately not part of
-prod yet — it lands with the CI migration (drafted: `manifests-prod/20-runner.yaml`, the in-cluster
-runner; the dedicated mgmt host stays the one for device workflows).
+fresh) plus the registry GC task noted in `values-prod.yaml`. The RUNNER lives on dev as the estate's dind builder (`manifests/20-runner.yaml`, connected to
+`forgejo.srv.hnatekmar.dev` on 2026-10-12); the prod declaration is parked (`replicas: 0`) — builds
+belong on the cluster that may be rebuilt, not the one that must survive. The dedicated mgmt host
+stays the one for device workflows.
 
 **Still absent, deliberately:** the dev app's own placement under `bootstrap/argocd/dev/`. The dev
 declaration adopts a RUNNING instance — live CI — so putting it under the dev root means ArgoCD takes
@@ -65,7 +66,7 @@ Then re-check the two things that are *deliberately* per-cluster rather than glo
   server matches `runs-on` against the labels recorded at registration, and `register` silently drops
   any label `config.yaml` does not define. **The scheme is by purpose (2026-10-11):** `mgmt` = the
   dedicated mgmt host (every device workflow, relabeled to `[self-hosted, mgmt]`), `dind` = docker
-  builders (the in-cluster runner, `manifests-prod/20-runner.yaml`), `k8s` = kubernetes runners
+  builders (the in-cluster runner on dev, `manifests/20-runner.yaml`), `k8s` = kubernetes runners
   (reserved). The device-workflow boundary is therefore a fact of the labels, not a convention;
 * `providerConfigRef` on the SSO client — the NAME is deliberately the same on both clusters
   (`sso-hnatekmar-xyz`, see the chart's keycloak-writer template); only the identity behind it differs,
@@ -86,8 +87,9 @@ into this instance is the fix; it is not done here.
   `clusters-production`'s reviewer gate cannot be reproduced as it stands. The replacement is a
   short-lived credential pulled at run time (OIDC token → OpenBao, bound to `ref_protected`), which is
   worth doing on GitHub as well.
-* **The runner's `/data` is statically bound NFS on dev** (`manifests/20-runner.yaml` says why not to
-  carry that to prod). On this NAS export it has history: the directory the PVC landed on is shared with
-  unrelated objects, which is why the volume listing looks like a NAS dump rather than a CI runner.
+* **The runner's volumes are on the block tier** (`truenas-nvmeof` on dev too, 2026-10-12): `/data` for
+  the registration, `act-runner-dind` for the docker layers. The old dev binding was static NFS, whose
+  history was that the directory the PVC landed on was shared with unrelated objects — the volume
+  listing looked like a NAS dump rather than a CI runner.
 * **`actions/upload-artifact@v4`** is used by the `tofu-apply` composite action and has not been
   exercised on Forgejo here — the apply path needs device credentials this prototype does not have.

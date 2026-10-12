@@ -54,6 +54,7 @@ locals {
     "truenas.srv.hnatekmar.dev"            = local.dhcp_reservations["truenas"].address
     "minio.srv.hnatekmar.dev"              = local.dhcp_reservations["truenas"].address
     "gitea.srv.hnatekmar.dev"              = local.dhcp_reservations["gitea"].address
+    "forgejo.srv.hnatekmar.dev"            = local.dhcp_reservations["forgejo"].address
     "github-dind.srv.hnatekmar.dev"        = local.dhcp_reservations["github-dind"].address
     "coder.srv.hnatekmar.dev"              = local.dhcp_reservations["coder"].address
     "kubernetes-sandbox.srv.hnatekmar.dev" = local.dhcp_reservations["kubernetes-sandbox"].address

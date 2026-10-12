@@ -189,6 +189,11 @@ locals {
     # `.33`; claiming it here is what makes the vault's own name resolve to it (a pool lease is ten
     # minutes long, so a lease-only address is a name that can move).
     "openbao" = { mac = "BC:24:11:3F:75:F2", address = "172.16.40.33", class = "srv" }
+    # The estate's forge (LXC 148 on balteus, 2026-10-12) — git, CI and the registry. srv because that
+    # is where its consumers are (the clusters' ArgoCD, the runner); off the cluster because a rebuild
+    # must not take the thing that rebuilds it. It came up on the pool lease `.34`; the reservation is
+    # what turns that into a claim, and the name follows it like every other srv record.
+    "forgejo" = { mac = "BC:24:11:A4:AA:0C", address = "172.16.40.34", class = "srv" }
     # Infrastructure on a pool lease is a fragility: the spine's management address must not depend
     # on pool churn. It moved to mgmt on 2026-09-15 and keeps the address it landed on (`.201`) rather
     # than being moved again for suffix symmetry — one address change per device is enough.

@@ -87,6 +87,7 @@ spec:
               # (an idle burst node returns its RAM quickly) without arming a spawn loop.
               disruption:
                 consolidateAfter: 5m
+                consolidationPolicy: WhenEmptyOrUnderutilized
                 # ABSOLUTE and scoped per reason, deliberately. The CRD default is one budget of 10% of
                 # the fleet, and at this fleet size that allows ONE concurrent disruption — which a node
                 # pinned by `do-not-disrupt` pods (argo-bench's stack) consumes permanently, because its

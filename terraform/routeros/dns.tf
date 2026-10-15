@@ -41,11 +41,12 @@ locals {
     # this record carried the literal, which made the name a claim on an address nobody owned (and the
     # address a firewall identity — see `stories-access.tf`, where a `stories_allow_charon` keyed on it
     # would have followed whatever device the pool handed it to).
-    "charon.mgmt.hnatekmar.dev"      = local.dhcp_reservations["charon"].address
-    "crs804.mgmt.hnatekmar.dev"      = local.dhcp_reservations["crs804"].address
-    "crs317.mgmt.hnatekmar.dev"      = local.dhcp_reservations["crs317"].address
-    "bmc-balteus.mgmt.hnatekmar.dev" = local.dhcp_reservations["balteus-ipmi"].address
-    "runner.mgmt.hnatekmar.dev"      = local.dhcp_reservations["runner"].address
+    "charon.mgmt.hnatekmar.dev"        = local.dhcp_reservations["charon"].address
+    "crs804.mgmt.hnatekmar.dev"        = local.dhcp_reservations["crs804"].address
+    "crs317.mgmt.hnatekmar.dev"        = local.dhcp_reservations["crs317"].address
+    "bmc-balteus.mgmt.hnatekmar.dev"   = local.dhcp_reservations["balteus-ipmi"].address
+    "bmc-bukefalos.mgmt.hnatekmar.dev" = local.dhcp_reservations["bukefalos-ipmi"].address
+    "runner.mgmt.hnatekmar.dev"        = local.dhcp_reservations["runner"].address
     # The operator host (vault, WebUI, admin box) — re-classed to mgmt, so its name states that class.
     "personal-hermes.mgmt.hnatekmar.dev" = local.dhcp_reservations["personal-hermes"].address
 

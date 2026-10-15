@@ -175,7 +175,7 @@ Every port therefore defaults into the compat segment — which is why an unmapp
 | Device | State | Live ports with measured occupants |
 |---|---|---|
 | **RB5009** (`172.16.100.1`, **7.24.2** — upgraded 2026-09-14 from 7.12.1) | one bridge, LAN IP `172.16.100.1/24` on **`ether2`** — a bridge slave whose link is **down** (the plan's cut-over risk #1) | `ether4` UP · 1 Gb → CRS326 `ether18` (33 MACs behind it); `ether5` UP → 3 MACs, AP or small switch **TBC**; `sfp-sfpplus1` = the work subnet `172.16.101.1/24` |
-| **CRS326-24G-2S+** (`172.16.100.2`, **7.24.2** — upgraded 2026-09-14 from **7.5/2022**) | 24 ports + 2 SFP+, one flat bridge; 6 ports live | `ether18` → RB5009; **`balteus`** = an **LACP bond** (`ether1`+`ether2`, 802.3ad) → the PVE host, **18 guest NICs** — one member was **repurposed by design** as the 10 Gbps NAS↔fabric link (the cable now lands on CRS804 `ether2`), so the bond runs on a single 1 Gb member; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; **`bukefalos`** = a second LACP bond (`ether23` since `ether24` was freed for the island link), **now a trunk like balteus's** (2026-10-12). Two 10 G SFP+ ports sit unused while the server side runs at 1 G |
+| **CRS326-24G-2S+** (`172.16.100.2`, **7.24.2** — upgraded 2026-09-14 from **7.5/2022**) | 24 ports + 2 SFP+, one flat bridge; 8 ports live | `ether18` → RB5009; **`balteus`** = an **LACP bond** (`ether1`+`ether2`, 802.3ad) → the PVE host, **18 guest NICs** — one member was **repurposed by design** as the 10 Gbps NAS↔fabric link (the cable now lands on CRS804 `ether2`), so the bond runs on a single 1 Gb member; `ether4` → CSS610 → the rest; `ether7` → HPE box #2 `3c:ec:ef:73:09:9d`; `ether16` → **deco-BE22** AP + 4 WiFi clients; **`bukefalos`** = the second PVE host, measured 2026-10-14: its **LAN is on `ether21`** (a trunk like balteus's) and its **IPMI on `ether22`** (untagged mgmt access, BMC `.45`); the second LACP bond (`ether23`, since `ether24` was freed for the island link) has **no link** and stays a reservation. Two 10 G SFP+ ports sit unused while the server side runs at 1 G |
 | **CSS610-8G-2S+** (SwOS 2.21, `.117`) | **no RouterOS API** → outside IaC, hand-config only | *Not a leaf:* the measured MAC table shows it is the middle hop for **charon (work PC, `.227`)**, the **spark1-4 management NICs**, and **CRS804's management uplink** |
 | **CRS804-4DDQ** (`.113`, **7.24.2** — upgraded 2026-09-14 from 7.23.3) | **two bridges, and only one of them carries traffic** | `bridge1`: **`ether1` only — management access, nothing else** (~1 GiB in three weeks; being single-port, CPU bridging is expected here, not a fault). `bridge-compute` (`10.0.0.1/24`) is the **storage + RDMA fabric by design**: 4× QSFP-DD at `200G-baseCR4` → spark1..4 (**hardware-offloaded**, ~300 TiB each way since boot) plus **`ether2` → balteus' 10G NAS link** (~43.6 TiB received since boot, **software-bridged**, no drops or errors, average ~24 Mbit/s) |
 | **Endpoints** | — | `balteus` (Proxmox, 46 guests, 19 running) carries the live devops cluster `main-*` and the VIP `.15` (ARP'd by `main-4`); the Sparks have a management NIC on the flat LAN (`.110/.112/.136/.137`) **and** a RoCE NIC on the fabric |
@@ -226,17 +226,26 @@ makes the next upgrade a byte-level check.
 
 | Was TBC | Answer |
 |---|---|
-| Whose box is `bukefalos`? | the second PVE host — being integrated 2026-10-12; its port is a trunk like balteus's, so its guests can be tagged into any class |
+| Whose box is `bukefalos`? | the second PVE host — integrated 2026-10-12; measured 2026-10-14 its LAN is on `ether21` (trunk like balteus's, guests tag into any class) and its IPMI on `ether22` (mgmt access); the `ether23` bond has no link and stays reserved |
 | CRS326 `ether2/5/6/8–15/17/19–22` — empty or occupied? | it is a **"dumb" switch with servers on random ports** → trace only the **live** ports; 5 are live, 4 identified above, `ether2` is the one to look at |
 | CRS804 `ether2`? | **direct 10 G link to balteus**, used to give balteus its NAS path |
 | CSS610 occupants? | mainly the **Sparks** and **charon** (the work PC) |
 | IoT/printers — own VLAN or onto `.40`? | **own VLAN** → `vlan70-iot` below (`.60` stays reserved for WireGuard clients) |
 
+### Measured on 2026-10-14 (bukefalos' real ports)
+
+| Question | Answer |
+|---|---|
+| Which ports is the second server on? | **`ether21`** (LAN — link-ok at **100 M**, no MAC learned: the host is down; `.100.71` / `AC:1F:6B:E9:E8:32` when up) and **`ether22`** (Super Micro IPMI — `AC:1F:6B:E9:E3:0C`, static `.100.45`; port 623 and its web UI answer). The `bukefalos` bond (`ether23`) has **no link and 0 bytes since boot** — the trunk #201 declared sat on an empty port |
+| What changed in IaC | `ether21` takes the trunk memberships (untagged compat + tagged mgmt/lab/srv/vpn/iot); `ether22` becomes an untagged mgmt access port (pvid 10, `admit-only-untagged-and-priority-tagged`) and leaves the compat row; the BMC is claimed at `172.16.10.45` (`bukefalos-ipmi` + `bmc-bukefalos.mgmt`) |
+| Sequencing | the BMC keeps `.100.45` until it is re-addressed on the device — once `ether22` carries only VLAN 10, that address is unreachable from every segment. Re-addressing (`172.16.10.45/20`, gateway `172.16.10.1`) is one coordinated step; the reservation binds the moment it switches to DHCP |
+| Side finding | `ether21` negotiates **100 M** (link partner advertises only 100M-baseT-full) — worth a cable-pair check; a damaged pair did exactly this to Spark 3 |
+
 ## Layer 2 — proposed, for review
 
 | Class | Subnet (gateway) | Host addressing | Candidates from the measurements | Port mechanism |
 |---|---|---|---|---|
-| mgmt | `172.16.0.0/20` (`172.16.10.1/20`) | `172.16.10.x` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46`), `bukefalos` later | access on the CSS610 port for charon; tagged on every switch uplink |
+| mgmt | `172.16.0.0/20` (`172.16.10.1/20`) | `172.16.10.x` | `charon` (work PC), network-gear management, IPMIs (`.123` atuin, `.46` balteus, `.45` bukefalos) | access on the CSS610 port for charon; tagged on every switch uplink |
 | lab | `172.16.16.0/20` (`172.16.30.1/20`) | `172.16.30.x` | **AI compute**: spark1-4 management, `.189`; sandboxes | trunk to balteus (per-VM tags) + access on spark ports |
 | srv | **`172.16.32.0/19`** (`172.16.40.1/19`) | `172.16.40.x` | `balteus` + its keepers (truenas, gitea, authentik, matchbox, headscale), the `3c:ec:ef` box, **and the devops cluster nodes** (see below) | **balteus' uplink becomes a trunk** — the largest single change |
 | → service VIPs | *inside srv, one subnet* | `172.16.48.1 – 172.16.63.254` | **the MetalLB pool** — 4,094 addresses | **L2 announcement** — possible precisely because pool and nodes share srv's /19 |
@@ -317,7 +326,7 @@ staying intact.
 |---|---|---|
 | 1 | ~~CRS326 `ether2` / the degraded `balteus` bond~~ **resolved and by design** (Martin, 2026-09-14): one bond member was repurposed to give the NAS a 10 Gbps path onto the Spark fabric — that cable is the CRS804 `ether2` link measured below, carrying the NAS VM's traffic. Flat-LAN side of balteus is 1 Gb; the NAS path is 10 Gb. Nothing to fix | — |
 | 2 | The RB5009 `ether5` segment (3 MACs) — AP or small switch? | decides trusted vs guest/IoT placement |
-| 3 | Is the HPE box on `ether7` the machine the `bukefalos` port is reserved for? | if yes, the port name is stale; if not, `bukefalos` is unplugged |
+| 3 | ~~Is the HPE box on `ether7` the machine the `bukefalos` port is reserved for?~~ **Resolved 2026-10-14** — `ether7` is balteus' IPMI; bukefalos is on `ether21`/`ether22`, the `ether23` bond idles | — |
 | 4 | Which AP can tag VLANs per SSID? | gates guest + IoT on WiFi (constraint 3) |
 | 5 | Does all network-gear management belong in `vlan10-mgmt`? | decides the tagged-VLAN set on every trunk |
 | 6 | Spark *management* in `vlan30-lab` (with `wan-restricted`) or in `vlan10-mgmt`? | they are AI compute, but also infrastructure |

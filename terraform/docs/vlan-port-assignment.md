@@ -23,7 +23,7 @@ tunnelling clients into it).
 
 | Device | Reservation |
 |---|---|
-| **bukefalos** (second server) | already cabled as an idle LACP bond (`ether23`+`ether24` on the CRS326) → reserved as an **srv** trunk |
+| **bukefalos** (second server) | **Integrated 2026-10-12** — measured 2026-10-14: LAN on **`ether21`** (trunk: untagged compat + tagged 10/30/40/60/70) and IPMI on **`ether22`** (untagged mgmt access, BMC `.45`). The LACP bond (`ether23`) stays reserved — no link, the server did not arrive on it |
 | ~~atuin~~ | **parked (2026-09-14)** — introduced later; nothing reserved beyond the rule below |
 
 **Rule (Martin, 2026-09-14): every Kubernetes node gets a 10 Gbps link into the storage network

@@ -83,6 +83,13 @@ locals {
     "inference"    = { mac = "BC:24:11:5D:F4:C7", address = "172.16.30.189", class = "lab" }
     "balteus-ipmi" = { mac = "3C:EC:EF:73:09:9D", address = "172.16.10.46", class = "mgmt" }
 
+    # `bukefalos-ipmi` — the second server's BMC (Super Micro), the same shape as balteus': it holds a
+    # static address today (`.45` in compat — measured 2026-10-14: no lease exists for its MAC), so this
+    # reservation is the *documented claim* on `172.16.10.45` in mgmt and the address it takes the
+    # moment it is switched to DHCP. `ether22` is its access port (untagged VLAN 10 only); the suffix is
+    # preserved across segments, the same rule the Sparks and balteus' BMC keep.
+    "bukefalos-ipmi" = { mac = "AC:1F:6B:E9:E3:0C", address = "172.16.10.45", class = "mgmt" }
+
     # The reader — a Redmi Pad 2 Pro used as an e-reader and for internal web browsing (2026-09-19,
     # re-keyed 2026-09-20). It keeps the address its own lease had already settled on (`.25`), so
     # nothing re-addresses: this reservation, `main.tf`'s `reader-nets` entry and the firewall rules in

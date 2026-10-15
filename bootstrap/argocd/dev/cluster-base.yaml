@@ -286,6 +286,26 @@ spec:
                   requests: {cpu: "4", memory: 24Gi}
                   limits: {nvidia.com/gpu: 1}
                 args: ["--diffusion-model", "/models/models-custom/krea2-turbo/diffusion_models/krea2_turbo_int8_convrot.safetensors", "--llm", "/models/models-custom/krea2-turbo/text_encoders/qwen3vl_4b_fp8_scaled.safetensors", "--vae", "/models/models-custom/krea2-turbo/vae/wan_2.1_vae_bare.safetensors", "--listen-ip", "0.0.0.0", "--listen-port", "8188", "--eager-load"]
+              # The second image entry: Qwen-Image-2.1-Turbo (Qwen, 2026-10-09) on the same sd-server.
+              # int8 ConvRot DiT + int8 ConvRot Qwen3-VL-8B text encoder + the NEW 2.1 VAE (a
+              # different 64-channel model — the old Qwen-Image/Wan VAE is NOT interchangeable);
+              # all three load as-is. 15.9GB of weights, 16.2GB resident, one 3090.
+              # Turbo sampling needs its fixed 8-step sigma schedule: `--sigmas qwen-image-2.1-turbo`
+              # on the CLI; via the API `sample_params.custom_sigmas`, or `<sd_cpp_extra_args>`
+              # embedded in the prompt for the A1111/OpenAI shapes. Steps+cfg alone select the
+              # non-Turbo flow schedule and the output is mush. Measured on this pool: 7.9s/img warm
+              # at 1024²/8 steps/euler/cfg 1.0 (sampling 6.5s + VAE decode 1.1s) vs krea2's 8.9-9.8s.
+              # One GPU like krea2, so both image models can be resident at once (1+1 of the pool's 2).
+              - name: qwen21
+                image: ghcr.io/leejet/stable-diffusion.cpp@sha256:97780045a4bff5224703e686b172c7a4af558d8a4be466e9a20a7739a808c1b9
+                command: ["/sd-server"]
+                port: 8188
+                probePath: /
+                nodeSelector: {karpenter.sh/nodepool: talos-nocloud-gpu-3090-template}
+                resources:
+                  requests: {cpu: "4", memory: 24Gi}
+                  limits: {nvidia.com/gpu: 1}
+                args: ["--diffusion-model", "/models/models-custom/qwen-image-2.1-turbo/diffusion_models/qwen_image_2.1_turbo_int8_convrot.safetensors", "--llm", "/models/models-custom/qwen-image-2.1-turbo/text_encoders/qwen3vl_8b_int8_convrot.safetensors", "--vae", "/models/models-custom/qwen-image-2.1-turbo/vae/qwen_image_2.1_vae_bf16.safetensors", "--listen-ip", "0.0.0.0", "--listen-port", "8188", "--eager-load"]
         # SCALE — the model toggle dashboard, behind the estate's first forward-auth
         # (oauth2-proxy → sso.hnatekmar.xyz; the client is created by this chart).
         scale:

@@ -32,4 +32,5 @@ models: []
 #     requests: {cpu: "8", memory: 48Gi}
 #     limits: {nvidia.com/gpu: 2}
 #   env: []                           # per-model extras
+#   probePath: /                      # probe path override (default /health; sd-server answers on /)
 #   scale: {on: 1, off: 0}            # SCALE's two replica counts (defaults 1/0)

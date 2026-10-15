@@ -79,15 +79,16 @@ spec:
           # /health answers once the model is up; the big ones take minutes to load, so startup
           # gets a 15-minute budget and readiness — not liveness — gates traffic. No liveness
           # probe: killing a loading model is worse than a pod that simply stays NotReady.
+          # `probePath` overrides /health for servers that answer elsewhere (sd-server: /).
           startupProbe:
             httpGet:
-              path: /health
+              path: {{ .probePath | default "/health" }}
               port: http
             periodSeconds: 15
             failureThreshold: 60
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ .probePath | default "/health" }}
               port: http
             periodSeconds: 10
           volumeMounts:

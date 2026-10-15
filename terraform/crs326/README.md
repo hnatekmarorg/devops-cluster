@@ -39,6 +39,21 @@ Two constraints ride along, both measured 2026-09-19:
   that keep the island unrouted, and NTP/DNS pointed at the router (which also fixes its 1972 clock, since
   both are directly connected in mgmt). That switch becomes `terraform/crs317` once it is reachable here.
 
+## bukefalos' real ports (this wave)
+
+Measured 2026-10-14: the second server is cabled on **`ether21`** (LAN — link-ok, no MAC learned because
+the host is down) and **`ether22`** (its Super Micro IPMI, `AC:1F:6B:E9:E3:0C`, static `.100.45`), while
+the `bukefalos` bond on `ether23` has **no link and 0 bytes since boot** — so the trunk declared in #201
+sat on an empty port. `ether21` takes over the trunk memberships (untagged compat + tagged
+mgmt/lab/srv/vpn/iot, the same treatment as `pve_lan`), and `ether22` becomes an untagged **mgmt** access
+port (pvid 10, `admit-only-untagged-and-priority-tagged`) — the same shape as `ether7` — with the BMC
+claimed at `172.16.10.45` in `../routeros/dhcp.tf` and named `bmc-bukefalos.mgmt`.
+
+Sequencing worth stating: the BMC holds its compat address until it is re-addressed on the device, and
+once `ether22` carries only VLAN 10 that address is unreachable from every segment — so the BMC
+re-address (`172.16.10.45/20`, gateway `172.16.10.1`) is one coordinated step with the apply, and the
+reservation binds the moment it switches to DHCP.
+
 ## Traps inherited from the router module
 
 - a stale checkout plans **destroys** — fetch before branching (`../scripts/tf-plan-check.sh`);

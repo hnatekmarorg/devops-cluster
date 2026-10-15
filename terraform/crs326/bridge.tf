@@ -156,6 +156,11 @@ resource "routeros_interface_bridge" "bridge" {
 # out-of-band link (see the `ether24` port below). A one-port 802.3ad bond aggregates nothing, which is
 # the honest representation: bukefalos' hardware takes the freed port back when it arrives, and a
 # two-member bond that cannot form would only mislead the next reader.
+#
+# Measured 2026-10-14: bukefalos *arrived* — but not on this bond. It has no link and 0 bytes since
+# boot, while the server's LAN answers on `ether21` (a plain port, not a bond) and its IPMI on
+# `ether22`. The trunk memberships now also ride on `ether21`; this bond stays the reservation for the
+# day an LACP link lands here.
 resource "routeros_interface_bonding" "bukefalos" {
   arp                  = "enabled"
   arp_interval         = "100ms"
@@ -270,6 +275,10 @@ resource "routeros_interface_bridge_port" "pve_lan" {
 # port had been removed with the other dead ports; it is back now that bukefalos is being integrated,
 # with the same treatment as `pve_lan` — untagged in compat, tagged for every class, so its guests can
 # be tagged into any segment without moving the host.
+#
+# 2026-10-14: the server's live cable turned out to be on `ether21`, not here — this port has no link
+# and has never seen a frame. `ether21` carries the same memberships now; this one waits for the LACP
+# link.
 resource "routeros_interface_bridge_port" "bukefalos" {
   auto_isolate            = false
   bpdu_guard              = false
@@ -651,12 +660,16 @@ resource "routeros_interface_bridge_port" "ether20" {
   unknown_unicast_flood   = true
 }
 
+# **bukefalos' LAN** — the second server's live cable, measured 2026-10-14: link-ok, no MAC learned at
+# the moment (the host is down; it answers as `.100.71` / `AC:1F:6B:E9:E8:32` when up). The trunk
+# memberships ride on it (see stage2-filtering.tf) — the `bukefalos` bond above stays a reservation,
+# because the server did not arrive on it.
 resource "routeros_interface_bridge_port" "ether21" {
   auto_isolate            = false
   bpdu_guard              = false
   bridge                  = "bridge"
   broadcast_flood         = true
-  comment                 = "defconf"
+  comment                 = "bukefalos LAN — trunk: untagged compat + tagged classes"
   disabled                = false
   edge                    = "auto"
   fast_leave              = false
@@ -682,16 +695,22 @@ resource "routeros_interface_bridge_port" "ether21" {
   unknown_unicast_flood   = true
 }
 
+# **bukefalos' IPMI** — the server's BMC sits on this port (measured 2026-10-14: `AC:1F:6B:E9:E3:0C`,
+# static `.100.45`, a Super Micro IPMI — port 623 and its web UI answer). Untagged mgmt access, the
+# same shape as `ether7`: the BMC cannot tag, so it lands in VLAN 10 and nowhere else. Sequencing:
+# `.100.45` is unreachable from every segment once this port carries only VLAN 10, so re-addressing
+# the BMC (`172.16.10.45/20`, gateway `172.16.10.1`) is a coordinated device-side step — the
+# `bukefalos-ipmi` reservation in the router module claims the number either way.
 resource "routeros_interface_bridge_port" "ether22" {
   auto_isolate            = false
   bpdu_guard              = false
   bridge                  = "bridge"
   broadcast_flood         = true
-  comment                 = "defconf"
+  comment                 = "bukefalos IPMI — untagged VLAN 10 only"
   disabled                = false
   edge                    = "auto"
   fast_leave              = false
-  frame_types             = "admit-all"
+  frame_types             = "admit-only-untagged-and-priority-tagged"
   horizon                 = "none"
   hw                      = true
   ingress_filtering       = true
@@ -704,7 +723,7 @@ resource "routeros_interface_bridge_port" "ether22" {
   path_cost               = "10"
   point_to_point          = "auto"
   priority                = "0x80"
-  pvid                    = 1
+  pvid                    = 10
   restricted_role         = false
   restricted_tcn          = false
   tag_stacking            = false

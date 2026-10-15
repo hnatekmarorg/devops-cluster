@@ -54,9 +54,9 @@ resource "routeros_interface_bridge_vlan" "compat" {
   # out-of-band plane's access port (balteus IPMI, `.46`) — an untagged member of VLAN 10 only.
   untagged = ["ether2", "bukefalos", "ether4", "ether6", "ether8", "ether9",
     "ether10", "ether11", "ether12", "ether13", "ether14", "ether15", "ether17",
-    "ether18", "ether19", "ether20", "ether21", "ether22", "sfp-sfpplus1", "sfp-sfpplus2",
+    "ether18", "ether19", "ether20", "ether21", "sfp-sfpplus1", "sfp-sfpplus2",
   "bridge"]
-  comment = "compat — everything not yet migrated; does not include ether3, ether7, ether16 or ether24"
+  comment = "compat — everything not yet migrated; does not include ether3, ether7, ether16, ether22 or ether24"
 }
 
 resource "routeros_interface_bridge_vlan" "mgmt" {
@@ -69,17 +69,20 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
   #
   # Tagged on both uplinks: `ether18` toward the router (so this switch and the router share one mgmt
   # segment) and `ether4` toward the CSS610 (so charon, on that box, can live in mgmt). Untagged for
-  # the three access ports that belong to the out-of-band/management plane: `ether3` (the escape
-  # hatch), `ether7` (balteus IPMI) and `ether24` (the CRS317's management port — so the island
-  # switch stops needing a journey through the storage island to be reachable; see crs326/bridge.tf
-  # for the 1500-byte ceiling this link has to respect). Every other port keeps its compat pvid 1.
+  # the four access ports that belong to the out-of-band/management plane: `ether3` (the escape
+  # hatch), `ether7` (balteus IPMI), `ether22` (bukefalos IPMI — moved here 2026-10-14) and `ether24`
+  # (the CRS317's management port — so the island switch stops needing a journey through the storage
+  # island to be reachable; see crs326/bridge.tf for the 1500-byte ceiling this link has to respect).
+  # Every other port keeps its compat pvid 1.
   #
-  # `ether2` and `bukefalos` are here because the Proxmox hosts are trunks: each host itself stays on
-  # compat (the ports' pvid is 1, untouched), and their guests are tagged into the class they belong
-  # to. A VM in mgmt is therefore possible without moving a host — which is what keeps this additive.
-  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4", "ether2", "bukefalos"]
-  untagged = ["ether3", "ether7", "ether24"]
-  comment  = "mgmt — escape hatch, IPMI and the CRS317's port untagged; tagged on both uplinks"
+  # `ether2`, `ether21` and `bukefalos` are here because the Proxmox hosts are trunks: each host itself
+  # stays on compat (the ports' pvid is 1, untouched), and their guests are tagged into the class they
+  # belong to. A VM in mgmt is therefore possible without moving a host — which is what keeps this
+  # additive. `ether21` is bukefalos' live LAN port and `bukefalos` the bond reserved for it (see
+  # crs326/bridge.tf).
+  tagged   = [routeros_interface_bridge.bridge.name, "ether18", "ether4", "ether2", "bukefalos", "ether21"]
+  untagged = ["ether3", "ether7", "ether24", "ether22"]
+  comment  = "mgmt — escape hatch, both IPMIs and the CRS317's port untagged; tagged on both uplinks"
 }
 
 # ---------------------------------------------------------------------------
@@ -96,7 +99,7 @@ resource "routeros_interface_bridge_vlan" "mgmt" {
 resource "routeros_interface_bridge_vlan" "lab_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["30"]
-  tagged   = ["ether18", "ether4", "ether2", "bukefalos"]
+  tagged   = ["ether18", "ether4", "ether2", "bukefalos", "ether21"]
   comment  = "lab — transport only; the router terminates it, the PVE hosts' guests live in it"
 }
 
@@ -122,7 +125,7 @@ import {
 resource "routeros_interface_bridge_vlan" "srv_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["40"]
-  tagged   = ["ether18", "ether2", "bukefalos"]
+  tagged   = ["ether18", "ether2", "bukefalos", "ether21"]
   comment  = "srv — transport only; the router terminates it, the PVE hosts' guests live in it"
 }
 
@@ -137,7 +140,7 @@ import {
 resource "routeros_interface_bridge_vlan" "vpn_trunk" {
   bridge   = routeros_interface_bridge.bridge.name
   vlan_ids = ["60"]
-  tagged   = ["ether18", "ether2", "bukefalos"]
+  tagged   = ["ether18", "ether2", "bukefalos", "ether21"]
   comment  = "vpn — transport only; the router terminates the zone, WireGuard clients join it there"
 }
 
@@ -155,7 +158,7 @@ resource "routeros_interface_bridge_vlan" "iot_trunk" {
   # is an UNTAGGED member and its `pvid` is 70 (see crs326/bridge.tf). Tagging it instead would leave
   # the segment's devices — a dumb switch, a Deco, a TV, a gaming PC, none of which can tag — receiving
   # VLAN 70 frames they cannot read, and would leave the probe sitting in compat.
-  tagged   = ["ether18", "ether2", "bukefalos"]
+  tagged   = ["ether18", "ether2", "bukefalos", "ether21"]
   untagged = ["ether16"]
   comment  = "iot — tagged to the router on ether18; ether16 is the untagged access port to the devices"
 }

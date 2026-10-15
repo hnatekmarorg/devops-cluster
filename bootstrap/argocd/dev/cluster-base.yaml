@@ -268,6 +268,24 @@ spec:
                   requests: {cpu: "8", memory: 48Gi}
                   limits: {nvidia.com/gpu: 2}
                 args: ["/models/models-custom/gemma4-26b", "--served-model-name", "gemma4-26b-moe", "--host", "0.0.0.0", "--port", "8030", "--tensor-parallel-size", "2", "--max-model-len", "262144", "--gpu-memory-utilization", "0.92", "--max-num-seqs", "2", "--max-num-batched-tokens", "4096", "--kv-cache-dtype", "auto", "--trust-remote-code", "--dtype", "auto", "--enable-auto-tool-choice", "--tool-call-parser", "gemma4", "--reasoning-parser", "gemma4", "--override-generation-config", "{\"temperature\":0.9,\"top_p\":0.95,\"top_k\":64,\"min_p\":0.0,\"repetition_penalty\":1.0}"]
+              # The image entry: stable-diffusion.cpp's sd-server on one 3090, serving the .189
+              # krea2 set. It loads the ComfyUI int8 ConvRot checkpoint natively (no conversion);
+              # measured on this pool: warm ~9s/img at 1024²/8 steps, 18.1GB VRAM. `--eager-load`
+              # moves the weight read (~45s from NFS) into startup so Ready means ready — the
+              # server builds its context before it listens. One GPU vs the LLMs' two, so it
+              # swaps with them by capacity — the .189 quadlets' Conflicts=, scheduler-enforced.
+              # The VAE is the bare-named real file: sd.cpp adds the component prefix itself, and
+              # the comfyui-189 copy's models/vae is a symlink that only resolves on .189.
+              - name: krea2
+                image: ghcr.io/leejet/stable-diffusion.cpp@sha256:97780045a4bff5224703e686b172c7a4af558d8a4be466e9a20a7739a808c1b9
+                command: ["/sd-server"]
+                port: 8188
+                probePath: /
+                nodeSelector: {karpenter.sh/nodepool: talos-nocloud-gpu-3090-template}
+                resources:
+                  requests: {cpu: "4", memory: 24Gi}
+                  limits: {nvidia.com/gpu: 1}
+                args: ["--diffusion-model", "/models/models-custom/krea2-turbo/diffusion_models/krea2_turbo_int8_convrot.safetensors", "--llm", "/models/models-custom/krea2-turbo/text_encoders/qwen3vl_4b_fp8_scaled.safetensors", "--vae", "/models/models-custom/krea2-turbo/vae/wan_2.1_vae_bare.safetensors", "--listen-ip", "0.0.0.0", "--listen-port", "8188", "--eager-load"]
         # SCALE — the model toggle dashboard, behind the estate's first forward-auth
         # (oauth2-proxy → sso.hnatekmar.xyz; the client is created by this chart).
         scale:

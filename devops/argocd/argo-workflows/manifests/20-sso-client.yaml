@@ -47,9 +47,13 @@ spec:
 ---
 # The default scopes are what make the group-based RBAC rules possible at all: `microprofile-jwt`
 # is the scope that carries the realm's roles into the token's `groups` claim, and the
-# workflows.argoproj.io/rbac-rule expressions in 30-sso-rbac.yaml read exactly that. It is not
-# among a realm's default client scopes by default, so a client relying on fullScopeAllowed alone
-# would get tokens with no groups — every rule would miss and every user would be denied.
+# workflows.argoproj.io/rbac-rule expressions in 30-sso-rbac.yaml read exactly that.
+#
+# microprofile-jwt is NOT in this list, deliberately: the realm already attaches it to new
+# clients as an OPTIONAL scope, and Keycloak rejects re-attaching it as a default ("scope
+# microprofile-jwt is already attached to client as an optional scope" — measured). Optional is
+# fine — the argo-server REQUESTS it (server.sso.scopes in values-dev.yaml), and a requested
+# optional scope is activated for the token.
 apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
 kind: ClientDefaultScopes
 metadata:
@@ -71,7 +75,6 @@ spec:
       - profile
       - roles
       - web-origins
-      - microprofile-jwt
 ---
 apiVersion: v1
 kind: Secret

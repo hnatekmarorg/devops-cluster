@@ -11,7 +11,11 @@
 # 20-sso-client.yaml) — the same claim the clusters' RBAC binds as `sso:k8s-<class>-<tier>`.
 #
 # Service account tokens are not auto-created since Kubernetes 1.24, so each account carries its
-# own kubernetes.io/service-account-token secret below.
+# own kubernetes.io/service-account-token secret below — and the NAME must be
+# `${serviceAccountName}.service-account-token` (discovery by name, docs/service-account-secrets.md
+# option 1): the server resolves that exact name when no secret is listed on the SA, and a plain
+# `-token` suffix fails at authorization time with a "secret not found" that looks like a login
+# problem (measured live).
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -27,7 +31,7 @@ metadata:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: argo-workflows-sa-admin-token
+  name: argo-workflows-sa-admin.service-account-token
   namespace: argo-workflows
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
@@ -47,7 +51,7 @@ metadata:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: argo-workflows-sa-viewer-token
+  name: argo-workflows-sa-viewer.service-account-token
   namespace: argo-workflows
   annotations:
     argocd.argoproj.io/sync-wave: "-1"

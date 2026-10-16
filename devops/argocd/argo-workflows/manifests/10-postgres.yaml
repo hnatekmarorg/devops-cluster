@@ -1,0 +1,104 @@
+# argo-workflows' database — the piece the upstream chart does not own.
+#
+# WHY A PLAIN STATEFULSET (same reasoning as forgejo's 10-postgres.yaml): the estate runs its
+# databases on the block tier in git, not as a chart subchart whose storage, image and reset
+# semantics arrive as a dependency bump.
+#
+# WHY THE BLOCK TIER (`truenas-nvmeof`): Postgres fsyncs on every commit; over NFS that fsync
+# is somebody else's problem.
+#
+# PREREQUISITE, not owned here: Secret `postgres-db-credentials` (keys `username`, `password`)
+# in the argo-workflows namespace — a credential, so not in git; created out of band before the
+# first sync (see README.md). Without it the pod sits in CreateContainerConfigError.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: argo-workflows
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: argo-workflows
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  # RETAIN, deliberately — say it out loud rather than inherit the default.
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      # postgres:17-alpine runs as uid/gid 70; 999 is what this image's data directory expects
+      # to be group-owned, so the volume is mounted writable for it.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: argo
+            - name: POSTGRES_DB
+              value: workflows
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-db-credentials
+                  key: password
+            # A SUBDIRECTORY of the volume, not its root: the image refuses to initialise a data
+            # directory that already has content, and a mounted volume always has `lost+found`.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "argo", "-d", "workflows"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "argo"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              # A ceiling, not a target: the pod shares a node with the control plane and an
+              # unbounded Postgres is the one pod that can take a node down.
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: truenas-nvmeof
+        resources:
+          requests:
+            storage: 10Gi

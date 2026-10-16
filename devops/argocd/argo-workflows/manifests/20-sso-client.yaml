@@ -1,0 +1,84 @@
+# argo-server's OIDC client — declared here, in the cluster that CONSUMES it (the estate's
+# one-writer-per-object rule; same shape as devops/argocd/forgejo/manifests/30-sso-client.yaml).
+#
+# TWO SECRETS, deliberately:
+#   * `argo-oidc-secret` — Crossplane writes the client's connection secret here
+#     (key `attribute.client_secret`); it never leaves the cluster.
+#   * `argo-oidc-config` — the client ID. It is NOT a credential (it rides every login
+#     redirect), the argo-helm chart takes it via a secret ref, so it ships in git below.
+---
+apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+kind: Client
+metadata:
+  name: argo-workflows-dev
+  namespace: argo-workflows
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  deletionPolicy: Delete
+  providerConfigRef:
+    name: sso-hnatekmar-xyz
+  writeConnectionSecretToRef:
+    name: argo-oidc-secret
+    namespace: argo-workflows
+  forProvider:
+    realmId: master
+    clientId: argo-workflows-dev
+    name: Argo Workflows (dev)
+    # CONFIDENTIAL + client-secret: the callback is consumed by the argo-server, not a browser.
+    accessType: CONFIDENTIAL
+    clientAuthenticatorType: client-secret
+    enabled: true
+    standardFlowEnabled: true
+    directAccessGrantsEnabled: false   # no password grant: humans log in through the browser flow
+    serviceAccountsEnabled: false
+    useRefreshTokens: true
+    fullScopeAllowed: true
+    # Absolute URLs — Keycloak validates these server-side (a relative value was a measured
+    # failure mode on this estate).
+    rootUrl: https://workflows.dev-k8s.srv.hnatekmar.dev
+    baseUrl: https://workflows.dev-k8s.srv.hnatekmar.dev
+    validRedirectUris:
+      - https://workflows.dev-k8s.srv.hnatekmar.dev/oauth2/callback
+    validPostLogoutRedirectUris:
+      - https://workflows.dev-k8s.srv.hnatekmar.dev/
+    webOrigins:
+      - https://workflows.dev-k8s.srv.hnatekmar.dev
+---
+# The default scopes are what make the group-based RBAC rules possible at all: `microprofile-jwt`
+# is the scope that carries the realm's roles into the token's `groups` claim, and the
+# workflows.argoproj.io/rbac-rule expressions in 30-sso-rbac.yaml read exactly that. It is not
+# among a realm's default client scopes by default, so a client relying on fullScopeAllowed alone
+# would get tokens with no groups — every rule would miss and every user would be denied.
+apiVersion: openidclient.keycloak.crossplane.io/v1alpha1
+kind: ClientDefaultScopes
+metadata:
+  name: argo-workflows-dev-default-scopes
+  namespace: argo-workflows
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  deletionPolicy: Delete
+  providerConfigRef:
+    name: sso-hnatekmar-xyz
+  forProvider:
+    realmId: master
+    clientIdRef:
+      name: argo-workflows-dev
+    defaultScopes:
+      - acr
+      - email
+      - profile
+      - roles
+      - web-origins
+      - microprofile-jwt
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argo-oidc-config
+  namespace: argo-workflows
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+stringData:
+  client-id: argo-workflows-dev

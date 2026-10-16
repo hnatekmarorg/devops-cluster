@@ -1,0 +1,62 @@
+---
+# argo-workflows for THIS cluster, as an ArgoCD Application.
+#
+# This directory is what bootstrap-cluster.sh hands to ArgoCD (the root Application recurses over
+# bootstrap/argocd/<cluster>), same shape as cluster-base.yaml: the Application below is the
+# boundary; everything the deployment needs is described by the chart it points at plus the
+# manifests next to the values file in the repo.
+#
+# Version: chart 1.0.14 == appVersion v4.0.5 — the upstream baseline was requested as v4.0.5, and
+# chart 1.0.14 is the chart whose own defaults ARE v4.0.5, so chart and app match exactly.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-workflows
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # THREE SOURCES, the forgejo shape:
+  #   1. the official chart, PINNED — every per-cluster fact lives in the value file, so a
+  #      version bump or a move is a values change, not a rewrite of this file;
+  #   2. the pieces the chart does not own — the Postgres StatefulSet, the Keycloak client, the
+  #      namespace workflows run in;
+  #   3. the repo itself as `repo`, so the value file above can be a $repo/... path.
+  sources:
+    - name: argo-workflows-chart
+      repoURL: https://argoproj.github.io/argo-helm
+      chart: argo-workflows
+      targetRevision: 1.0.14
+      helm:
+        releaseName: argo-workflows
+        valueFiles:
+          - $repo/devops/argocd/argo-workflows/values-dev.yaml
+
+    - repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
+      targetRevision: main
+      path: devops/argocd/argo-workflows/manifests
+
+    - repoURL: https://forgejo.srv.hnatekmar.dev/hnatekmarorg/devops-cluster.git
+      targetRevision: main
+      ref: repo
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-workflows
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    retry:
+      limit: -1
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

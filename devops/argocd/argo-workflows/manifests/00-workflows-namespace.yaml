@@ -1,0 +1,13 @@
+---
+# The namespace workflow PODS run in (controller.workflowNamespaces in values-dev.yaml).
+#
+# Kept separate from argo-workflows (where the control plane lives), per the reference
+# Application — and on this cluster it is also half of the two-controller split: the bench
+# controller is scoped to argo-bench, this deployment's controller to `workflows`, so neither
+# reconciles the other's Workflows.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workflows
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

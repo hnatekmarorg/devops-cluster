@@ -1,0 +1,151 @@
+# argo-workflows (dev cluster) — values for the upstream chart, argoproj.github.io/argo-helm.
+#
+# Modeled on the reference Application the deployment was requested from; every per-cluster fact
+# is resolved for THIS cluster below (issuer, domain, S3 endpoint, group filter). Version: chart
+# 1.0.14 / app v4.0.5 — the images are pinned explicitly so the deployed version is visible in
+# git rather than inherited from the chart's appVersion.
+
+crds:
+  # NOT INSTALLED, deliberately: this cluster already carries the argo CRDs (installed with the
+  # bench; fork-era — a superset that includes status.storedTemplateSpecs, which the fork's
+  # server and a future v4.0.5->fork upgrade test both need). The chart must not replace them;
+  # an upgrade patches them surgically instead.
+  install: false
+
+# WORKFLOW
+workflow:
+  serviceAccount:
+    create: true
+    name: argo-workflow
+  rbac:
+    create: true
+    artifactGC: true
+    rules:
+      # Necessary for child workflow execution from within a workflow task
+      - apiGroups: ["argoproj.io"]
+        resources: ["workflows"]
+        verbs: ["create", "get", "watch"]
+
+# CONTROLLER
+controller:
+  image:
+    tag: "v4.0.5"
+  extraEnv: # https://github.com/argoproj/argo-workflows/pull/14879
+    - name: PROMETHEUS_LEGACY_NAME_VALIDATION_SCHEME
+      value: "true"
+  logging:
+    level: info
+  # TWO-CONTROLLER COEXISTENCE (this cluster only): the argo-bench harness runs its own fork
+  # controller on this cluster, and Argo controllers are cluster-wide by default — two
+  # cluster-wide controllers would reconcile the same Workflows and fight. The bench is scoped
+  # to argo-bench; this controller is scoped to `workflows` (its single-namespace mode), which
+  # is also where this deployment's workflows are meant to live.
+  extraArgs:
+    - "--namespaced"
+    - "--managed-namespace=workflows"
+  workflowNamespaces:
+    - workflows
+  persistence:
+    clusterName: dev
+    archive: true
+    archiveTTL: 30d
+    nodeStatusOffLoad: true
+    postgresql:
+      host: postgres
+      port: 5432
+      database: workflows
+      tableName: argo_workflows
+      userNameSecret:
+        name: postgres-db-credentials
+        key: username
+      passwordSecret:
+        name: postgres-db-credentials
+        key: password
+  metricsConfig:
+    enabled: true
+    path: /metrics
+    port: 9090
+  # add these options to every Workflow by default
+  workflowDefaults:
+    spec:
+      # delete WF from kubernetes after (will still be archived)
+      ttlStrategy:
+        secondsAfterCompletion: 259200 # 3 days
+      serviceAccountName: argo-workflow
+      # Logs are NOT archived: no artifact repository is wired yet (the NAS MinIO credentials
+      # available today are read-only, so a scoped bucket/user could not be minted). Archive-
+      # to-DB (persistence.archive above) still records every completed workflow; pod logs live
+      # until podGC. Flip this to true together with an artifactRepository block once S3
+      # credentials land.
+      archiveLogs: false
+      podGC:
+        strategy: OnPodSuccess
+        deleteDelayDuration: 30s
+
+# EXECUTOR
+executor:
+  image:
+    tag: "v4.0.5"
+
+# SERVER
+server:
+  image:
+    tag: "v4.0.5"
+  logging:
+    level: info
+  authModes:
+    - sso
+    - client
+  sso:
+    enabled: true
+    rbac:
+      enabled: true
+    # The estate's Keycloak (master realm); clients for this cluster are declared in
+    # devops/argocd/argo-workflows/manifests/20-sso-client.yaml.
+    issuer: "https://sso.hnatekmar.xyz/realms/master"
+    clientId:
+      # client-id is not a credential — it ships in git (the chart takes it as a secret ref)
+      name: argo-oidc-config
+      key: client-id
+    clientSecret:
+      # Crossplane's connection secret for the Client above (attribute.client_secret)
+      name: argo-oidc-secret
+      key: attribute.client_secret
+    redirectUrl: https://workflows.dev-k8s.srv.hnatekmar.dev/oauth2/callback
+    sessionExpiry: "168h"
+    # Requested on top of openid. microprofile-jwt is the scope that carries the realm's roles
+    # in the token's `groups` claim — the claim the SSO-RBAC rules in manifests/30-sso-rbac.yaml
+    # read (it is also set as a default scope on the client in manifests/20-sso-client.yaml).
+    scopes:
+      - email
+      - profile
+      - microprofile-jwt
+    # Only cluster-scoped groups reach argo RBAC; matches the estate's k8s-dev-* access groups.
+    filterGroupsRegex:
+      - "k8s-dev-.*"
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    ingressClassName: nginx
+    hosts:
+      - workflows.dev-k8s.srv.hnatekmar.dev
+    tls:
+      - secretName: argo-workflows-tls
+        hosts:
+          - workflows.dev-k8s.srv.hnatekmar.dev
+
+# ARTIFACT REPOSITORY — intentionally absent for now (see the archiveLogs note above).
+# When S3 credentials land (NAS MinIO, bucket per the reference scheme
+# <cluster>-argo-workflows-<sha256(cluster-argo-workflows)[0:7]>), add:
+#   useStaticCredentials: true
+#   artifactRepository:
+#     archiveLogs: true
+#     s3:
+#       endpoint: minio.srv.hnatekmar.dev:9000
+#       region: europe
+#       bucket: dev-argo-workflows-cf6a0c3
+#       insecure: true
+#       accessKeySecret: {name: s3-artifacts-credentials, key: accesskey}
+#       secretKeySecret: {name: s3-artifacts-credentials, key: secretkey}
+# …and flip workflowDefaults.archiveLogs back to true.

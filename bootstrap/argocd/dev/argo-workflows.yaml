@@ -18,6 +18,16 @@ metadata:
 spec:
   project: default
 
+  # The API server defaults the embedded PVC spec inside volumeClaimTemplates (volumeMode,
+  # apiVersion, kind) and ArgoCD compares it raw — the Postgres StatefulSet reported OutOfSync
+  # forever: a phantom diff that masks real ones. Templates are immutable anyway. (Same rule as
+  # the forgejo Application — this estate has hit it twice now.)
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/volumeClaimTemplates
+
   # THREE SOURCES, the forgejo shape:
   #   1. the official chart, PINNED — every per-cluster fact lives in the value file, so a
   #      version bump or a move is a values change, not a rewrite of this file;
